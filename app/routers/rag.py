@@ -36,21 +36,21 @@ async def query_rag(
     text: Optional[str] = Form(default=None, description="Câu hỏi/đoạn văn bản"),
     top_k: int = Form(default=settings.APP_TOP_K, ge=1, le=50),
     min_score: float = Form(default=settings.APP_MIN_SCORE, ge=0.0, le=1.0),
-    files: Optional[List[UploadFile]] = File(default=None, description="Danh sách ảnh (image/*)"),
+    # files: Optional[List[UploadFile]] = File(default=None, description="Danh sách ảnh (image/*)"),
 ):
     try:
         # Collect images
         image_bytes_list: List[bytes] = []
-        pil_images: List[Image] = []
-        if files:
-            for f in files:
-                content = await f.read()
-                if content:
-                    image_bytes_list.append(content)
-                    try:
-                        pil_images.append(Image.open(BytesIO(content)).convert("RGB"))
-                    except Exception:
-                        pass
+        # pil_images: List[Image] = []
+        # if files:
+        #     for f in files:
+        #         content = await f.read()
+        #         if content:
+        #             image_bytes_list.append(content)
+        #             try:
+        #                 pil_images.append(Image.open(BytesIO(content)).convert("RGB"))
+        #             except Exception:
+        #                 pass
 
         ocr_text = ocr_images_to_text(image_bytes_list) if image_bytes_list else ""
         user_text = (text or "").strip()
@@ -92,7 +92,7 @@ async def query_rag(
         if not context_strings:
             context_strings = [f"Không tìm thấy tài liệu phù hợp trong bảng {schema}.{table} cho câu hỏi này."]
 
-        answer = generate_answer(user_text or merged_text, context_strings, images=pil_images if pil_images else None)
+        answer = generate_answer(user_text or merged_text, context_strings)
 
         return QueryResponse(answer=answer, ocr_text=ocr_text, used_contexts=used_contexts)
 

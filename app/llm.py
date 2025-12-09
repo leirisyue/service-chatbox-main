@@ -38,6 +38,17 @@ def generate_answer(
         # Append images to multimodal prompt
         parts.extend(images)
 
-    model = genai.GenerativeModel(settings.APP_GEMINI_MODEL)
-    resp = model.generate_content(parts, safety_settings=None)
-    return (getattr(resp, "text", None) or "").strip() or "Xin lỗi, tôi chưa thể trả lời câu hỏi này."
+    # Try generate with configured model, fallback to commonly available ones
+    candidate_models = [settings.APP_GEMINI_MODEL, "gemini-1.5-flash", "gemini-1.0-pro"]
+    last_err = None
+    for m in candidate_models:
+        try:
+            model = genai.GenerativeModel(m)
+            resp = model.generate_content(parts, safety_settings=None)
+            text = (getattr(resp, "text", None) or "").strip()
+            if text:
+                return text
+        except Exception as e:
+            last_err = e
+            continue
+    return "Xin lỗi, mô hình Gemini hiện không khả dụng cho generateContent: " + (str(last_err) if last_err else "Unknown error")

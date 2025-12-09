@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     # Gemini
     GOOGLE_API_KEY: str = Field(default="", description="API key từ Google AI Studio")
-    APP_GEMINI_MODEL: str = Field(default="gemini-1.5-pro")
+    APP_GEMINI_MODEL: str = Field(default="gemini-1.5-flash")
 
     # App
     APP_RELOAD: bool = Field(default=False)
