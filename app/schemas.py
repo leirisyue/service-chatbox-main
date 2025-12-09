@@ -1,11 +1,12 @@
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
 class ContextDocument(BaseModel):
     table: str
     id: int
     score: float
-    original_data: Optional[str] = None
+    # DB may return JSON/dict for original_data; accept structured types
+    original_data: Optional[Dict[str, Any]] = None
     content_text: Optional[str] = None
 
 class QueryResponse(BaseModel):

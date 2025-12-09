@@ -1,4 +1,4 @@
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Optional
 import psycopg
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
@@ -15,14 +15,13 @@ dsn = (
 
 pool = ConnectionPool(conninfo=dsn, kwargs={"row_factory": dict_row})
 
-# Register pgvector when a connection is created
 def _on_connect(conn):
     try:
         register_vector(conn)
     except Exception:
         pass
 
-pool.wait()  # ensure pool is ready
+pool.wait()
 with pool.connection() as conn:
     _on_connect(conn)
 
@@ -37,9 +36,6 @@ def health_check_db() -> bool:
         return False
 
 def list_embedding_tables() -> List[Tuple[str, str]]:
-    """
-    Trả về danh sách (schema, table) có cột 'embedding' và các cột chuẩn id|original_data|content_text|embedding
-    """
     q = """
     SELECT c.table_schema, c.table_name
     FROM information_schema.columns c
@@ -64,52 +60,67 @@ def count_documents_per_table() -> Dict[str, int]:
             result[f"{schema}.{table}"] = int(c)
     return result
 
-def _table_topk(schema: str, table: str, query_vec: list, top_k: int) -> List[Dict[str, Any]]:
+def get_embedding_dimension(schema: str, table: str) -> Optional[int]:
     """
-    Lấy top_k từ 1 bảng theo cosine distance (<=>). Nếu không có, fallback Euclidean (<->).
-    Trả về dict có score trong [0,1] (1 - cosine_distance).
+    Lấy chiều của cột vector 'embedding' bằng cách đọc một bản ghi đầu tiên.
+    Nếu không có dữ liệu, trả None.
     """
     with pool.connection() as conn, conn.cursor() as cur:
-        # Try cosine distance
+        try:
+            cur.execute(f'SELECT embedding FROM "{schema}"."{table}" WHERE embedding IS NOT NULL LIMIT 1;')
+            row = cur.fetchone()
+            if not row or row.get("embedding") is None:
+                return None
+            # pgvector trong psycopg đẩy ra list[float]; suy ra độ dài
+            emb = row["embedding"]
+            return len(emb) if isinstance(emb, (list, tuple)) else None
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            return None
+
+def _table_topk(schema: str, table: str, query_vec: list, top_k: int) -> List[Dict[str, Any]]:
+    """
+    Lấy top_k từ 1 bảng theo cosine distance (<=>). Nếu lỗi, fallback Euclidean (<->).
+    """
+    with pool.connection() as conn, conn.cursor() as cur:
         try:
             sql = f'''
                 SELECT 
                     id, original_data, content_text, 
-                    (1 - (embedding <=> %s))::double precision AS score
+                    (1 - (embedding <=> %s::vector))::double precision AS score
                 FROM "{schema}"."{table}"
                 WHERE embedding IS NOT NULL
-                ORDER BY embedding <=> %s
+                ORDER BY embedding <=> %s::vector
                 LIMIT %s;
             '''
             cur.execute(sql, (query_vec, query_vec, top_k))
             return cur.fetchall()
         except Exception:
-            # Fallback Euclidean distance normalized (rough heuristic): score = 1 / (1 + distance)
+            try:
+                conn.rollback()
+            except Exception:
+                pass
             sql = f'''
                 SELECT 
                     id, original_data, content_text, 
-                    (1.0 / (1.0 + (embedding <-> %s)))::double precision AS score
+                    (1.0 / (1.0 + (embedding <-> %s::vector)))::double precision AS score
                 FROM "{schema}"."{table}"
                 WHERE embedding IS NOT NULL
-                ORDER BY embedding <-> %s
+                ORDER BY embedding <-> %s::vector
                 LIMIT %s;
             '''
             cur.execute(sql, (query_vec, query_vec, top_k))
             return cur.fetchall()
 
-def similarity_search_across_tables(query_vec: list, top_k: int, min_score: float) -> List[Dict[str, Any]]:
-    print('query_vec',query_vec)
-    tables = list_embedding_tables()
-    print('Searching in tables:', tables)
-    
-    all_rows: List[Dict[str, Any]] = []
-    for schema, table in tables:
-        rows = _table_topk(schema, table, query_vec, top_k)
-        for r in rows:
-            r_out = dict(r)
-            r_out["table"] = f"{schema}.{table}"
-            all_rows.append(r_out)
-    # sort and top_k globally
-    all_rows.sort(key=lambda x: x.get("score", 0.0), reverse=True)
-    filtered = [r for r in all_rows if (r.get("score") or 0.0) >= min_score]
-    return filtered[:top_k]
+def similarity_search_table(schema: str, table: str, query_vec: list, top_k: int, min_score: float) -> List[Dict[str, Any]]:
+    rows = _table_topk(schema, table, query_vec, top_k)
+    out: List[Dict[str, Any]] = []
+    for r in rows:
+        r_out = dict(r)
+        r_out["table"] = f"{schema}.{table}"
+        out.append(r_out)
+    out.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    return [r for r in out if (r.get("score") or 0.0) >= min_score]
