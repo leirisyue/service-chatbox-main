@@ -43,7 +43,9 @@ class TableSelector:
                 t.embedding = embed_text(t.description)
 
     def select_best_table(self, query_text: str) -> Optional[Tuple[str, str, float]]:
+        print("Selecting best table for query")
         q_emb = embed_text(query_text)
+        
         best = None
         best_score = -1.0
 

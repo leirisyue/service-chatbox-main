@@ -22,12 +22,6 @@ class Settings(BaseSettings):
     APP_TOP_K: int = Field(default=5)
     APP_MIN_SCORE: float = Field(default=0.3)
 
-    # Optional: JSON mô tả schema các bảng để selector dùng
-    # Ví dụ:
-    # APP_TABLE_SCHEMAS_JSON=[
-    #   {"schema":"public","table":"customers","description":"Thông tin khách hàng..."},
-    #   {"schema":"public","table":"products","description":"Thông tin sản phẩm..."}
-    # ]
     APP_TABLE_SCHEMAS_JSON: str = Field(default="")
 
     model_config = SettingsConfigDict(env_file=".env", case_sensitive=False)

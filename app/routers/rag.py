@@ -64,6 +64,7 @@ async def query_rag(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bảng phù hợp theo schema mô tả.")
         schema, table, table_score = selected
 
+        print(f"Selected table: {schema}.{table} (score={table_score:.3f})")
         # 2) Embed query
         query_vec = embed_text(merged_text)
 
