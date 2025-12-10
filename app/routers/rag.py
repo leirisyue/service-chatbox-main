@@ -22,6 +22,7 @@ def _align_vector_dim(vec: List[float], target_dim: Optional[int]) -> List[float
     - Nếu vec dài hơn: cắt bớt.
     - Nếu vec ngắn hơn: padding 0.
     """
+    print(f"Aligning vector dimension to target_dim")
     if not isinstance(vec, list) or target_dim is None:
         return vec
     if len(vec) == target_dim:
@@ -54,17 +55,23 @@ async def query_rag(
 
         ocr_text = ocr_images_to_text(image_bytes_list) if image_bytes_list else ""
         user_text = (text or "").strip()
+        
+        # gop text va noi dung ocr
         merged_text = " ".join([t for t in [user_text, ocr_text] if t]).strip()
+        
         if not merged_text:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Thiếu input: cần cung cấp text hoặc ít nhất một ảnh chứa chữ.")
 
         # 1) Select one table
         selected = selector.select_best_table(merged_text)
+        
         if not selected:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bảng phù hợp theo schema mô tả.")
         schema, table, table_score = selected
 
+        #  lay duoc table query
         print(f"Selected table: {schema}.{table} (score={table_score:.3f})")
+        
         # 2) Embed query
         query_vec = embed_text(merged_text)
 
