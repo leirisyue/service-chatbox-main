@@ -22,7 +22,7 @@ def _align_vector_dim(vec: List[float], target_dim: Optional[int]) -> List[float
     - Nếu vec dài hơn: cắt bớt.
     - Nếu vec ngắn hơn: padding 0.
     """
-    print(f"Aligning vector dimension to target_dim")
+    print(f"Aligning vector dimension to target_dim: ")
     if not isinstance(vec, list) or target_dim is None:
         return vec
     if len(vec) == target_dim:
@@ -95,11 +95,14 @@ async def query_rag(
                 original_data=h.get("original_data"),
                 content_text=h.get("content_text"),
             ))
-
+        
         # Nếu không có hit nào, vẫn gọi LLM với thông điệp rõ ràng
         if not context_strings:
-            context_strings = [f"Không tìm thấy tài liệu phù hợp trong bảng {schema}.{table} cho câu hỏi này."]
+            context_strings = [f"Không tìm thấy tài liệu phù hợp trong cơ sở dữ liệu cho câu hỏi này."]
 
+        print(f"Found {len(used_contexts)} context documents from table {schema}.{table}")  
+        print("User text: ", user_text)
+        # print("context_strings: ", context_strings)
         answer = generate_answer(user_text or merged_text, context_strings)
 
         return QueryResponse(answer=answer, ocr_text=ocr_text, used_contexts=used_contexts)

@@ -65,7 +65,7 @@ def get_embedding_dimension(schema: str, table: str) -> Optional[int]:
     Lấy chiều của cột vector 'embedding' bằng cách đọc một bản ghi đầu tiên.
     Nếu không có dữ liệu, trả None.
     """
-    print(f"Getting embedding dimension for table")
+    print(f"Getting embedding dimension for table: ")
     with pool.connection() as conn, conn.cursor() as cur:
         try:
             cur.execute(f'SELECT embedding FROM "{schema}"."{table}" WHERE embedding IS NOT NULL LIMIT 1;')
@@ -86,6 +86,7 @@ def _table_topk(schema: str, table: str, query_vec: list, top_k: int) -> List[Di
     """
     Lấy top_k từ 1 bảng theo cosine distance (<=>). Nếu lỗi, fallback Euclidean (<->).
     """
+    print(f"Performing top-k similarity search on table: ")
     with pool.connection() as conn, conn.cursor() as cur:
         try:
             sql = f'''
@@ -117,7 +118,7 @@ def _table_topk(schema: str, table: str, query_vec: list, top_k: int) -> List[Di
             return cur.fetchall()
 
 def similarity_search_table(schema: str, table: str, query_vec: list, top_k: int, min_score: float) -> List[Dict[str, Any]]:
-    print(f"Performing similarity search on table")
+    print(f"Performing similarity search on table: ")
     rows = _table_topk(schema, table, query_vec, top_k)
     out: List[Dict[str, Any]] = []
     for r in rows:

@@ -31,7 +31,7 @@ def generate_answer(
     """
     Gọi Gemini để sinh câu trả lời, truyền cả ảnh (nếu có).
     """
-    print(f"Generating answer with Gemini")
+    print(f"Generating answer with Gemini: ")
     parts: List = [SYSTEM_PROMPT]
     if contexts:
         ctx_joined = "\n\n---- CONTEXT ----\n" + "\n\n".join(contexts) + "\n-----------------\n"
@@ -61,7 +61,7 @@ def _resolve_supported_model() -> Optional[str]:
     """Pick a model that supports generateContent from the account's available models.
     Preference order: env-configured model, then any 'flash' model, then any 'pro' model.
     """
-    print(f"Resolving supported model")
+    print(f"Resolving supported model: ")
     try:
         # List models available to the API key
         ms = genai.list_models()
