@@ -3,7 +3,6 @@ import json
 import google.generativeai as genai
 from dataclasses import dataclass
 from app.config import settings
-import logging
 
 from .logger import setup_logger
 
@@ -55,13 +54,13 @@ class TableSelectorLLM:
                 schema="public", 
                 table="bompk_data",
                 description="Chứa thông tin về vật liệu, đá, kích thước, trọng lượng của các assembly/sản phẩm",
-                columns="assembly_name, material_type, stone_type, dimensions, weight"
+                columns="original_data, original_data, content_text, embedding, created_at"
             ),
             TableSchemaDesc(
                 schema="public", 
                 table="bom_son_data",
                 description="Chứa chi tiết BOM (Bill of Materials) về màu sơn, mã màu, thành phần chi tiết",
-                columns="product_code, color_name, color_code, paint_type, components"
+                columns="original_data, original_data, content_text, embedding, created_at"
             ),
         ]
         logger.info(f"Using {len(self.tables)} default table schemas")

@@ -4,9 +4,12 @@ import logging
 from logging.handlers import TimedRotatingFileHandler
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .logger import setup_logger
+from app.logger import setup_logger
 
 logger = setup_logger(__name__)
+
+LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 # Initialize logging early
 def setup_logging():
@@ -20,11 +23,12 @@ def setup_logging():
     ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
 
+    log_file = os.path.join(LOG_DIR, "app.log")
     fh = TimedRotatingFileHandler(
-        filename="logs/app.log",
+        log_file,
         when="midnight",
         interval=1,
-        backupCount=30,
+        backupCount=7,
         encoding="utf-8",
     )
     fh.setLevel(logging.INFO)

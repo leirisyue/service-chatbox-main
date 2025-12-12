@@ -84,7 +84,7 @@ def _resolve_supported_model() -> Optional[str]:
         return available[0]
     except Exception:
         # If listing fails, try a small known-good set
-        fallbacks = [settings.APP_GEMINI_MODEL, "gemini-2.0-flash", "gemini-1.5-flash"]
+        fallbacks = [settings.APP_GEMINI_MODEL, "gemini-2.0-flash"]
         for name in fallbacks:
             try:
                 model = genai.GenerativeModel(name)

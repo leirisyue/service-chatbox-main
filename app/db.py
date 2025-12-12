@@ -2,9 +2,10 @@ from typing import List, Tuple, Dict, Any, Optional
 import psycopg
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
-from pgvector.psycopg import register_vector
+from pgvector.psycopg import register_vector, Vector
 from app.config import settings
-from .logger import setup_logger
+from app.logger import setup_logger
+
 logger = setup_logger(__name__)
 
 dsn = (
@@ -21,9 +22,8 @@ def _on_connect(conn):
     except Exception:
         pass
 
-pool = ConnectionPool(conninfo=dsn, kwargs={"row_factory": dict_row}, open=_on_connect)
-
-pool.wait()
+# Ensure pgvector is registered on every pooled connection
+pool = ConnectionPool(conninfo=dsn, kwargs={"row_factory": dict_row}, configure=_on_connect)
 
 def health_check_db() -> bool:
     try:
@@ -61,10 +61,7 @@ def count_documents_per_table() -> Dict[str, int]:
     return result
 
 def get_embedding_dimension(schema: str, table: str) -> Optional[int]:
-    """
-    Lấy chiều của cột vector 'embedding' bằng cách đọc một bản ghi đầu tiên.
-    Nếu không có dữ liệu, trả None.
-    """
+    logger.info("Getting embedding dimension")
     with pool.connection() as conn, conn.cursor() as cur:
         try:
             cur.execute(f'SELECT embedding FROM "{schema}"."{table}" WHERE embedding IS NOT NULL LIMIT 1;')
@@ -74,7 +71,6 @@ def get_embedding_dimension(schema: str, table: str) -> Optional[int]:
             emb = row["embedding"]
             if isinstance(emb, (list, tuple)):
                 return len(emb)
-            # Một số adapter có thể trả Vector object
             try:
                 return len(list(emb))
             except Exception:
@@ -88,19 +84,20 @@ def get_embedding_dimension(schema: str, table: str) -> Optional[int]:
 
 def _table_topk(schema: str, table: str, query_vec: List[float], top_k: int) -> List[Dict[str, Any]]:
     """
-    Lấy top_k từ 1 bảng theo cosine distance (<=>). Nếu lỗi, fallback Euclidean (<->).
-    Truyền list/tuple làm tham số vector (pgvector adapter hỗ trợ trực tiếp).
+    Truy vấn top-k theo cosine (<=>); nếu lỗi thì fallback Euclidean (<->).
+    Ép kiểu tham số về vector bằng %s::vector để tránh bị hiểu là double precision[].
     """
+    logger.info("Querying top")
     with pool.connection() as conn, conn.cursor() as cur:
-        param_vec = query_vec  # adapter pgvector/psycopg chấp nhận list/tuple
+        param_vec = Vector(query_vec)
         try:
             sql = f'''
                 SELECT 
                     id, original_data, content_text, 
-                    (1 - (embedding <=> %s))::double precision AS score
+                    (1 - (embedding <=> %s::vector))::double precision AS score
                 FROM "{schema}"."{table}"
                 WHERE embedding IS NOT NULL
-                ORDER BY embedding <=> %s
+                ORDER BY embedding <=> %s::vector
                 LIMIT %s;
             '''
             cur.execute(sql, (param_vec, param_vec, top_k))
@@ -114,16 +111,49 @@ def _table_topk(schema: str, table: str, query_vec: List[float], top_k: int) -> 
             sql = f'''
                 SELECT 
                     id, original_data, content_text, 
-                    (1.0 / (1.0 + (embedding <-> %s)))::double precision AS score
+                    (1.0 / (1.0 + (embedding <-> %s::vector)))::double precision AS score
                 FROM "{schema}"."{table}"
                 WHERE embedding IS NOT NULL
-                ORDER BY embedding <-> %s
+                ORDER BY embedding <-> %s::vector
                 LIMIT %s;
             '''
             cur.execute(sql, (param_vec, param_vec, top_k))
             return cur.fetchall()
 
 def similarity_search_table(schema: str, table: str, query_vec: List[float], top_k: int, min_score: float) -> List[Dict[str, Any]]:
+    logger.info("Performing similarity search on %s.%s with top_k=%d and min_score=%.3f", schema, table, top_k, min_score)
+
+    try:
+        table_dim = get_embedding_dimension(schema, table)
+    except Exception:
+        table_dim = None
+
+    if table_dim and table_dim > 0:
+        qlen = len(query_vec)
+        if qlen != table_dim:
+            if qlen < table_dim:
+                # pad with zeros
+                query_vec = list(query_vec) + [0.0] * (table_dim - qlen)
+                logger.warning(
+                    "Query vector padded from %d to %d dimensions for %s.%s",
+                    qlen,
+                    table_dim,
+                    schema,
+                    table,
+                )
+            else:
+                # truncate to match
+                query_vec = list(query_vec)[:table_dim]
+                logger.warning(
+                    "Query vector truncated from %d to %d dimensions for %s.%s",
+                    qlen,
+                    table_dim,
+                    schema,
+                    table,
+                )
+    else:
+        logger.warning("Could not determine embedding dimension for %s.%s; proceeding without alignment", schema, table)
+        
     rows = _table_topk(schema, table, query_vec, top_k)
     out: List[Dict[str, Any]] = []
     for r in rows:
