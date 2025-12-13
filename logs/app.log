@@ -1,354 +1,100 @@
-2025-12-12 14:24:35 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.0-flash RELOAD=False
-2025-12-12 07:24:35,669 INFO __main__: Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.0-flash RELOAD=False
-2025-12-12 14:24:36 [INFO] [app.table_selector_llm] Using 2 default table schemas
-2025-12-12 07:24:36,895 INFO app.table_selector_llm: Using 2 default table schemas
-2025-12-12 14:24:36 [INFO] [__main__] Router mounted successfully.
-2025-12-12 07:24:36,916 INFO __main__: Router mounted successfully.
-2025-12-12 14:24:36 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.0-flash RELOAD=False
-2025-12-12 07:24:36,971 INFO app.main: Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.0-flash RELOAD=False
-2025-12-12 14:24:36 [INFO] [app.main] Router mounted successfully.
-2025-12-12 07:24:36,976 INFO app.main: Router mounted successfully.
-2025-12-12 07:24:36,977 INFO uvicorn.error: Started server process [1]
-2025-12-12 07:24:36,978 INFO uvicorn.error: Waiting for application startup.
-2025-12-12 07:24:36,978 INFO uvicorn.error: Application startup complete.
-2025-12-12 07:24:36,980 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-2025-12-12 07:24:53,468 INFO uvicorn.access: 172.22.0.1:45936 - "GET /docs HTTP/1.1" 200
-2025-12-12 07:24:53,830 INFO uvicorn.access: 172.22.0.1:45936 - "GET /openapi.json HTTP/1.1" 200
-2025-12-12 07:24:54,497 INFO uvicorn.access: 172.22.0.1:45936 - "GET /docs HTTP/1.1" 200
-2025-12-12 07:24:54,775 INFO uvicorn.access: 172.22.0.1:45936 - "GET /openapi.json HTTP/1.1" 200
-2025-12-12 14:25:03 [ERROR] [app.table_selector_llm] LLM table selection failed: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
-Please retry in 55.90446356s. [links {
-  description: "Learn more about Gemini API quotas"
-  url: "https://ai.google.dev/gemini-api/docs/rate-limits"
-}
-, violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count"
-  quota_id: "GenerateContentInputTokensPerModelPerMinute-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-, retry_delay {
-  seconds: 55
-}
-]
-Traceback (most recent call last):
-  File "/app/app/table_selector_llm.py", line 140, in select_tables_with_llm
-    response = model.generate_content(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/generativeai/generative_models.py", line 331, in generate_content
-    response = self._client.generate_content(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/ai/generativelanguage_v1beta/services/generative_service/client.py", line 830, in generate_content
-    response = rpc(
-               ^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
-    return wrapped_func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 294, in retry_wrapped_func
-    return retry_target(
-           ^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 156, in retry_target
-    next_sleep = _retry_error_helper(
-                 ^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_base.py", line 214, in _retry_error_helper
-    raise final_exc from source_exc
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 147, in retry_target
-    result = target()
-             ^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/timeout.py", line 130, in func_with_timeout
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
-    raise exceptions.from_grpc_error(exc) from exc
-google.api_core.exceptions.ResourceExhausted: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
-Please retry in 55.90446356s. [links {
-  description: "Learn more about Gemini API quotas"
-  url: "https://ai.google.dev/gemini-api/docs/rate-limits"
-}
-, violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count"
-  quota_id: "GenerateContentInputTokensPerModelPerMinute-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-, retry_delay {
-  seconds: 55
-}
-]
-2025-12-12 07:25:03,890 ERROR app.table_selector_llm: LLM table selection failed: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
-Please retry in 55.90446356s. [links {
-  description: "Learn more about Gemini API quotas"
-  url: "https://ai.google.dev/gemini-api/docs/rate-limits"
-}
-, violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count"
-  quota_id: "GenerateContentInputTokensPerModelPerMinute-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-, retry_delay {
-  seconds: 55
-}
-]
-Traceback (most recent call last):
-  File "/app/app/table_selector_llm.py", line 140, in select_tables_with_llm
-    response = model.generate_content(
-               ^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/generativeai/generative_models.py", line 331, in generate_content
-    response = self._client.generate_content(
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/ai/generativelanguage_v1beta/services/generative_service/client.py", line 830, in generate_content
-    response = rpc(
-               ^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/gapic_v1/method.py", line 131, in __call__
-    return wrapped_func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 294, in retry_wrapped_func
-    return retry_target(
-           ^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 156, in retry_target
-    next_sleep = _retry_error_helper(
-                 ^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_base.py", line 214, in _retry_error_helper
-    raise final_exc from source_exc
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/retry/retry_unary.py", line 147, in retry_target
-    result = target()
-             ^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/timeout.py", line 130, in func_with_timeout
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/local/lib/python3.11/site-packages/google/api_core/grpc_helpers.py", line 77, in error_remapped_callable
-    raise exceptions.from_grpc_error(exc) from exc
-google.api_core.exceptions.ResourceExhausted: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. 
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 0, model: gemini-2.0-flash
-* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_input_token_count, limit: 0, model: gemini-2.0-flash
-Please retry in 55.90446356s. [links {
-  description: "Learn more about Gemini API quotas"
-  url: "https://ai.google.dev/gemini-api/docs/rate-limits"
-}
-, violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_requests"
-  quota_id: "GenerateRequestsPerMinutePerProjectPerModel-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-violations {
-  quota_metric: "generativelanguage.googleapis.com/generate_content_free_tier_input_token_count"
-  quota_id: "GenerateContentInputTokensPerModelPerMinute-FreeTier"
-  quota_dimensions {
-    key: "model"
-    value: "gemini-2.0-flash"
-  }
-  quota_dimensions {
-    key: "location"
-    value: "global"
-  }
-}
-, retry_delay {
-  seconds: 55
-}
-]
-2025-12-12 14:25:03 [INFO] [app.routers.rag] Selected table: public.bompk_data (score=0.400)
-2025-12-12 07:25:03,895 INFO app.routers.rag: Selected table: public.bompk_data (score=0.400)
-2025-12-12 14:25:10 [INFO] [app.db] Getting embedding dimension
-2025-12-12 07:25:10,211 INFO app.db: Getting embedding dimension
-2025-12-12 14:25:10 [INFO] [app.routers.rag] Query vec dim=4096, DB vec dim for public.bompk_data=768
-2025-12-12 07:25:10,226 INFO app.routers.rag: Query vec dim=4096, DB vec dim for public.bompk_data=768
-2025-12-12 14:25:10 [INFO] [app.routers.rag] Aligned query vec dim=768
-2025-12-12 07:25:10,227 INFO app.routers.rag: Aligned query vec dim=768
-2025-12-12 14:25:10 [INFO] [app.db] Performing similarity search on public.bompk_data with top_k=5 and min_score=0.300
-2025-12-12 07:25:10,228 INFO app.db: Performing similarity search on public.bompk_data with top_k=5 and min_score=0.300
-2025-12-12 14:25:10 [INFO] [app.db] Getting embedding dimension
-2025-12-12 07:25:10,229 INFO app.db: Getting embedding dimension
-2025-12-12 14:25:10 [INFO] [app.db] Querying top
-2025-12-12 07:25:10,235 INFO app.db: Querying top
-2025-12-12 07:25:12,881 INFO uvicorn.access: 172.22.0.1:45952 - "POST /query HTTP/1.1" 200
-2025-12-12 07:28:43,367 INFO uvicorn.error: Shutting down
-2025-12-12 07:28:43,469 INFO uvicorn.error: Waiting for application shutdown.
-2025-12-12 07:28:43,470 INFO uvicorn.error: Application shutdown complete.
-2025-12-12 07:28:43,471 INFO uvicorn.error: Finished server process [1]
-2025-12-12 14:28:54 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 07:28:54,246 INFO __main__: Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 14:28:55 [INFO] [app.table_selector_llm] Using 2 default table schemas
-2025-12-12 07:28:55,310 INFO app.table_selector_llm: Using 2 default table schemas
-2025-12-12 14:28:55 [INFO] [__main__] Router mounted successfully.
-2025-12-12 07:28:55,336 INFO __main__: Router mounted successfully.
-2025-12-12 14:28:55 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 07:28:55,398 INFO app.main: Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 14:28:55 [INFO] [app.main] Router mounted successfully.
-2025-12-12 07:28:55,404 INFO app.main: Router mounted successfully.
-2025-12-12 07:28:55,405 INFO uvicorn.error: Started server process [1]
-2025-12-12 07:28:55,406 INFO uvicorn.error: Waiting for application startup.
-2025-12-12 07:28:55,407 INFO uvicorn.error: Application startup complete.
-2025-12-12 07:28:55,408 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-2025-12-12 07:29:40,683 INFO uvicorn.access: 172.23.0.1:44282 - "GET /docs HTTP/1.1" 200
-2025-12-12 07:29:40,997 INFO uvicorn.access: 172.23.0.1:44282 - "GET /openapi.json HTTP/1.1" 200
-2025-12-12 14:29:53 [INFO] [app.table_selector_llm] LLM response: ```json
+2025-12-14 00:14:38 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:14:39 [INFO] [app.table_selector_llm] Using 2 default table schemas
+2025-12-14 00:14:39 [INFO] [__main__] Router mounted successfully.
+2025-12-14 00:14:39 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:14:39 [INFO] [app.main] Router mounted successfully.
+2025-12-13 17:14:39,346 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:14:39,347 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:14:39,348 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:14:39,349 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:20:14,756 INFO uvicorn.access: 172.18.0.1:38274 - "GET /docs HTTP/1.1" 200
+2025-12-13 17:20:15,140 INFO uvicorn.access: 172.18.0.1:38274 - "GET /openapi.json HTTP/1.1" 200
+2025-12-14 00:23:42 [INFO] [app.table_selector_llm] LLM response: ```json
 {
     "selected_tables": [
         {
             "schema": "public",
-            "table": "bom_son_data",
+            "table": "bompk_data",
             "confidence": 0.9,
-            "reason": "Câu hỏi đề cập đến 'SƠN TĨNH ĐIỆ...
-2025-12-12 07:29:53,393 INFO app.table_selector_llm: LLM response: ```json
-{
-    "selected_tables": [
-        {
-            "schema": "public",
-            "table": "bom_son_data",
-            "confidence": 0.9,
-            "reason": "Câu hỏi đề cập đến 'SƠN TĨNH ĐIỆ...
-2025-12-12 14:29:53 [INFO] [app.table_selector_llm] LLM selected 1 tables: [('bom_son_data', 0.9)]
-2025-12-12 07:29:53,396 INFO app.table_selector_llm: LLM selected 1 tables: [('bom_son_data', 0.9)]
-2025-12-12 14:29:53 [INFO] [app.routers.rag] Selected table: public.bom_son_data (score=0.900)
-2025-12-12 07:29:53,397 INFO app.routers.rag: Selected table: public.bom_son_data (score=0.900)
-2025-12-12 14:29:59 [INFO] [app.db] Getting embedding dimension
-2025-12-12 07:29:59,174 INFO app.db: Getting embedding dimension
-2025-12-12 14:29:59 [INFO] [app.routers.rag] Query vec dim=4096, DB vec dim for public.bom_son_data=768
-2025-12-12 07:29:59,186 INFO app.routers.rag: Query vec dim=4096, DB vec dim for public.bom_son_data=768
-2025-12-12 14:29:59 [INFO] [app.routers.rag] Aligned query vec dim=768
-2025-12-12 07:29:59,187 INFO app.routers.rag: Aligned query vec dim=768
-2025-12-12 14:29:59 [INFO] [app.db] Performing similarity search on public.bom_son_data with top_k=3 and min_score=0.300
-2025-12-12 07:29:59,188 INFO app.db: Performing similarity search on public.bom_son_data with top_k=3 and min_score=0.300
-2025-12-12 14:29:59 [INFO] [app.db] Getting embedding dimension
-2025-12-12 07:29:59,189 INFO app.db: Getting embedding dimension
-2025-12-12 14:29:59 [INFO] [app.db] Querying top
-2025-12-12 07:29:59,194 INFO app.db: Querying top
-2025-12-12 07:30:01,510 INFO uvicorn.access: 172.23.0.1:44296 - "POST /query HTTP/1.1" 200
-2025-12-12 07:34:47,949 INFO uvicorn.error: Shutting down
-2025-12-12 07:34:48,051 INFO uvicorn.error: Waiting for application shutdown.
-2025-12-12 07:34:48,053 INFO uvicorn.error: Application shutdown complete.
-2025-12-12 07:34:48,053 INFO uvicorn.error: Finished server process [1]
-2025-12-12 15:07:50 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 08:07:50,043 INFO __main__: Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 15:07:50 [INFO] [app.table_selector_llm] Using 2 default table schemas
-2025-12-12 08:07:50,937 INFO app.table_selector_llm: Using 2 default table schemas
-2025-12-12 15:07:50 [INFO] [__main__] Router mounted successfully.
-2025-12-12 08:07:50,966 INFO __main__: Router mounted successfully.
-2025-12-12 15:07:51 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 08:07:51,013 INFO app.main: Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
-2025-12-12 15:07:51 [INFO] [app.main] Router mounted successfully.
-2025-12-12 08:07:51,020 INFO app.main: Router mounted successfully.
-2025-12-12 08:07:51,021 INFO uvicorn.error: Started server process [1]
-2025-12-12 08:07:51,022 INFO uvicorn.error: Waiting for application startup.
-2025-12-12 08:07:51,023 INFO uvicorn.error: Application startup complete.
-2025-12-12 08:07:51,024 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+            "reason": "Câu hỏi đề cập đến 'vật liệu ĐINH ...
+2025-12-14 00:23:42 [INFO] [app.table_selector_llm] LLM selected 1 tables: [('bompk_data', 0.9)]
+2025-12-14 00:23:42 [INFO] [app.routers.rag] Selected table: public.bompk_data (score=0.900)
+2025-12-14 00:23:48 [INFO] [app.routers.rag] Generated embedding vector of dim=4096 for query
+2025-12-14 00:23:48 [INFO] [app.db] f_get_embedding_dimension
+2025-12-14 00:23:48 [INFO] [app.routers.rag] Query vec dim=4096, DB vec dim for public.bompk_data=768
+2025-12-14 00:23:48 [INFO] [app.routers.rag] Aligned query vec dim=768
+2025-12-14 00:23:48 [INFO] [app.db] Performing similarity search on public.bompk_data with top_k=7 and min_score=0.300
+2025-12-14 00:23:48 [INFO] [app.db] f_get_embedding_dimension
+2025-12-14 00:23:48 [INFO] [app.db] f__table_topk
+2025-12-14 00:23:48 [INFO] [app.db] f__table_topk SQL query on 
+                SELECT 
+                    id, original_data, content_text, 
+                    (1 - (embedding <=> %s::vector))::double precision AS score
+                FROM "public"."bompk_data"
+                WHERE embedding IS NOT NULL
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s;
+            
+2025-12-14 00:23:49 [INFO] [app.db] Results - END
+2025-12-13 17:23:51,324 INFO uvicorn.access: 172.18.0.1:56162 - "POST /query HTTP/1.1" 200
+2025-12-13 17:27:48,604 INFO uvicorn.error: Shutting down
+2025-12-13 17:27:48,706 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:27:48,708 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 17:27:48,708 INFO uvicorn.error: Finished server process [1]
+2025-12-13 17:27:59,766 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:27:59,767 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:27:59,768 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:27:59,769 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:29:00,069 INFO uvicorn.error: Shutting down
+2025-12-13 17:29:00,170 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:29:00,172 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 17:29:00,173 INFO uvicorn.error: Finished server process [1]
+2025-12-13 17:29:12,002 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:29:12,003 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:29:12,004 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:29:12,011 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:32:07,874 INFO uvicorn.error: Shutting down
+2025-12-13 17:32:07,975 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:32:07,977 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 17:32:07,978 INFO uvicorn.error: Finished server process [1]
+2025-12-13 17:32:21,421 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:32:21,422 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:32:21,427 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:32:21,432 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:33:43,536 INFO uvicorn.error: Shutting down
+2025-12-13 17:33:43,638 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:33:56,147 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:33:56,147 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:33:56,148 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:33:56,149 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:34:09,904 INFO uvicorn.access: 172.22.0.1:38186 - "GET /docs HTTP/1.1" 200
+2025-12-13 17:34:10,147 INFO uvicorn.access: 172.22.0.1:38186 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 17:34:24,752 INFO uvicorn.access: 172.22.0.1:38186 - "POST /query HTTP/1.1" 200
+2025-12-13 17:38:54,682 INFO uvicorn.error: Shutting down
+2025-12-13 17:38:54,783 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:38:54,784 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 17:38:54,785 INFO uvicorn.error: Finished server process [1]
+2025-12-13 17:39:04,557 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:39:04,557 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:39:04,558 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:39:04,559 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:39:13,968 INFO uvicorn.access: 172.23.0.1:54534 - "GET /docs HTTP/1.1" 200
+2025-12-13 17:39:14,098 INFO uvicorn.access: 172.23.0.1:54534 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 17:40:34,049 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:40:34,050 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:40:34,051 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:40:34,053 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:40:36,476 INFO uvicorn.access: 172.24.0.1:44400 - "GET /docs HTTP/1.1" 200
+2025-12-13 17:40:39,800 INFO uvicorn.access: 172.24.0.1:44400 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 17:40:54,785 INFO uvicorn.access: 172.24.0.1:44400 - "POST /query HTTP/1.1" 200
+2025-12-13 17:46:00,502 INFO uvicorn.error: Shutting down
+2025-12-13 17:46:00,604 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:46:00,605 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 17:46:00,606 INFO uvicorn.error: Finished server process [1]
+2025-12-13 17:47:28,694 INFO uvicorn.error: Started server process [1]
+2025-12-13 17:47:28,695 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 17:47:28,696 INFO uvicorn.error: Application startup complete.
+2025-12-13 17:47:28,697 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 17:47:38,924 INFO uvicorn.access: 172.25.0.1:43054 - "GET /docs HTTP/1.1" 200
+2025-12-13 17:47:39,210 INFO uvicorn.access: 172.25.0.1:43054 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 17:47:58,996 INFO uvicorn.access: 172.25.0.1:43062 - "POST /query HTTP/1.1" 200

@@ -19,6 +19,8 @@ rag_router = APIRouter()
 log = logging.getLogger("rag")
 
 def _align_vector_dim(vec: List[float], target_dim: Optional[int]) -> List[float]:
+    logger.debug("Aligning vector of dim ")
+    
     if not isinstance(vec, list) or target_dim is None:
         return vec
     if len(vec) == target_dim:
@@ -60,6 +62,8 @@ async def query_rag(
         logger.info("Selected table: %s.%s (score=%.3f)", schema, table, table_score)
 
         query_vec = embed_text(merged_text)
+        logger.info("Generated embedding vector of dim=%s for query", len(query_vec) if isinstance(query_vec, list) else None)
+        
         db_dim = get_embedding_dimension(schema, table)
         logger.info("Query vec dim=%s, DB vec dim for %s.%s=%s", len(query_vec) if isinstance(query_vec, list) else None, schema, table, db_dim)
 

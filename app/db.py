@@ -61,7 +61,7 @@ def count_documents_per_table() -> Dict[str, int]:
     return result
 
 def get_embedding_dimension(schema: str, table: str) -> Optional[int]:
-    logger.info("Getting embedding dimension")
+    logger.info("f_get_embedding_dimension")
     with pool.connection() as conn, conn.cursor() as cur:
         try:
             cur.execute(f'SELECT embedding FROM "{schema}"."{table}" WHERE embedding IS NOT NULL LIMIT 1;')
@@ -87,9 +87,10 @@ def _table_topk(schema: str, table: str, query_vec: List[float], top_k: int) -> 
     Truy vấn top-k theo cosine (<=>); nếu lỗi thì fallback Euclidean (<->).
     Ép kiểu tham số về vector bằng %s::vector để tránh bị hiểu là double precision[].
     """
-    logger.info("Querying top")
+    logger.info("f__table_topk")
     with pool.connection() as conn, conn.cursor() as cur:
         param_vec = Vector(query_vec)
+        logger.info("query_vec %d", param_vec)
         try:
             sql = f'''
                 SELECT 
@@ -100,6 +101,8 @@ def _table_topk(schema: str, table: str, query_vec: List[float], top_k: int) -> 
                 ORDER BY embedding <=> %s::vector
                 LIMIT %s;
             '''
+            logger.info("f__table_topk SQL query on %s", sql)
+            
             cur.execute(sql, (param_vec, param_vec, top_k))
             return cur.fetchall()
         except Exception as e:
@@ -111,13 +114,15 @@ def _table_topk(schema: str, table: str, query_vec: List[float], top_k: int) -> 
             sql = f'''
                 SELECT 
                     id, original_data, content_text, 
-                    (1.0 / (1.0 + (embedding <-> %s::vector)))::double precision AS score
+                    (1 - (embedding <=> %s::vector)) AS score
                 FROM "{schema}"."{table}"
                 WHERE embedding IS NOT NULL
-                ORDER BY embedding <-> %s::vector
+                ORDER BY embedding <=> %s::vector
                 LIMIT %s;
             '''
+            logger.info("f__table_topk SQL query on %s", sql)
             cur.execute(sql, (param_vec, param_vec, top_k))
+            logger.info("Results seatch dataTable ", cur.fetchall())
             return cur.fetchall()
 
 def similarity_search_table(schema: str, table: str, query_vec: List[float], top_k: int, min_score: float) -> List[Dict[str, Any]]:
@@ -155,10 +160,13 @@ def similarity_search_table(schema: str, table: str, query_vec: List[float], top
         logger.warning("Could not determine embedding dimension for %s.%s; proceeding without alignment", schema, table)
         
     rows = _table_topk(schema, table, query_vec, top_k)
+    logger.info("ROW %d ", rows)
     out: List[Dict[str, Any]] = []
     for r in rows:
         r_out = dict(r)
         r_out["table"] = f"{schema}.{table}"
         out.append(r_out)
     out.sort(key=lambda x: x.get("score", 0.0), reverse=True)
+    
+    logger.info("Results - END") 
     return [r for r in out if (r.get("score") or 0.0) >= min_score]
