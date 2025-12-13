@@ -646,3 +646,10 @@ ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
 2025-12-14 03:41:13 [INFO] [app.main] Router mounted successfully.
 2025-12-14 03:41:44 [INFO] [app.db] Embedding model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
 2025-12-14 03:41:44 [WARNING] [app.db] Cosine query failed on public.bom_son_data: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-14 03:44:37 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:44:41 [INFO] [__main__] Router mounted successfully.
+2025-12-14 03:44:41 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:44:41 [INFO] [app.main] Router mounted successfully.
+2025-12-14 03:44:56 [INFO] [app.db] Embedding model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-14 03:46:00 [INFO] [app.db] Embedding model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-14 03:48:01 [INFO] [app.db] Embedding model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096

@@ -542,3 +542,17 @@ psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (for
 2025-12-13 20:43:05,631 INFO uvicorn.error: Waiting for application shutdown.
 2025-12-13 20:43:05,632 INFO uvicorn.error: Application shutdown complete.
 2025-12-13 20:43:05,633 INFO uvicorn.error: Finished server process [1]
+2025-12-13 20:44:41,489 INFO uvicorn.error: Started server process [1]
+2025-12-13 20:44:41,490 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 20:44:41,492 INFO uvicorn.error: Application startup complete.
+2025-12-13 20:44:41,494 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 20:44:42,443 INFO uvicorn.access: 192.168.160.1:43098 - "GET /docs HTTP/1.1" 200
+2025-12-13 20:44:42,725 INFO uvicorn.access: 192.168.160.1:43098 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 20:44:43,430 INFO uvicorn.access: 192.168.160.1:43098 - "GET /docs HTTP/1.1" 200
+2025-12-13 20:44:43,530 INFO uvicorn.access: 192.168.160.1:43098 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 20:44:54,985 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 20:45:05,232 INFO uvicorn.access: 192.168.160.1:43106 - "POST /query HTTP/1.1" 200
+2025-12-13 20:45:59,476 INFO rag: Selected table: public.bom_son_data (score=0.321)
+2025-12-13 20:46:04,666 INFO uvicorn.access: 192.168.160.1:51252 - "POST /query HTTP/1.1" 200
+2025-12-13 20:48:00,096 INFO rag: Selected table: public.bom_son_data (score=0.486)
+2025-12-13 20:48:08,180 INFO uvicorn.access: 192.168.160.1:48306 - "POST /query HTTP/1.1" 200
