@@ -98,3 +98,447 @@
 2025-12-13 17:47:38,924 INFO uvicorn.access: 172.25.0.1:43054 - "GET /docs HTTP/1.1" 200
 2025-12-13 17:47:39,210 INFO uvicorn.access: 172.25.0.1:43054 - "GET /openapi.json HTTP/1.1" 200
 2025-12-13 17:47:58,996 INFO uvicorn.access: 172.25.0.1:43062 - "POST /query HTTP/1.1" 200
+2025-12-13 17:58:40,985 INFO uvicorn.error: Shutting down
+2025-12-13 17:58:41,086 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 17:58:41,088 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 17:58:41,089 INFO uvicorn.error: Finished server process [1]
+2025-12-13 18:02:52,124 INFO uvicorn.error: Started server process [1]
+2025-12-13 18:02:52,125 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 18:02:52,126 INFO uvicorn.error: Application startup complete.
+2025-12-13 18:02:52,129 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 18:03:41,949 INFO uvicorn.access: 172.27.0.1:58280 - "GET /docs HTTP/1.1" 200
+2025-12-13 18:03:42,058 INFO uvicorn.access: 172.27.0.1:58280 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 18:03:56,764 INFO uvicorn.access: 172.27.0.1:58270 - "POST /query HTTP/1.1" 422
+2025-12-13 18:04:19,934 INFO uvicorn.error: Shutting down
+2025-12-13 18:04:20,036 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 18:04:20,037 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 18:04:20,038 INFO uvicorn.error: Finished server process [1]
+2025-12-13 18:04:31,688 INFO uvicorn.error: Started server process [1]
+2025-12-13 18:04:31,691 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 18:04:31,692 INFO uvicorn.error: Application startup complete.
+2025-12-13 18:04:31,694 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 18:04:31,717 INFO uvicorn.access: 172.28.0.1:54584 - "GET /docs HTTP/1.1" 200
+2025-12-13 18:04:31,834 INFO uvicorn.access: 172.28.0.1:54584 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 18:04:32,676 INFO uvicorn.access: 172.28.0.1:54584 - "GET /docs HTTP/1.1" 200
+2025-12-13 18:04:33,681 INFO uvicorn.access: 172.28.0.1:54584 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 18:04:39,341 INFO rag: Selected table: public.bom_son_data (score=0.454)
+2025-12-13 18:04:40,113 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=8548
+2025-12-13 18:04:40,115 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 18:04:40,121 ERROR rag: Unhandled error in /query: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+Traceback (most recent call last):
+  File "/app/app/db.py", line 125, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 146, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 142, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+2025-12-13 18:04:40,126 INFO uvicorn.access: 172.28.0.1:54584 - "POST /query HTTP/1.1" 500
+2025-12-13 18:06:37,075 INFO uvicorn.error: Shutting down
+2025-12-13 18:06:37,176 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 18:06:37,178 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 18:06:37,178 INFO uvicorn.error: Finished server process [1]
+2025-12-13 18:06:49,061 INFO uvicorn.error: Started server process [1]
+2025-12-13 18:06:49,061 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 18:06:49,062 INFO uvicorn.error: Application startup complete.
+2025-12-13 18:06:49,064 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 18:07:21,389 INFO uvicorn.access: 172.29.0.1:52684 - "GET /docs HTTP/1.1" 200
+2025-12-13 18:07:21,754 INFO uvicorn.access: 172.29.0.1:52684 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 18:07:27,505 INFO rag: Selected table: public.bom_son_data (score=0.454)
+2025-12-13 18:07:28,079 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=768
+2025-12-13 18:07:31,342 INFO uvicorn.access: 172.29.0.1:52696 - "POST /query HTTP/1.1" 200
+2025-12-13 18:13:05,798 INFO uvicorn.error: Shutting down
+2025-12-13 18:13:05,900 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 18:13:05,901 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 18:13:05,902 INFO uvicorn.error: Finished server process [1]
+2025-12-13 18:13:18,876 INFO uvicorn.error: Started server process [1]
+2025-12-13 18:13:18,879 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 18:13:18,880 INFO uvicorn.error: Application startup complete.
+2025-12-13 18:13:18,882 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 18:13:26,950 INFO uvicorn.access: 172.30.0.1:52702 - "GET /docs HTTP/1.1" 200
+2025-12-13 18:13:27,352 INFO uvicorn.access: 172.30.0.1:52702 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 18:13:34,526 INFO rag: Selected table: public.bom_son_data (score=0.454)
+2025-12-13 18:13:35,286 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=768
+2025-12-13 18:13:35,291 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 18:13:38,374 INFO uvicorn.access: 172.30.0.1:52718 - "POST /query HTTP/1.1" 200
+2025-12-13 18:36:22,843 INFO uvicorn.error: Shutting down
+2025-12-13 18:36:22,944 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 18:36:22,947 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 18:36:22,948 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:06:30,048 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:06:30,049 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:06:30,050 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:06:30,053 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:06:47,889 INFO uvicorn.access: 172.31.0.1:39378 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:06:48,276 INFO uvicorn.access: 172.31.0.1:39378 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:07:48,744 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:07:49,496 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:07:49,498 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:07:49,508 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:07:49,513 INFO uvicorn.access: 172.31.0.1:39376 - "POST /query HTTP/1.1" 500
+2025-12-13 19:13:14,291 INFO uvicorn.error: Shutting down
+2025-12-13 19:13:14,392 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:13:14,394 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:13:14,395 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:13:38,783 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:13:38,783 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:13:38,784 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:13:38,787 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:14:00,333 INFO uvicorn.access: 192.168.0.1:51182 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:14:00,656 INFO uvicorn.access: 192.168.0.1:51182 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:14:05,846 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:14:06,597 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:14:06,599 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:14:06,604 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:14:06,611 INFO uvicorn.access: 192.168.0.1:51182 - "POST /query HTTP/1.1" 500
+2025-12-13 19:16:11,487 INFO uvicorn.error: Shutting down
+2025-12-13 19:16:11,588 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:16:11,589 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:16:11,590 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:16:38,143 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:16:38,144 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:16:38,145 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:16:38,147 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:16:47,453 INFO uvicorn.access: 192.168.16.1:37986 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:16:47,824 INFO uvicorn.access: 192.168.16.1:37986 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:16:54,880 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:16:55,666 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:16:55,667 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:16:55,672 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:16:55,678 INFO uvicorn.access: 192.168.16.1:37996 - "POST /query HTTP/1.1" 500
+2025-12-13 19:30:40,405 INFO uvicorn.error: Shutting down
+2025-12-13 19:30:40,507 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:30:40,508 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:30:40,509 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:31:45,326 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:31:45,326 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:31:45,327 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:31:45,329 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:31:53,744 INFO uvicorn.access: 192.168.32.1:46794 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:31:54,102 INFO uvicorn.access: 192.168.32.1:46794 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:32:03,903 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:32:04,727 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:32:04,729 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:32:04,734 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:32:04,740 INFO uvicorn.access: 192.168.32.1:46796 - "POST /query HTTP/1.1" 500
+2025-12-13 19:33:41,704 INFO uvicorn.error: Shutting down
+2025-12-13 19:33:41,806 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:33:41,807 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:33:41,808 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:33:59,969 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:33:59,971 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:33:59,976 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:33:59,979 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:34:18,583 INFO uvicorn.access: 192.168.48.1:57542 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:34:19,037 INFO uvicorn.access: 192.168.48.1:57542 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:34:25,229 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:34:25,980 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:34:25,982 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:34:25,986 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:34:25,992 INFO uvicorn.access: 192.168.48.1:57540 - "POST /query HTTP/1.1" 500
+2025-12-13 19:39:20,594 INFO uvicorn.error: Shutting down
+2025-12-13 19:39:20,695 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:39:20,697 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:39:20,698 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:39:43,258 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:39:43,259 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:39:43,260 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:39:43,261 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:39:45,734 INFO uvicorn.access: 192.168.80.1:40204 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:39:46,241 INFO uvicorn.access: 192.168.80.1:40204 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:39:47,428 INFO uvicorn.access: 192.168.80.1:40204 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:39:47,662 INFO uvicorn.access: 192.168.80.1:40204 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:39:54,635 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:39:55,392 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:39:55,394 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:39:55,398 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:39:55,402 INFO uvicorn.access: 192.168.80.1:40202 - "POST /query HTTP/1.1" 500
+2025-12-13 19:51:04,169 INFO uvicorn.error: Shutting down
+2025-12-13 19:51:04,270 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:51:04,272 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:51:04,272 INFO uvicorn.error: Finished server process [1]
+2025-12-13 19:51:22,896 INFO uvicorn.error: Started server process [1]
+2025-12-13 19:51:22,897 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 19:51:22,898 INFO uvicorn.error: Application startup complete.
+2025-12-13 19:51:22,900 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 19:51:24,441 INFO uvicorn.access: 192.168.96.1:38020 - "GET /docs HTTP/1.1" 200
+2025-12-13 19:51:24,845 INFO uvicorn.access: 192.168.96.1:38020 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 19:51:34,183 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 19:51:35,025 INFO db: Embedding with model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-13 19:51:35,028 WARNING db: Cosine query failed on public.bom_son_data: cannot adapt type 'set' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-13 19:51:35,035 ERROR rag: Unhandled error in /query: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+Traceback (most recent call last):
+  File "/app/app/db.py", line 124, in _table_topk
+    cur.execute(sql, (test, test, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'set' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 145, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 141, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.errors.UndefinedFunction: operator does not exist: double precision[] <-> vector
+LINE 4:                     (1.0 / (1.0 + (embedding <-> $1::vector)...
+                                                     ^
+HINT:  No operator matches the given name and argument types. You might need to add explicit type casts.
+2025-12-13 19:51:35,042 INFO uvicorn.access: 192.168.96.1:38022 - "POST /query HTTP/1.1" 500
+2025-12-13 19:52:14,290 INFO uvicorn.error: Shutting down
+2025-12-13 19:52:14,391 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 19:52:14,394 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 19:52:14,396 INFO uvicorn.error: Finished server process [1]
+2025-12-13 20:37:31,193 INFO uvicorn.error: Started server process [1]
+2025-12-13 20:37:31,194 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 20:37:31,195 INFO uvicorn.error: Application startup complete.
+2025-12-13 20:37:31,198 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 20:37:38,175 INFO uvicorn.access: 192.168.144.1:58458 - "GET /docs HTTP/1.1" 200
+2025-12-13 20:37:38,494 INFO uvicorn.access: 192.168.144.1:58458 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 20:37:47,812 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 20:37:48,749 ERROR rag: Unhandled error in /query: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+Traceback (most recent call last):
+  File "/app/app/db.py", line 149, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 172, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 168, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+2025-12-13 20:37:48,759 INFO uvicorn.access: 192.168.144.1:58444 - "POST /query HTTP/1.1" 500
+2025-12-13 20:41:08,909 INFO uvicorn.error: Shutting down
+2025-12-13 20:41:09,011 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 20:41:09,014 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 20:41:09,016 INFO uvicorn.error: Finished server process [1]
+2025-12-13 20:41:13,127 INFO uvicorn.error: Started server process [1]
+2025-12-13 20:41:13,127 INFO uvicorn.error: Waiting for application startup.
+2025-12-13 20:41:13,130 INFO uvicorn.error: Application startup complete.
+2025-12-13 20:41:13,132 INFO uvicorn.error: Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+2025-12-13 20:41:31,331 INFO uvicorn.access: 192.168.144.1:41230 - "GET /docs HTTP/1.1" 200
+2025-12-13 20:41:31,746 INFO uvicorn.access: 192.168.144.1:41230 - "GET /openapi.json HTTP/1.1" 200
+2025-12-13 20:41:43,851 INFO rag: Selected table: public.bom_son_data (score=0.357)
+2025-12-13 20:41:44,611 ERROR rag: Unhandled error in /query: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+Traceback (most recent call last):
+  File "/app/app/db.py", line 149, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/app/app/routers/rag.py", line 50, in query_rag
+    hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 172, in similarity_search_table
+    rows = _table_topk(schema, table, query_text, top_k)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/app/db.py", line 168, in _table_topk
+    cur.execute(sql, (param_vec, param_vec, top_k))
+  File "/usr/local/lib/python3.11/site-packages/psycopg/cursor.py", line 97, in execute
+    raise ex.with_traceback(None)
+psycopg.ProgrammingError: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO)
+2025-12-13 20:41:44,614 INFO uvicorn.access: 192.168.144.1:41234 - "POST /query HTTP/1.1" 500
+2025-12-13 20:43:05,529 INFO uvicorn.error: Shutting down
+2025-12-13 20:43:05,631 INFO uvicorn.error: Waiting for application shutdown.
+2025-12-13 20:43:05,632 INFO uvicorn.error: Application shutdown complete.
+2025-12-13 20:43:05,633 INFO uvicorn.error: Finished server process [1]

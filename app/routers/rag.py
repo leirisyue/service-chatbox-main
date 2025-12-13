@@ -3,31 +3,16 @@ from fastapi import APIRouter, File, UploadFile, Form, HTTPException
 from fastapi import status
 from app.schemas import QueryResponse, HealthStatusResponse, DocumentCountResponse, ContextDocument
 from app.ocr import ocr_images_to_text, health_check_ocr
-from app.embedding import embed_text, health_check_ollama
 from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
 from app.llm import generate_answer, health_check_gemini
 from app.config import settings
-from app.table_selector_llm import selector
+from app.table_selector import selector
 from PIL import Image
 from io import BytesIO
 import logging
-from app.logger import setup_logger
-
-logger = setup_logger(__name__)
 
 rag_router = APIRouter()
 log = logging.getLogger("rag")
-
-def _align_vector_dim(vec: List[float], target_dim: Optional[int]) -> List[float]:
-    logger.debug("Aligning vector of dim ")
-    
-    if not isinstance(vec, list) or target_dim is None:
-        return vec
-    if len(vec) == target_dim:
-        return vec
-    if len(vec) > target_dim:
-        return vec[:target_dim]
-    return vec + [0.0] * (target_dim - len(vec))
 
 @rag_router.post("/query", response_model=QueryResponse, summary="Query the RAG system with a text query")
 async def query_rag(
@@ -59,19 +44,10 @@ async def query_rag(
         if not selected:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bảng phù hợp theo schema mô tả.")
         schema, table, table_score = selected
-        logger.info("Selected table: %s.%s (score=%.3f)", schema, table, table_score)
+        log.info("Selected table: %s.%s (score=%.3f)", schema, table, table_score)
 
-        query_vec = embed_text(merged_text)
-        logger.info("Generated embedding vector of dim=%s for query", len(query_vec) if isinstance(query_vec, list) else None)
-        
-        db_dim = get_embedding_dimension(schema, table)
-        logger.info("Query vec dim=%s, DB vec dim for %s.%s=%s", len(query_vec) if isinstance(query_vec, list) else None, schema, table, db_dim)
-
-        query_vec_aligned = _align_vector_dim(query_vec, db_dim)
-        if isinstance(query_vec_aligned, list):
-            logger.info("Aligned query vec dim=%d", len(query_vec_aligned))
-
-        hits = similarity_search_table(schema, table, query_vec_aligned, top_k=top_k, min_score=min_score)
+        # Truy vấn similarity trực tiếp với text (db sẽ dùng EmbeddingService để embed bằng đúng model)
+        hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
 
         context_strings: List[str] = []
         used_contexts: List[ContextDocument] = []
@@ -96,21 +72,5 @@ async def query_rag(
     except HTTPException:
         raise
     except Exception as e:
-        logger.exception("Unhandled error in /query: %s", e)
+        log.exception("Unhandled error in /query: %s", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Lỗi nội bộ khi xử lý truy vấn: {str(e)}")
-    
-    
-
-@rag_router.get("/health", response_model=HealthStatusResponse, summary="Get health status of the RAG system components.")
-async def health():
-    return HealthStatusResponse(
-        db_ok=health_check_db(),
-        ollama_ok=health_check_ollama(),
-        gemini_ok=health_check_gemini(),
-        ocr_ok=health_check_ocr(),
-    )
-
-@rag_router.get("/documents/count", response_model=DocumentCountResponse, summary="Get the total number of documents in the vector store.")
-async def documents_count():
-    per_table = count_documents_per_table()
-    return DocumentCountResponse(total=sum(per_table.values()), per_table=per_table)

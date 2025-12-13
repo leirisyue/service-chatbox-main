@@ -68,3 +68,581 @@
                 LIMIT %s;
             
 2025-12-14 00:40:52 [INFO] [app.db] Results - END
+2025-12-14 00:47:27 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:47:28 [INFO] [app.table_selector_llm] Using 2 default table schemas
+2025-12-14 00:47:28 [INFO] [__main__] Router mounted successfully.
+2025-12-14 00:47:28 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:47:28 [INFO] [app.main] Router mounted successfully.
+2025-12-14 00:47:50 [INFO] [app.table_selector_llm] LLM response: ```json
+{
+    "selected_tables": [
+        {
+            "schema": "public",
+            "table": "bompk_data",
+            "confidence": 0.9,
+            "reason": "Câu hỏi đề cập đến 'vật liệu ĐINH ...
+2025-12-14 00:47:50 [INFO] [app.table_selector_llm] LLM selected 1 tables: [('bompk_data', 0.9)]
+2025-12-14 00:47:50 [INFO] [app.routers.rag] Selected table: public.bompk_data (score=0.900)
+2025-12-14 00:47:56 [INFO] [app.routers.rag] Generated embedding vector of dim=4096 for query
+2025-12-14 00:47:56 [INFO] [app.db] f_get_embedding_dimension
+2025-12-14 00:47:56 [INFO] [app.routers.rag] Query vec dim=4096, DB vec dim for public.bompk_data=768
+2025-12-14 00:47:56 [INFO] [app.routers.rag] Aligned query vec dim=768
+2025-12-14 00:47:56 [INFO] [app.db] Performing similarity search on public.bompk_data with top_k=5 and min_score=0.010
+2025-12-14 00:47:56 [INFO] [app.db] f_get_embedding_dimension
+2025-12-14 00:47:56 [INFO] [app.db] f__table_topk
+2025-12-14 00:47:56 [INFO] [app.db] f__table_topk SQL query on 
+                SELECT 
+                    id, original_data, content_text, 
+                    (1 - (embedding <=> %s::vector))::double precision AS score
+                FROM "public"."bompk_data"
+                WHERE embedding IS NOT NULL
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s;
+            
+2025-12-14 00:47:56 [INFO] [app.db] Results - END
+2025-12-14 00:58:53 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:58:54 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:58:56 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:58:56 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:58:58 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:58:58 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:59:00 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:59:00 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:59:03 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:59:03 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:59:07 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:59:07 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:59:12 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:59:12 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:59:20 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:59:20 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 00:59:35 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 00:59:35 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:00:03 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:00:03 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:00:56 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:00:56 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:28 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:28 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:30 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:30 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:32 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:32 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:34 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:34 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:37 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:37 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:40 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:41 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:45 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:46 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:01:54 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:01:54 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:02:09 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:02:09 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 6, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 01:02:44 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:02:52 [INFO] [__main__] Router mounted successfully.
+2025-12-14 01:02:52 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:02:52 [INFO] [app.main] Router mounted successfully.
+2025-12-14 01:04:28 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:04:31 [INFO] [__main__] Router mounted successfully.
+2025-12-14 01:04:31 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:04:31 [INFO] [app.main] Router mounted successfully.
+2025-12-14 01:06:45 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:06:49 [INFO] [__main__] Router mounted successfully.
+2025-12-14 01:06:49 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:06:49 [INFO] [app.main] Router mounted successfully.
+2025-12-14 01:13:15 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:13:18 [INFO] [__main__] Router mounted successfully.
+2025-12-14 01:13:18 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=ultimate_advisor OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 01:13:18 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:06:22 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:06:29 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:06:30 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:06:30 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:13:31 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:13:38 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:13:38 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:13:38 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:16:30 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:16:38 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:16:38 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:16:38 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:31:38 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:31:45 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:31:45 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:31:45 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:33:52 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:33:59 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:33:59 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:33:59 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:39:35 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:39:43 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:39:43 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:39:43 [INFO] [app.main] Router mounted successfully.
+2025-12-14 02:51:15 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:51:22 [INFO] [__main__] Router mounted successfully.
+2025-12-14 02:51:22 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 02:51:22 [INFO] [app.main] Router mounted successfully.
+2025-12-14 03:23:40 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:23:40 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:23:50 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:23:50 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:23:57 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:23:57 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:24:01 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:24:02 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:24:06 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:24:07 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:24:14 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:24:14 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:24:29 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:24:30 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:24:48 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:24:48 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:25:03 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:25:03 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:25:30 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:25:30 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:26:23 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:26:24 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:27:25 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:27:26 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:28:27 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:28:27 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:29:29 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:29:29 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:30:31 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:30:31 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:31:33 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:31:33 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:32:35 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:32:35 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:33:37 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:33:37 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:34:39 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:34:39 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:35:49 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:35:49 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:35:51 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:35:51 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:35:53 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:35:54 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:35:56 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:35:56 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:35:59 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:35:59 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:36:02 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:36:02 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:36:07 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:36:08 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:36:16 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:36:16 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:36:31 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:36:31 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:36:58 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:36:59 [ERROR] [__main__] Failed to mount router: cannot import name 'Vector' from 'pgvector' (unknown location)
+Traceback (most recent call last):
+  File "/app/app/main.py", line 73, in <module>
+    from app.routers.rag import rag_router
+  File "/app/app/routers/rag.py", line 6, in <module>
+    from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
+  File "/app/app/db.py", line 8, in <module>
+    from pgvector import Vector
+ImportError: cannot import name 'Vector' from 'pgvector' (unknown location)
+2025-12-14 03:37:27 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:37:31 [INFO] [__main__] Router mounted successfully.
+2025-12-14 03:37:31 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:37:31 [INFO] [app.main] Router mounted successfully.
+2025-12-14 03:37:48 [INFO] [app.db] Embedding model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-14 03:37:48 [WARNING] [app.db] Cosine query failed on public.bom_son_data: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
+2025-12-14 03:41:11 [INFO] [__main__] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:41:13 [INFO] [__main__] Router mounted successfully.
+2025-12-14 03:41:13 [INFO] [app.main] Environment summary: PG=host.docker.internal:5432 DB=vectorDB OLLAMA_HOST=http://ollama:11434 EMB_MODEL=qwen3-embedding:latest GEMINI_MODEL=gemini-2.5-flash-lite RELOAD=False
+2025-12-14 03:41:13 [INFO] [app.main] Router mounted successfully.
+2025-12-14 03:41:44 [INFO] [app.db] Embedding model 'qwen3-embedding:latest': query dim=4096, aligned to table public.bom_son_data dim=4096
+2025-12-14 03:41:44 [WARNING] [app.db] Cosine query failed on public.bom_son_data: cannot adapt type 'Vector' using placeholder '%s' (format: AUTO). Falling back to Euclidean.
