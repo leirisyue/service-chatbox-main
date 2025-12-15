@@ -6,6 +6,7 @@ from app.config import settings
 @retry(stop=stop_after_attempt(3), wait=wait_fixed(0.5))
 def embed_text(text: str) -> List[float]:
     url = f"{settings.OLLAMA_HOST.rstrip('/')}/api/embeddings"
+    # url = f"{settings.OLLAMA_HOST.rstrip('/')}"
     print('Embedding text via Ollama: ', url)
     payload = {
         "model": settings.APP_EMBEDDING_MODEL,

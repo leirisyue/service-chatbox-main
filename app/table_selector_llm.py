@@ -81,33 +81,34 @@ class TableSelectorLLM:
         
         prompt = f"""Bạn là một chuyên gia phân tích database. Nhiệm vụ của bạn là chọn bảng phù hợp nhất để trả lời câu hỏi của người dùng.
 
-DANH SÁCH CÁC BẢNG AVAILABLE:
-{tables_text}
+                    DANH SÁCH CÁC BẢNG AVAILABLE:
+                    {tables_text}
 
-CÂU HỎI CỦA NGƯỜI DÙNG:
-"{query_text}"
+                    CÂU HỎI CỦA NGƯỜI DÙNG:
+                    "{query_text}"
 
-YÊU CẦU:
-1. Phân tích câu hỏi và xác định bảng nào chứa thông tin cần thiết
-2. Có thể chọn nhiều bảng nếu cần kết hợp dữ liệu
-3. Trả về kết quả dưới dạng JSON với format:
-{{
-    "selected_tables": [
-        {{
-            "schema": "schema_name",
-            "table": "table_name",
-            "confidence": 0.95,
-            "reason": "Lý do chọn bảng này"
-        }}
-    ],
-    "analysis": "Phân tích ngắn gọn về câu hỏi"
-}}
+                    YÊU CẦU:
+                    1. Phân tích câu hỏi và xác định bảng nào chứa thông tin cần thiết
+                    2. Có thể chọn nhiều bảng nếu cần kết hợp dữ liệu
+                    3. Trả về kết quả dưới dạng JSON với format:
+                    {{
+                        "selected_tables": [
+                            {{
+                                "schema": "schema_name",
+                                "table": "table_name",
+                                "confidence": 0.95,
+                                "reason": "Lý do chọn bảng này"
+                            }}
+                        ],
+                        "analysis": "Phân tích ngắn gọn về câu hỏi"
+                    }}
 
-4. confidence là số từ 0.0 đến 1.0 (càng cao càng chắc chắn)
-5. Chỉ chọn bảng có confidence >= 0.5
-6. Sắp xếp theo độ ưu tiên giảm dần
+                    4. confidence là số từ 0.0 đến 1.0 (càng cao càng chắc chắn)
+                    5. Chỉ chọn bảng có confidence >= 0.5
+                    6. Sắp xếp theo độ ưu tiên giảm dần
 
-CHÚ Ý: Chỉ trả về JSON, không thêm text nào khác."""
+                    CHÚ Ý: Chỉ trả về JSON, không thêm text nào khác.
+                """
 
         return prompt
     

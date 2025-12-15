@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     APP_PG_PORT: int = int(os.getenv("APP_PG_PORT", "5432"))
 
     # Ollama
-    OLLAMA_HOST: str = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434")
+    OLLAMA_HOST: str = os.getenv("OLLAMA_URL")
     APP_EMBEDDING_MODEL:str = os.getenv("APP_EMBEDDING_MODEL", "qwen3-embedding:latest")
 
     # Gemini

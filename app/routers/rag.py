@@ -9,22 +9,23 @@ from app.config import settings
 from app.table_selector import selector
 from PIL import Image
 from io import BytesIO
-import logging
-
 rag_router = APIRouter()
-log = logging.getLogger("rag")
 
-@rag_router.post("/query", response_model=QueryResponse, summary="Query the RAG system with a text query")
+from app.logger import setup_logger
+logger = setup_logger(__name__)
+
+@rag_router.post("/api/query", response_model=QueryResponse, summary="Query the RAG system with a text query")
 async def query_rag(
     text: Optional[str] = Form(default=None, description="Câu hỏi/đoạn văn bản"),
     top_k: int = Form(default=settings.APP_TOP_K, ge=1, le=50),
     min_score: float = Form(default=settings.APP_MIN_SCORE, ge=0.0, le=1.0),
     # files: Optional[List[UploadFile]] = File(default=None, description="Danh sách ảnh (image/*)"),
 ):
+    logger.info("Received /api/query request: text=%s, top_k=%d, min_score=%.3f",text, top_k, min_score)
     try:
         image_bytes_list: List[bytes] = []
         pil_images: List[Image] = []
-        # if files:
+        # if files:```
         #     for f in files:
         #         content = await f.read()
         #         if content:
@@ -44,7 +45,7 @@ async def query_rag(
         if not selected:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy bảng phù hợp theo schema mô tả.")
         schema, table, table_score = selected
-        log.info("Selected table: %s.%s (score=%.3f)", schema, table, table_score)
+        logger.info("Selected table: %s.%s (score=%.3f)", schema, table, table_score)
 
         # Truy vấn similarity trực tiếp với text (db sẽ dùng EmbeddingService để embed bằng đúng model)
         hits = similarity_search_table(schema, table, merged_text, top_k=top_k, min_score=min_score)
@@ -72,5 +73,5 @@ async def query_rag(
     except HTTPException:
         raise
     except Exception as e:
-        log.exception("Unhandled error in /query: %s", e)
+        logger.exception("Unhandled error in /query: %s", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Lỗi nội bộ khi xử lý truy vấn: {str(e)}")
