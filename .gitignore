@@ -1,9 +1,13 @@
 # Environment files
 .env
+.env.locally
 .venv
 
 app/__pycache__
 
 *.env
+*.env.locally
 
 .history
+
+logs
