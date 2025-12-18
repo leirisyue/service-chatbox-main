@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import Message from './Message';
 import './Chat.css';
 
-function ChatContainer({ messages, isLoading }) {
+function ChatContainer({ messages, isLoading, onSendMessage }) {
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -17,7 +17,7 @@ function ChatContainer({ messages, isLoading }) {
     <div className="chat-container">
       <div className="messages-wrapper">
         {messages.map((message, index) => (
-          <Message key={index} message={message} />
+          <Message key={index} message={message} onSendMessage={onSendMessage} />
         ))}
         
         {isLoading && (

@@ -3,9 +3,31 @@ import ProductCard from './ProductCard';
 import MaterialCard from './MaterialCard';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
+import { formatTimestamp } from '../../utils/helpers';
 
-function Message({ message }) {
+function Message({ message, onSendMessage }) {
   const isUser = message.role === 'user';
+
+  // Handle click for material button
+  const handleMaterialClick = (headcode) => {
+    if (onSendMessage) {
+      onSendMessage(`Phân tích nguyên vật liệu sản phẩm ${headcode}`);
+    }
+  };
+
+  // Handle click for price button
+  const handlePriceClick = (headcode) => {
+    if (onSendMessage) {
+      onSendMessage(`Tính chi phí sản phẩm ${headcode}`);
+    }
+  };
+
+  // Handle click for material detail button
+  const handleMaterialDetailClick = (materialName) => {
+    if (onSendMessage) {
+      onSendMessage(`Chi tiết vật liệu ${materialName}`);
+    }
+  };
 
   const renderContent = () => {
     if (typeof message.content === 'string') {
@@ -26,6 +48,9 @@ function Message({ message }) {
       </div>
       <div className="message-content">
         <div className="message-text">
+          {formatTimestamp(message?.timestamp)}
+          <br />
+          <br />
           {renderContent()}
         </div>
 
@@ -41,8 +66,8 @@ function Message({ message }) {
                     <ProductCard
                       key={index}
                       product={product}
-                      onMaterialClick={() => {/* Handle click */ }}
-                      onPriceClick={() => {/* Handle click */ }}
+                      onMaterialClick={() => handleMaterialClick(product.headcode)}
+                      onPriceClick={() => handlePriceClick(product.headcode)}
                     /></Box>
                 </Grid>
               ))}
@@ -60,7 +85,7 @@ function Message({ message }) {
                 <MaterialCard
                   key={index}
                   material={material}
-                  onDetailClick={() => {/* Handle click */ }}
+                  onDetailClick={() => handleMaterialDetailClick(material.material_name)}
                 />
               ))}
             </div>

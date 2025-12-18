@@ -27,7 +27,7 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-GEMINI_API_KEY = "AIzaSyBBIQbyDW28I76wNj5obdX8xlov4bZi2Ow"
+GEMINI_API_KEY = 
 genai.configure(api_key=GEMINI_API_KEY)
 
 app = FastAPI(title="AA Corporation Chatbot API", version="4.0")
@@ -89,7 +89,6 @@ def generate_embedding(text: str):
         print(f"❌ Lỗi embedding: {e}")
         return None
 
-# ========================================
 # ========================================
 # ✨ [MỚI] HYBRID SEARCH FUNCTIONS
 # ========================================
@@ -218,7 +217,8 @@ def search_products_hybrid(params: Dict):
                 "project": r.get("project"),
                 "project_id": r.get("project_id"),
                 "similarity": round(1 - r["raw_distance"], 3),
-                "keyword_matched": bool(r.get("keyword_match"))
+                "keyword_matched": bool(r.get("keyword_match")),
+                "total_cost": 0.0  # Khởi tạo, sẽ được tính sau
             } for r in results]
             
             print(f"✅ Found {len(products)} products (Hybrid)")
@@ -234,6 +234,7 @@ def search_products_hybrid(params: Dict):
     conn.close()
     return {"products": [], "search_method": "hybrid_failed"}
 
+# ========================================
 # [NEW] AUTO CLASSIFICATION AI
 # ========================================
 
@@ -403,6 +404,50 @@ def get_latest_material_price(material_subprice_json: str) -> float:
         return 0.0
 
 # ========================================
+# HELPER - TÍNH TOTAL COST CHO SẢN PHẨM
+# ========================================
+
+def calculate_product_total_cost(headcode: str) -> float:
+    """Tính tổng chi phí (total_cost) cho một sản phẩm"""
+    conn = get_db()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    sql = """
+        SELECT 
+            m.material_subprice,
+            pm.quantity
+        FROM product_materials pm
+        INNER JOIN materials m ON pm.material_id_sap = m.id_sap
+        WHERE pm.product_headcode = %s
+    """
+    
+    try:
+        cur.execute(sql, (headcode,))
+        materials = cur.fetchall()
+    except Exception as e:
+        print(f"❌ Query error in calculate_product_total_cost for {headcode}: {e}")
+        conn.close()
+        return 0.0
+    
+    conn.close()
+    
+    if not materials:
+        return 0.0
+    
+    material_cost = 0
+    for mat in materials:
+        quantity = float(mat['quantity']) if mat['quantity'] else 0.0
+        latest_price = get_latest_material_price(mat['material_subprice'])
+        material_cost += quantity * latest_price  # Sửa lỗi: cộng dồn material_cost
+    
+    labor_cost = material_cost * 0.20
+    overhead_cost = material_cost * 0.15
+    profit_margin = material_cost * 0.25
+    
+    total_cost = material_cost + labor_cost + overhead_cost + profit_margin
+    return total_cost
+
+# ========================================
 # INTENT DETECTION
 # ========================================
 
@@ -534,7 +579,7 @@ def format_search_results(results):
     """Format results thành cấu trúc chuẩn"""
     products = []
     for row in results:
-        products.append({
+        product = {
             "headcode": row["headcode"],
             "product_name": row["product_name"],
             "category": row.get("category"),
@@ -542,8 +587,11 @@ def format_search_results(results):
             "material_primary": row.get("material_primary"),
             "project": row.get("project"),
             "project_id": row.get("project_id"),
-            "similarity": round(1 - row["distance"], 3) if "distance" in row else None
-        })
+            "similarity": round(1 - row["distance"], 3) if "distance" in row else None,
+            "total_cost": calculate_product_total_cost(row["headcode"]), 
+            "image_url": row.get("image_url")
+        }
+        products.append(product)
     return products
 
 def search_products(params: Dict):
@@ -553,6 +601,9 @@ def search_products(params: Dict):
     try:
         result = search_products_hybrid(params)
         if result.get("products"):
+            # Cập nhật total_cost cho các sản phẩm trong hybrid search
+            for product in result["products"]:
+                product["total_cost"] = calculate_product_total_cost(product["headcode"])
             return result
     except Exception as e:
         print(f"⚠️ TIER 1 failed: {e}")
@@ -640,8 +691,14 @@ def search_products_keyword_only(params: Dict):
             }
         
         print(f"✅ TIER 3 Success: Found {len(results)} products")
+        products = []
+        for r in results:
+            product = dict(r)
+            product["total_cost"] = calculate_product_total_cost(product["headcode"])
+            products.append(product)
+        
         return {
-            "products": [dict(r) for r in results],
+            "products": products,
             "search_method": "keyword"
         }
     except Exception as e:
@@ -810,7 +867,7 @@ def calculate_product_cost(headcode: str):
     for mat in materials:
         quantity = float(mat['quantity']) if mat['quantity'] else 0.0  # ✅ Cast sang float
         latest_price = get_latest_material_price(mat['material_subprice'])
-        total_cost = quantity * latest_price
+        material_cost += quantity * latest_price  # SỬA LỖI: Cộng dồn material_cost
 
     labor_cost = material_cost * 0.20
     overhead_cost = material_cost * 0.15
@@ -867,7 +924,8 @@ def calculate_product_cost(headcode: str):
             "profit_margin": profit_margin,
             "total_cost": total_cost,
             "material_count": material_count
-        }
+        },
+        "total_cost": total_cost  # Thêm total_cost vào response
     }
 
 
@@ -1249,6 +1307,11 @@ def chat(msg: ChatMessage):
                         f"📋 Xem vật liệu {products[0]['headcode']}"
                     ]
                 
+                # Đảm bảo mỗi sản phẩm có total_cost
+                for product in products:
+                    if "total_cost" not in product or product["total_cost"] == 0:
+                        product["total_cost"] = calculate_product_total_cost(product["headcode"])
+                
                 result_response = {
                     "response": response_text,
                     "products": products,
@@ -1486,12 +1549,6 @@ async def search_by_image(file: UploadFile = File(...)):
 # ========================================
 # IMPORT ENDPOINTS
 # ========================================
-# ========================================
-# THÊM VÀO chatbot_api.py
-# ========================================
-
-# [1] BATCH CLASSIFICATION FUNCTIONS
-# Thêm sau phần AUTO CLASSIFICATION AI (dòng ~100)
 
 def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     """
@@ -1502,10 +1559,8 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     if not products_batch:
         return []
     
-    # [FIX] Đổi sang model ổn định để tránh lỗi Rate Limit của bản Experimental
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
-    # Tạo danh sách sản phẩm trong prompt
     products_text = ""
     for i, prod in enumerate(products_batch, 1):
         products_text += f"{i}. ID: {prod['id_sap']}, Tên: {prod['name']}\n"
@@ -1529,10 +1584,8 @@ OUTPUT JSON ARRAY ONLY (no markdown, no backticks):
 ]
 """
     
-    # Gọi AI với retry logic
     response_text = call_gemini_with_retry(model, prompt, max_retries=3)
     
-    # Fallback mặc định nếu AI lỗi hẳn
     default_results = [{
         'id_sap': p['id_sap'],
         'category': 'Chưa phân loại',
@@ -1545,7 +1598,6 @@ OUTPUT JSON ARRAY ONLY (no markdown, no backticks):
     
     try:
         clean = response_text.strip()
-        # Xử lý trường hợp Gemini trả về markdown code block
         if "```json" in clean:
             clean = clean.split("```json")[1].split("```")[0].strip()
         elif "```" in clean:
@@ -1553,7 +1605,6 @@ OUTPUT JSON ARRAY ONLY (no markdown, no backticks):
         
         results = json.loads(clean)
         
-        # Đảm bảo số lượng kết quả khớp với input
         if len(results) != len(products_batch):
             print(f"⚠️ Batch size mismatch: expected {len(products_batch)}, got {len(results)}")
             return default_results
@@ -1563,6 +1614,7 @@ OUTPUT JSON ARRAY ONLY (no markdown, no backticks):
     except Exception as e:
         print(f"❌ Batch classification parse error: {e}")
         return default_results
+
 def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     """
     Phân loại HÀNG LOẠT vật liệu
@@ -1572,7 +1624,6 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     if not materials_batch:
         return []
     
-    # [FIX] Đổi sang model gemini-1.5-flash để ổn định hơn và tránh lỗi Rate Limit
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     materials_text = ""
@@ -1595,10 +1646,8 @@ OUTPUT JSON ARRAY ONLY:
 ]
 """
     
-    # Gọi Gemini với retry
     response_text = call_gemini_with_retry(model, prompt, max_retries=3)
     
-    # Tạo kết quả mặc định (Fallback) để trả về nếu AI lỗi
     default_results = [{
         'id_sap': m['id_sap'],
         'material_group': 'Chưa phân loại',
@@ -1610,7 +1659,6 @@ OUTPUT JSON ARRAY ONLY:
     
     try:
         clean = response_text.strip()
-        # Xử lý làm sạch markdown JSON
         if "```json" in clean:
             clean = clean.split("```json")[1].split("```")[0].strip()
         elif "```" in clean:
@@ -1618,7 +1666,6 @@ OUTPUT JSON ARRAY ONLY:
         
         results = json.loads(clean)
         
-        # Kiểm tra số lượng kết quả trả về có khớp input không
         if len(results) != len(materials_batch):
             print(f"⚠️ Batch materials mismatch: expected {len(materials_batch)}, got {len(results)}")
             return default_results
@@ -1628,10 +1675,6 @@ OUTPUT JSON ARRAY ONLY:
     except Exception as e:
         print(f"❌ Batch materials classification error: {e}")
         return default_results
-
-
-# Thay thế 2 endpoints import cũ
-# ========================================
 
 @app.post("/import/products")
 async def import_products(file: UploadFile = File(...)):
@@ -1643,7 +1686,6 @@ async def import_products(file: UploadFile = File(...)):
         contents = await file.read()
         df = pd.read_csv(io.BytesIO(contents))
         
-        # Chuẩn hóa tên cột
         df.columns = df.columns.str.strip().str.lower()
         
         required = ['headcode', 'id_sap', 'product_name']
@@ -1672,7 +1714,6 @@ async def import_products(file: UploadFile = File(...)):
                     errors.append(f"Row {idx+2}: Missing required fields")
                     continue
                 
-                # LẤY TRỰC TIẾP từ CSV (nếu có), KHÔNG gọi AI
                 category = str(row.get('category', 'Chưa phân loại')).strip() if pd.notna(row.get('category')) else 'Chưa phân loại'
                 sub_category = str(row.get('sub_category', 'Chưa phân loại')).strip() if pd.notna(row.get('sub_category')) else 'Chưa phân loại'
                 material_primary = str(row.get('material_primary', 'Chưa xác định')).strip() if pd.notna(row.get('material_primary')) else 'Chưa xác định'
@@ -1713,7 +1754,6 @@ async def import_products(file: UploadFile = File(...)):
         conn.commit()
         conn.close()
         
-        # Đếm số sản phẩm cần classify
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
@@ -1740,7 +1780,6 @@ async def import_products(file: UploadFile = File(...)):
         
     except Exception as e:
         return {"message": f"❌ Lỗi: {str(e)}"}
-
 
 @app.post("/import/materials")
 async def import_materials(file: UploadFile = File(...)):
@@ -1779,7 +1818,6 @@ async def import_materials(file: UploadFile = File(...)):
                     errors.append(f"Row {idx+2}: Missing required fields")
                     continue
                 
-                # KHÔNG gọi AI ngay
                 material_subgroup = str(row.get('material_subgroup', 'Chưa phân loại')).strip() if pd.notna(row.get('material_subgroup')) else 'Chưa phân loại'
                 
                 material_subprice = row.get('material_subprice')
@@ -1849,8 +1887,6 @@ async def import_materials(file: UploadFile = File(...)):
     except Exception as e:
         return {"message": f"❌ Lỗi: {str(e)}"}
 
-
-
 @app.post("/import/product-materials")
 async def import_product_materials(file: UploadFile = File(...)):
     """
@@ -1862,7 +1898,6 @@ async def import_product_materials(file: UploadFile = File(...)):
         contents = await file.read()
         df = pd.read_csv(io.BytesIO(contents))
         
-        # Chuẩn hóa tên cột
         df.columns = df.columns.str.strip().str.lower()
         
         required = ['product_headcode']
@@ -1880,17 +1915,15 @@ async def import_product_materials(file: UploadFile = File(...)):
         
         imported = 0
         skipped = 0
-        auto_created_materials = 0 # Đếm số vật liệu được tạo tự động
+        auto_created_materials = 0
         errors = []
         
-        # Pre-load dữ liệu để check nhanh
         cur.execute("SELECT headcode FROM products")
         existing_products = {row[0] for row in cur.fetchall()}
         
         cur.execute("SELECT id_sap FROM materials")
         existing_materials = {row[0] for row in cur.fetchall()}
 
-        # Hàm làm sạch ID
         def clean_id(val):
             if pd.isna(val) or val == '':
                 return ""
@@ -1904,7 +1937,6 @@ async def import_product_materials(file: UploadFile = File(...)):
             cur.execute(f"SAVEPOINT {savepoint_name}")
             
             try:
-                # 1. Xử lý Product (Vẫn bắt buộc phải có trước)
                 product_headcode = clean_id(row.get('product_headcode'))
                 
                 if not product_headcode or product_headcode.lower() == 'nan':
@@ -1912,10 +1944,8 @@ async def import_product_materials(file: UploadFile = File(...)):
                     continue 
 
                 if product_headcode not in existing_products:
-                    # Tùy chọn: Có thể muốn tự tạo Product luôn, nhưng thường Product cần kiểm soát chặt hơn
                     raise ValueError(f"Product '{product_headcode}' chưa có trong hệ thống")
 
-                # 2. Xử lý Material (Tự động tạo nếu thiếu)
                 material_id_sap = clean_id(row.get('material_id_sap'))
                 
                 if not material_id_sap or material_id_sap.lower() == 'nan':
@@ -1923,9 +1953,7 @@ async def import_product_materials(file: UploadFile = File(...)):
                     cur.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     continue 
 
-                # --- LOGIC MỚI: TỰ ĐỘNG TẠO VẬT LIỆU NẾU THIẾU ---
                 if material_id_sap not in existing_materials:
-                    # Tạo vật liệu tạm
                     temp_name = f"Vật liệu mới {material_id_sap}"
                     
                     cur.execute("""
@@ -1934,12 +1962,9 @@ async def import_product_materials(file: UploadFile = File(...)):
                         ON CONFLICT (id_sap) DO NOTHING
                     """, (material_id_sap, temp_name, "Auto-Created", "Chờ cập nhật"))
                     
-                    # Cập nhật vào set để các dòng sau không insert lại
                     existing_materials.add(material_id_sap)
                     auto_created_materials += 1
-                # --------------------------------------------------
-
-                # 3. Insert vào bảng định mức
+                
                 quantity = float(row['quantity']) if pd.notna(row.get('quantity')) else 0
                 unit = str(row.get('unit', '')).strip() if pd.notna(row.get('unit')) else None
                 
@@ -1982,10 +2007,8 @@ async def import_product_materials(file: UploadFile = File(...)):
     except Exception as e:
         return {"message": f"❌ Lỗi hệ thống: {str(e)}"}
 
-
 # ========================================
-# [3] NEW BATCH CLASSIFICATION ENDPOINTS
-# Thêm 2 endpoints mới để classify sau khi import
+# BATCH CLASSIFICATION ENDPOINTS
 # ========================================
 
 @app.post("/classify-products")
@@ -1998,7 +2021,6 @@ def classify_pending_products():
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Lấy sản phẩm chưa phân loại
         cur.execute("""
             SELECT headcode, id_sap, product_name 
             FROM products 
@@ -2023,12 +2045,11 @@ def classify_pending_products():
         classified = 0
         errors = []
         
-        BATCH_SIZE = 8  # Gemini xử lý tốt với 5-10 items
+        BATCH_SIZE = 8
         
         for i in range(0, len(pending_products), BATCH_SIZE):
             batch = pending_products[i:i+BATCH_SIZE]
             
-            # Chuẩn bị input cho batch classification
             batch_input = [{
                 'id_sap': p['id_sap'],
                 'name': p['product_name']
@@ -2037,10 +2058,8 @@ def classify_pending_products():
             print(f"🤖 Classifying batch {i//BATCH_SIZE + 1} ({len(batch)} products)...")
             
             try:
-                # GỌI BATCH CLASSIFICATION
                 results = batch_classify_products(batch_input)
                 
-                # Cập nhật vào DB
                 for j, result in enumerate(results):
                     try:
                         cur.execute("""
@@ -2062,19 +2081,16 @@ def classify_pending_products():
                 
                 conn.commit()
                 
-                # Delay giữa các batch để tránh rate limit
                 if i + BATCH_SIZE < len(pending_products):
                     time.sleep(4)
                 
             except Exception as e:
                 print(f"❌ Batch {i//BATCH_SIZE + 1} failed: {e}")
                 errors.append(f"Batch {i//BATCH_SIZE + 1}: {str(e)[:100]}")
-                # Tiếp tục với batch tiếp theo
                 continue
         
         conn.close()
         
-        # Kiểm tra còn bao nhiêu chưa phân loại
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
@@ -2101,7 +2117,6 @@ def classify_pending_products():
             "total": 0,
             "remaining": 0
         }
-
 
 @app.post("/classify-materials")
 def classify_pending_materials():
@@ -2201,7 +2216,6 @@ def classify_pending_materials():
             "remaining": 0
         }
 
-
 # ========================================
 # GENERATE EMBEDDINGS
 # ========================================
@@ -2223,7 +2237,7 @@ def generate_product_embeddings():
     
     if not products:
         conn.close()
-        return {"message": "âœ… Táº¥t cáº£ products Ä‘Ã£ cÃ³ embeddings"}
+        return {"message": "✅ Tất cả products đã có embeddings"}
     
     success = 0
     errors = []
@@ -2253,7 +2267,7 @@ def generate_product_embeddings():
     conn.close()
     
     return {
-        "message": f"âœ… ÄÃ£ táº¡o embeddings cho {success}/{len(products)} products",
+        "message": f"✅ Đã tạo embeddings cho {success}/{len(products)} products",
         "success": success,
         "total": len(products),
         "errors": errors[:5] if errors else []
@@ -2276,7 +2290,7 @@ def generate_material_embeddings():
     
     if not materials:
         conn.close()
-        return {"message": "âœ… Táº¥t cáº£ materials Ä‘Ã£ cÃ³ embeddings"}
+        return {"message": "✅ Tất cả materials đã có embeddings"}
     
     success = 0
     errors = []
@@ -2306,7 +2320,7 @@ def generate_material_embeddings():
     conn.close()
     
     return {
-        "message": f"âœ… ÄÃ£ táº¡o embeddings cho {success}/{len(materials)} materials",
+        "message": f"✅ Đã tạo embeddings cho {success}/{len(materials)} materials",
         "success": success,
         "total": len(materials),
         "errors": errors[:5] if errors else []
@@ -2389,8 +2403,7 @@ def debug_chat_history():
     }
 
 # ========================================
-# [4] UPDATE ROOT ENDPOINT
-# Cập nhật danh sách endpoints
+# UPDATE ROOT ENDPOINT
 # ========================================
 
 @app.get("/")
@@ -2404,7 +2417,8 @@ def root():
             "✅ Import trước, classify sau",
             "✅ Batch size 8-10 items/call",
             "✅ Tiết kiệm quota Gemini",
-            "✅ NULL safety 100%"
+            "✅ NULL safety 100%",
+            "✅ Thêm total_cost vào response sản phẩm"
         ],
         "endpoints": {
             "chat": "POST /chat",
@@ -2419,8 +2433,6 @@ def root():
             "debug": "GET /debug/products, /debug/materials, /debug/chat-history"
         }
     }
-
-
 
 if __name__ == "__main__":
     import uvicorn

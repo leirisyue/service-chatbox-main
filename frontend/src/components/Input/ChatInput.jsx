@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import './Input.css';
+import ImageUpload from './ImageUpload';
 
-function ChatInput({ onSendMessage, disabled }) {
+function ChatInput({ onSendMessage, onImageUpload, disabled }) {
   const [inputValue, setInputValue] = useState('');
 
   const handleSubmit = (e) => {
@@ -21,6 +22,7 @@ function ChatInput({ onSendMessage, disabled }) {
 
   return (
     <form className="chat-input-form" onSubmit={handleSubmit}>
+      <ImageUpload onImageUpload={onImageUpload} disabled={disabled} />
       <input
         type="text"
         value={inputValue}
@@ -30,8 +32,8 @@ function ChatInput({ onSendMessage, disabled }) {
         disabled={disabled}
         className="chat-input"
       />
-      <button 
-        type="submit" 
+      <button
+        type="submit"
         disabled={!inputValue.trim() || disabled}
         className="send-button"
       >

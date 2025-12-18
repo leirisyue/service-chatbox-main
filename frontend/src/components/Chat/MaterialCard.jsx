@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 function MaterialCard({ material, onDetailClick }) {
+  // console.log("🚀 ~ MaterialCard ~ material:", material);
   const [imageUrl, setImageUrl] = useState(null);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ function MaterialCard({ material, onDetailClick }) {
     };
 
     if (material.image_url) {
-      setImageUrl(convertGDriveUrl(material.image_url));
+      setImageUrl(material.image_url);
     }
   }, [material.image_url]);
 
@@ -50,7 +51,7 @@ function MaterialCard({ material, onDetailClick }) {
         <p className="material-group">📂 Nhóm: {material.material_group || 'N/A'}</p>
         
         <div className="price-badge">
-          💰 {material.price?.toLocaleString('vi-VN') || '0'} VNĐ/{material.unit || ''}
+          💰 {material.total_cost?.toLocaleString('vi-VN') || material.price?.toLocaleString('vi-VN')} VNĐ
         </div>
       </div>
       

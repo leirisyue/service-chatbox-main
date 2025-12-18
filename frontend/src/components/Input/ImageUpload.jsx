@@ -1,74 +1,46 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
+import IconButton from '@mui/material/IconButton';
+import LoupeIcon from '@mui/icons-material/Loupe';
 import './Input.css';
 
 function ImageUpload({ onImageUpload, disabled }) {
   const fileInputRef = useRef(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+
+  const handleButtonClick = () => {
+    if (!disabled && fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleUpload = () => {
-    if (fileInputRef.current?.files[0] && !disabled) {
-      onImageUpload(fileInputRef.current.files[0]);
-      setPreviewUrl(null);
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const handleCancel = () => {
-    setPreviewUrl(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+    if (file && !disabled) {
+      onImageUpload(file);
+      // Reset input để có thể upload cùng file lại
+      e.target.value = '';
     }
   };
 
   return (
-    <div className="image-upload">
+    <>
       <input
         type="file"
         ref={fileInputRef}
-        accept="image/*"
+        accept="image/png,image/jpeg,image/jpg"
         onChange={handleFileSelect}
-        className="file-input"
+        style={{ display: 'none' }}
         disabled={disabled}
       />
-      
-      {previewUrl ? (
-        <div className="image-preview">
-          <img src={previewUrl} alt="Preview" />
-          <div className="preview-actions">
-            <button 
-              type="button" 
-              onClick={handleUpload}
-              className="btn-upload"
-              disabled={disabled}
-            >
-              🔍 Tìm sản phẩm tương tự
-            </button>
-            <button 
-              type="button" 
-              onClick={handleCancel}
-              className="btn-cancel"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="upload-placeholder">
-          <span>📷 Hoặc upload ảnh sản phẩm để tìm kiếm</span>
-        </div>
-      )}
-    </div>
+      <IconButton 
+        aria-label="upload image" 
+        size="large" 
+        onClick={handleButtonClick}
+        disabled={disabled}
+        title="📷 Upload ảnh để tìm sản phẩm tương tự"
+      >
+        <LoupeIcon />
+      </IconButton>
+    </>
   );
 }
 

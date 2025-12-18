@@ -59,6 +59,7 @@ function App() {
 
   // main message handler
   const handleSendMessage = async (message) => {
+    console.log("🚀 ~ handleSendMessage ~ message:", message);
     // Thêm message của user
     const userMessage = {
       role: 'user',
@@ -232,6 +233,7 @@ Hãy chọn một trong các gợi ý bên dưới hoặc gõ câu hỏi của b
           <ChatContainer
             messages={messages}
             isLoading={isLoading}
+            onSendMessage={handleSendMessage}
           />
 
           <div className="input-section">
@@ -243,12 +245,9 @@ Hãy chọn một trong các gợi ý bên dưới hoặc gõ câu hỏi của b
             <div className="input-row">
               <ChatInput
                 onSendMessage={handleSendMessage}
-                disabled={isLoading}
-              />
-              {/* <ImageUpload
                 onImageUpload={handleImageSearch}
                 disabled={isLoading}
-              /> */}
+              />
             </div>
           </div>
         </div>
