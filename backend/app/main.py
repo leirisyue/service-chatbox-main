@@ -46,9 +46,9 @@ def log_env_summary():
     try:
         from app.config import settings
         logger.info("Environment summary: PG=%s:%s DB=%s OLLAMA_HOST=%s EMB_MODEL=%s GEMINI_MODEL=%s RELOAD=%s",
-                 settings.APP_PG_HOST, settings.APP_PG_PORT, settings.APP_PG_DATABASE,
-                 settings.OLLAMA_HOST, settings.APP_EMBEDDING_MODEL,
-                 settings.APP_GEMINI_MODEL, settings.APP_RELOAD)
+                    settings.APP_PG_HOST, settings.APP_PG_PORT, settings.APP_PG_DATABASE,
+                    settings.OLLAMA_HOST, settings.APP_EMBEDDING_MODEL,
+                    settings.APP_GEMINI_MODEL, settings.APP_RELOAD)
     except Exception as e:
         logger.exception("Failed to read settings: %s", e)
 

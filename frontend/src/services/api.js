@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://127.0.0.1:8000';
-const API_URL_CHATBOT = 'http://127.0.0.1:8080';
+const API_URL = process.env.API_URL || 'http://localhost:8000';
+const API_URL_CHATBOT = process.env.API_URL_CHATBOT || 'http://localhost:8080';
 
 const api = axios.create({
   baseURL: API_URL,

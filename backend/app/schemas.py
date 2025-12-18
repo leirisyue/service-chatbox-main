@@ -43,7 +43,7 @@ class QueryRequest(BaseModel):
         json_schema_extra = {
             "example": {
                 "text": "text",
-                "top_k": 2,
+                "top_k": 7,
                 "min_score": 0.1
             }
         }

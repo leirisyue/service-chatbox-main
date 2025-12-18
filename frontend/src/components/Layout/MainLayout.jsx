@@ -19,7 +19,7 @@ function MainLayout({ sidebar, mainContent }) {
           onClick={toggleSidebar}
           aria-label={isSidebarVisible ? 'Ẩn sidebar' : 'Hiện sidebar'}
         >
-          {isSidebarVisible ? '<<' : '>>'}
+          {isSidebarVisible ? '<' : '>'}
         </button>
         {mainContent}
       </main>

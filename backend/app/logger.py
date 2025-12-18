@@ -10,7 +10,6 @@ except ImportError:
 LOG_DIR = os.getenv("LOG_DIR", "/app/logs")
 os.makedirs(LOG_DIR, exist_ok=True)
 
-
 class TZFormatter(logging.Formatter):
     def __init__(self, fmt=None, datefmt=None):
         super().__init__(fmt=fmt, datefmt=datefmt)
@@ -29,7 +28,6 @@ class TZFormatter(logging.Formatter):
         )
         dt = dt_utc.astimezone(self.tz)
         return dt.strftime(datefmt or "%Y-%m-%d %H:%M:%S")
-
 
 class DailyLogFileHandler(TimedRotatingFileHandler):
     """
