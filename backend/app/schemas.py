@@ -42,7 +42,7 @@ class QueryRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "text": "thông tin GIẤY NHÁM NƯỚC",
+                "text": "text",
                 "top_k": 2,
                 "min_score": 0.1
             }

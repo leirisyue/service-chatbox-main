@@ -6,7 +6,7 @@ from app.ocr import ocr_images_to_text, health_check_ocr
 from app.db import health_check_db, similarity_search_table, count_documents_per_table, get_embedding_dimension
 from app.llm import generate_answer, health_check_gemini
 from app.config import settings
-from app.table_selector import selector
+from app.table_selector_llm import selector
 from PIL import Image
 from io import BytesIO
 import base64

@@ -62,6 +62,12 @@ class TableSelectorLLM:
                 description="Chứa chi tiết BOM (Bill of Materials) về màu sơn, mã màu, thành phần chi tiết",
                 columns="original_data, original_data, content_text, embedding, created_at"
             ),
+            TableSchemaDesc(
+                schema="public", 
+                table="materials",
+                description="vật liệu sử dụng trong sản phẩm, bao gồm loại vật liệu, đặc tính kỹ thuật, nhà cung cấp",
+                columns="original_data, original_data, content_text, embedding, created_at"
+            ),
         ]
         logger.info(f"Using {len(self.tables)} default table schemas")
     
