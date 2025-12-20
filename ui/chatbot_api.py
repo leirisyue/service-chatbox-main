@@ -27,7 +27,7 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-GEMINI_API_KEY = "AIzaSyD-wRkviXIBRLkiLmXlm8DZZYTqj2fvrA4"
+GEMINI_API_KEY = "AIzaSyAuGvlRni3zKYnsvG6tdTDUj50o4mECcFk"
 genai.configure(api_key=GEMINI_API_KEY)
 
 app = FastAPI(title="AA Corporation Chatbot API", version="4.0")
@@ -3472,8 +3472,17 @@ def get_session_history(session_id: str):
 
 
 
+# ========================================
+# [4] VIEW IMAGE INTERNAL UTILS
+# public hình ảnh cho REACT
+# ========================================
+# mount media giống Streamlit
+from fastapi.staticfiles import StaticFiles
+from imageapi.media import router as media_router
 
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
+app.include_router(media_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
