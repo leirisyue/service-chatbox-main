@@ -6,7 +6,7 @@ function MaterialCard({ material, onDetailClick }) {
   const [imgError, setImgError] = useState(false);
 
   // 1. Try material's image, 2. Fallback to default, 3. Show placeholder on error
-  const imageSrc = `https://drive.google.com/uc?export=view&id=1syoH7m_FmZWfZgXyGkk5427jOFqq020o`;
+  const imageSrc = `https://lh3.googleusercontent.com/d/1syoH7m_FmZWfZgXyGkk5427jOFqq020o`;
 
   // Decide what to show
   const shouldShowImage = imageSrc;
@@ -16,7 +16,7 @@ function MaterialCard({ material, onDetailClick }) {
     <div className="material-card" style={{ position: 'relative' }}>
       <div className="material-image">
         {/* Show image only if we have a source and no error */}
-        {/* {shouldShowImage && (
+        {/* {shouldShowImage && ( */}
           <img
             src={imageSrc}
             alt={imageSrc || "Material image"}
@@ -26,7 +26,7 @@ function MaterialCard({ material, onDetailClick }) {
             }}
             style={{ display: 'block' }}
           />
-        )} */}
+        {/* )} */}
 
         {/* Show placeholder if no image source or image failed to load */}
         {/* {shouldShowPlaceholder && (
@@ -34,10 +34,10 @@ function MaterialCard({ material, onDetailClick }) {
             🧱
           </div>
         )} */}
-        <MediaImage
+        {/* <MediaImage
           imageUrl={material.image_url}
           alt={material.material_name}
-        />
+        /> */}
       </div>
 
       {/* ... rest of your component (material-info, material-actions) remains the same ... */}

@@ -6,6 +6,10 @@ import Box from '@mui/material/Box';
 import { formatTimestamp } from '../../utils/helpers';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import remarkBreaks from "remark-breaks";
+import { schemaMarkdown } from '../../utils/mardownhtml';
 
 
 function Message({ message, onSendMessage }) {
@@ -33,10 +37,27 @@ function Message({ message, onSendMessage }) {
   };
 
   const renderContent = () => {
-    if (typeof message.content === 'string') {
-      return <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>;
-    }
-    return message.content;
+    // if (typeof message.content === 'string') {
+    //   return message.content.split('\n').map((line, i) => (
+    //     <React.Fragment key={i}>
+    //       {line}
+    //       {i < message.content.split('\n').length - 1 && <br />}
+    //     </React.Fragment>
+    //   ));
+    // }
+    // return message.content;
+
+    return (
+      <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkBreaks]}
+      rehypePlugins={[
+        rehypeRaw,
+        [rehypeSanitize, schemaMarkdown],
+      ]}
+    >
+        {message.content}
+      </ReactMarkdown>
+    );
   };
 
   return (

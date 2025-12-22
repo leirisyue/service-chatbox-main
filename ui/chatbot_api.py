@@ -15,6 +15,8 @@ import re
 import pandas as pd
 import io
 
+from config import settings
+
 # ========================================
 # CONFIGURATION
 # ========================================
@@ -27,8 +29,7 @@ DB_CONFIG = {
     "port": "5432"
 }
 
-GEMINI_API_KEY = "AIzaSyCWrblQO9xfp2GOkfwUdFRv6VfanB0_328"
-genai.configure(api_key=GEMINI_API_KEY)
+genai.configure(api_key=settings.My_GOOGLE_API_KEY)
 
 app = FastAPI(title="AA Corporation Chatbot API", version="4.0")
 app.add_middleware(
@@ -379,7 +380,7 @@ def save_chat_history(session_id: str, user_message: str, bot_response: str,
         sql = """
             INSERT INTO chat_history 
             (session_id, user_message, bot_response, intent, params, result_count,
-             search_type, expanded_query, extracted_keywords, query_embedding)
+            search_type, expanded_query, extracted_keywords, query_embedding)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id
         """
@@ -445,7 +446,7 @@ def calculate_product_total_cost(headcode: str) -> float:
         INNER JOIN materials m ON pm.material_id_sap = m.id_sap
         WHERE pm.product_headcode = %s
     """
-    
+
     try:
         cur.execute(sql, (headcode,))
         materials = cur.fetchall()
@@ -464,7 +465,7 @@ def calculate_product_total_cost(headcode: str) -> float:
         quantity = float(mat['quantity']) if mat['quantity'] else 0.0
         latest_price = get_latest_material_price(mat['material_subprice'])
         material_cost += quantity * latest_price  # Sửa lỗi: cộng dồn material_cost
-    
+
     labor_cost = material_cost * 0.20
     overhead_cost = material_cost * 0.15
     profit_margin = material_cost * 0.25
@@ -501,7 +502,7 @@ def get_intent_and_params(user_message: str, context: Dict) -> Dict:
        - **search_product**: Tìm kiếm sản phẩm (VD: "Tìm bàn", "Có bàn nào", "Cho tôi xem ghế")
        - **query_product_materials**: Xem vật liệu của SẢN PHẨM (VD: "Vật liệu của bàn B001", "Phân tích vật liệu SP này")
        - **calculate_product_cost**: Tính giá/báo giá SẢN PHẨM (VD: "Giá bàn B001", "Tính giá sản phẩm", "Báo giá")
-       
+
        **MATERIAL FLOW:**
        - **search_material**: Tìm kiếm NGUYÊN VẬT LIỆU (VD: "Tìm gỗ sồi", "Có loại da nào", "Đá marble", "Vật liệu làm bàn")
        - **query_material_detail**: Xem chi tiết VẬT LIỆU + sản phẩm sử dụng (VD: "Chi tiết gỗ sồi", "Xem vật liệu này dùng ở đâu")
@@ -972,7 +973,7 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
         conn.close()
         
         if not similar_feedbacks:
-            print(f"ℹ️ Không có feedback tương tự (threshold={similarity_threshold})")
+            print(f"ℹ️  Không có feedback tương tự (threshold={similarity_threshold})")
             return {}
         
         # 3. Tính điểm cho từng item (weighted by similarity)

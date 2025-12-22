@@ -20,10 +20,10 @@ function App() {
     search_params: {}
   });
   const [suggestedPrompts, setSuggestedPrompts] = useState([
-    "🔍 Tìm sản phẩm",
-    "🧱 Tìm nguyên vật liệu",
-    "💰 Tính chi phí",
-    "📋 Danh sách nhóm vật liệu"
+    "🔍 Danh sách sản phẩm",
+    // "🧱 Tìm nguyên vật liệu",
+    // "💰 Tính chi phí",
+    // "📋 Danh sách nhóm vật liệu"
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,21 +37,8 @@ function App() {
     if (messages.length === 0) {
       const welcomeMessage = {
         role: 'bot',
-        content: `
-        👋 Xin chào! Tôi là trợ lý AI của **AA Corporation** (Phiên bản 4.0).\n\n
-        Tôi có thể giúp bạn:
-        • 🔍 **Tìm kiếm sản phẩm** (bằng mô tả hoặc hình ảnh)
-        • 🧱 **Tìm kiếm nguyên vật liệu** (gỗ, da, đá, vải...)
-        • 📋 **Xem định mức vật liệu** của sản phẩm
-        • 💰 **Tính chi phí** sản phẩm (NVL + Nhân công + Lợi nhuận)
-        • 🔗 **Tra cứu** vật liệu được dùng ở sản phẩm/dự án nào
-        • 📈 **Xem lịch sử giá** vật liệu\n\n
-        **🆕 Tính năng mới V4.0:**
-        • 🤖 AI tự động phân loại sản phẩm/vật liệu
-        • 📊 Lưu lịch sử truy vấn để học
-        • ⚡ Import CSV dễ dàng hơn\n\n
-        Hãy chọn một trong các gợi ý bên dưới hoặc gõ câu hỏi của bạn!
-      `,
+        content: `👋 Xin chào! Tôi là trợ lý AI của <b>AA Corporation</b> (Phiên bản 4.0).\nTôi có thể giúp bạn: \n• 🔍 <b>Tìm kiếm sản phẩm</b> (bằng mô tả hoặc hình ảnh) \n• 🧱 <b>Tìm kiếm nguyên vật liệu</b> (gỗ, da, đá, vải...) \n• 📋 <b>Xem định mức vật liệu</b> của sản phẩm \n• 💰 <b>Tính chi phí</b> sản phẩm (NVL + Nhân công + Lợi nhuận) \n• 🔗 <b>Tra cứu</b> vật liệu được dùng ở sản phẩm/dự án nào \n• 📈 <b>Xem lịch sử giá</b> vật liệu. <b> \n• 🆕 Tính năng mới V4.0:</b> \n• 🤖 AI tự động phân loại sản phẩm/vật liệu \n• 📊 Lưu lịch sử truy vấn để học \nHãy chọn một trong các gợi ý bên dưới hoặc gõ câu hỏi của bạn!
+        `,
         timestamp: Date.now()
       };
       setMessages([welcomeMessage]);
@@ -198,15 +185,7 @@ function App() {
     const welcomeMessage = {
       role: 'bot',
       content: `
-      👋 Xin chào! Tôi là trợ lý AI của **AA Corporation** (Phiên bản 4.0).\n\n
-      Tôi có thể giúp bạn:
-      • 🔍 **Tìm kiếm sản phẩm** (bằng mô tả hoặc hình ảnh)
-      • 🧱 **Tìm kiếm nguyên vật liệu** (gỗ, da, đá, vải...)
-      • 📋 **Xem định mức vật liệu** của sản phẩm
-      • 💰 **Tính chi phí** sản phẩm (NVL + Nhân công + Lợi nhuận)
-      • 🔗 **Tra cứu** vật liệu được dùng ở sản phẩm/dự án nào
-      • 📈 **Xem lịch sử giá** vật liệu\n\n
-      Hãy chọn một trong các gợi ý bên dưới hoặc gõ câu hỏi của bạn!
+      👋 Xin chào! Tôi là trợ lý AI của <b>AA Corporation</b> (Phiên bản 4.0).\nTôi có thể giúp bạn:\n• 🔍 <b>Tìm kiếm sản phẩm</b> (bằng mô tả hoặc hình ảnh)\n• 🧱 <b>Tìm kiếm nguyên vật liệu</b> (gỗ, da, đá, vải...)\n• 📋 <b>Xem định mức vật liệu</b> của sản phẩm\n• 💰 <b>Tính chi phí</b> sản phẩm (NVL + Nhân công + Lợi nhuận)\n• 🔗 <b>Tra cứu</b> vật liệu được dùng ở sản phẩm/dự án nào\n• 📈 <b>Xem lịch sử giá</b> vật liệu\nHãy chọn một trong các gợi ý bên dưới hoặc gõ câu hỏi của bạn!
       `,
       timestamp: Date.now()
     };
