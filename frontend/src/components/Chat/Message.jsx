@@ -67,9 +67,7 @@ function Message({ message, onSendMessage }) {
       </div>
       <div className="message-content">
         <div className="message-text">
-          {formatTimestamp(message?.timestamp)}
-          <br />
-          <br />
+          <div style={{paddingBottom:'15px'}}>{formatTimestamp(message?.timestamp)}</div>
           {renderContent()}
         </div>
 
@@ -99,7 +97,7 @@ function Message({ message, onSendMessage }) {
         {/* Hiển thị vật liệu */}
         {!isUser && message.data?.materials && (
           <div className="materials-section">
-            <h3>🧱 Kết quả tìm kiếm nguyên vật liệu ({message.data.materials.length} vật liệu)</h3>
+            <div style={{paddingBottom:'15px', fontWeight:'600'}}>🧱 Kết quả tìm kiếm nguyên vật liệu ({message.data.materials.length} vật liệu)</div>
             <Grid container spacing={2}>
               {message.data.materials.slice(0, 9).map((material, index) => (
                 <Grid size={{ xs: 12, md: 6, lg: 4 }}>

@@ -19,7 +19,6 @@ function ChatContainer({ messages, isLoading, onSendMessage }) {
         {messages.map((message, index) => (
           <Message key={index} message={message} onSendMessage={onSendMessage} />
         ))}
-        
         {isLoading && (
           <div className="loading-indicator">
             <div className="typing-dots">
@@ -29,7 +28,6 @@ function ChatContainer({ messages, isLoading, onSendMessage }) {
             </div>
           </div>
         )}
-        
         <div ref={messagesEndRef} />
       </div>
     </div>

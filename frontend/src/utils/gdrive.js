@@ -1,6 +1,7 @@
 
 export function convertGDriveUrl(url) {
-  if (!url || !url.includes('drive.google.com')) return url;
+  if (!url) return null;
+  if ( !url.includes('drive.google.com')) return url;
 
   try {
     let fileId = null;
@@ -12,7 +13,7 @@ export function convertGDriveUrl(url) {
     }
 
     return fileId
-      ? `https://drive.google.com/uc?export=view&id=${fileId}`
+      ? `https://lh3.googleusercontent.com/d/${fileId}`
       : url;
   } catch {
     return url;

@@ -192,7 +192,7 @@
   box-shadow: var(--card-shadow);
   transition: transform 0.2s;
   border-left: 4px solid #6c91ff;
-  height: 360px;
+  height: 335px;
 }
 
 .material-card:hover {

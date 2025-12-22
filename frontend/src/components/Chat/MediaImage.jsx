@@ -4,7 +4,6 @@ import { createMedia } from "../../services/api";
 
 export default function MediaImage({ imageUrl, alt }) {
   const [mediaUrl, setMediaUrl] = useState(null);
-  console.log("🚀 ~ MediaImage ~ mediaUrl:", mediaUrl);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -18,12 +17,9 @@ export default function MediaImage({ imageUrl, alt }) {
         setLoading(true);
         setError(false);
         setMediaUrl(null);
-
-        // ✅ gọi POST /media đúng payload
         const res = await createMedia(imageUrl);
-
         if (!cancelled && res?.url) {
-          setMediaUrl(res.url); // url = GET /api/media/{id}
+          setMediaUrl(res.url); 
         }
       } catch (err) {
         console.error("Load image failed:", err);

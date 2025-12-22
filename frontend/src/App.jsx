@@ -47,8 +47,6 @@ function App() {
 
   // main message handler
   const handleSendMessage = async (message) => {
-    console.log("🚀 ~ handleSendMessage ~ message:", message);
-    // Thêm message của user
     const userMessage = {
       role: 'user',
       content: message,
@@ -92,7 +90,7 @@ function App() {
         timestamp: Date.now()
       };
 
-      setMessages(prev => [...prev, botMessage]);
+      setMessages(prev => [...prev, botMessage]);     
 
       // Cập nhật suggested prompts
       if (response.suggested_prompts) {

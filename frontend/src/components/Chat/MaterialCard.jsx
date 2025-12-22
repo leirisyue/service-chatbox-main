@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import MediaImage from './MediaImage';
+import { convertGDriveUrl } from '../../utils/gdrive';
 
 function MaterialCard({ material, onDetailClick }) {
   // State to track if the main image fails to load
@@ -10,15 +11,15 @@ function MaterialCard({ material, onDetailClick }) {
 
   // Decide what to show
   const shouldShowImage = imageSrc;
-  const shouldShowPlaceholder = !imageSrc || imgError;
+  const shouldShowPlaceholder = !material?.image_url || imgError;
 
   return (
     <div className="material-card" style={{ position: 'relative' }}>
       <div className="material-image">
         {/* Show image only if we have a source and no error */}
-        {/* {shouldShowImage && ( */}
+        {material?.image_url && (
           <img
-            src={imageSrc}
+            src={convertGDriveUrl(material?.image_url)}
             alt={imageSrc || "Material image"}
             loading="lazy"
             onError={() => {
@@ -26,30 +27,28 @@ function MaterialCard({ material, onDetailClick }) {
             }}
             style={{ display: 'block' }}
           />
-        {/* )} */}
+        )}
 
         {/* Show placeholder if no image source or image failed to load */}
-        {/* {shouldShowPlaceholder && (
+        {shouldShowPlaceholder && (
           <div className="material-placeholder">
             🧱
           </div>
-        )} */}
+        )}
         {/* <MediaImage
           imageUrl={material.image_url}
           alt={material.material_name}
         /> */}
       </div>
-
-      {/* ... rest of your component (material-info, material-actions) remains the same ... */}
       <div className="material-info">
-        <h4>{material.material_name?.slice(0, 40)}...</h4>
+        <h4>{material.material_name}</h4>
         <p className="material-code">🏷️ Mã SAP: <strong>{material.id_sap}</strong></p>
         <p className="material-group">📂 Nhóm: {material.material_group || 'N/A'}</p>
-        <div className="price-badge">
-          💰 {material.total_cost?.toLocaleString('vi-VN') || material.price?.toLocaleString('vi-VN')} VNĐ / {material.unit || ''}
+        {(!!material.price || !!material.total_cost) ? <div className="price-badge">
+          💰 {material.total_cost?.toLocaleString('vi-VN') || material.price?.toLocaleString('vi-VN')} VNĐ {material.unit ? "/" + material.unit : ''}
         </div>
+          : null}
       </div>
-
       <div className="material-actions" style={{ position: 'absolute', bottom: '10px', width: '90%' }}>
         <button
           className="btn-detail"
