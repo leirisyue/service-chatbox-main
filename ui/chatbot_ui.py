@@ -914,9 +914,7 @@ with chat_container:
                             }
                             st.session_state.feedback_selections[idx] = []
                             st.rerun()                
-                
-                
-                
+
                 is_feedback_mode = (
                     st.session_state.pending_feedback and 
                     st.session_state.pending_feedback.get("message_idx") == idx

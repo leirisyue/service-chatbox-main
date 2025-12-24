@@ -20,9 +20,6 @@ function App() {
   });
   const [suggestedPrompts, setSuggestedPrompts] = useState([
     "🔍 Danh sách sản phẩm",
-    // "🧱 Tìm nguyên vật liệu",
-    // "💰 Tính chi phí",
-    // "📋 Danh sách nhóm vật liệu"
   ]);
   const [isLoading, setIsLoading] = useState(false);
 

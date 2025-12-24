@@ -26,7 +26,7 @@ router = APIRouter()
 # ========================================
 
 # FUNC cũ để lưu lịch sử chat
-def save_chat_to_histories(session_id: str, user_message: str, bot_response: str, 
+def save_chat_to_history(session_id: str, user_message: str, bot_response: str, 
                     intent: str, params: Dict, result_count: int,
                     search_type: str = "text",
                     expanded_query: str = None,
@@ -118,7 +118,7 @@ def save_chat_to_histories(session_id: str, user_message: str, bot_response: str
         return message_id
         
     except Exception as e:
-        print(f"❌ Lỗi save chat history: {e}")
+        print(f"Lỗi save chat history: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -130,7 +130,7 @@ def get_time_block(hour: int) -> int:
     return 1 if hour < 12 else 2
 
 # FUNC mới để lưu lịch sử chat theo block thời gian
-def save_chat_to_history(email: str, session_id: str, question: str, answer: str):
+def save_chat_to_histories(email: str, session_id: str, question: str, answer: str):
     """
     Save or update chat history based on date and time block
     - If same day and time block: UPDATE existing record (append to JSONB)
@@ -180,7 +180,7 @@ def save_chat_to_history(email: str, session_id: str, question: str, answer: str
                 WHERE id = %s
             """
             cur.execute(update_sql, (json.dumps(existing_history), record_id))
-            print(f"💾 UPDATED chat history: {email} | {session_id[:8]}... | {chat_date} | Block {time_block}")
+            print(f"UPDATED chat history: {email} | {session_id[:8]}... | {chat_date} | Block {time_block}")
 
         else:
             # INSERT: Create new record
@@ -194,14 +194,14 @@ def save_chat_to_history(email: str, session_id: str, question: str, answer: str
             history_json = json.dumps([new_chat_entry])
             cur.execute(insert_sql, (email, session_id, chat_date, time_block, history_json))
             record_id = cur.fetchone()[0]
-            print(f"💾 CREATED chat_histories: {email} | {session_id[:8]}... | {chat_date} | Block {time_block}")
+            print(f"CREATED chat_histories: {email} | {session_id[:8]}... | {chat_date} | Block {time_block}")
         
         conn.commit()
         conn.close()
         return True
         
     except Exception as e:
-        print(f"❌ Error saving chat history: {e}")
+        print(f"Error saving chat history: {e}")
         return False
 
 def get_session_chat_history(email: str, session_id: str):
@@ -252,9 +252,10 @@ def get_session_chat_history(email: str, session_id: str):
         }
         
     except Exception as e:
-        print(f"❌ Error retrieving chat history: {e}")
+        print(f"Error retrieving chat history: {e}")
         return None
-    
+
+
 @router.get("/history/{session_id}")
 def get_session_history(session_id: str):
     try:
@@ -319,11 +320,10 @@ def get_session_history(session_id: str):
         return {"error": str(e), "detail": error_detail}
 
     
-
 @router.get("/chat_histories/{email}")
 def get_all_sessions_by_email(email: str):
     """
-    Lấy danh sách tất cả sessions của một user
+    Lấy danh sách tất cả sessions của một user, grouped by session_id
     """
     try:
         conn = get_db()
@@ -334,8 +334,15 @@ def get_all_sessions_by_email(email: str):
                 session_id,
                 MIN(chat_date) as first_chat_date,
                 MAX(chat_date) as last_chat_date,
+                MAX(updated_at) as last_updated,
                 COUNT(DISTINCT chat_date) as total_days,
-                SUM(jsonb_array_length(history)) as total_messages
+                SUM(
+                    CASE 
+                        WHEN jsonb_typeof(history) = 'array' 
+                        THEN jsonb_array_length(history)
+                        ELSE 0
+                    END
+                ) as total_messages
             FROM chat_histories
             WHERE email = %s
             GROUP BY session_id
@@ -346,14 +353,29 @@ def get_all_sessions_by_email(email: str):
         sessions = cur.fetchall()
         conn.close()
         
+        # Format response
+        sessions_list = []
+        for s in sessions:
+            session_dict = dict(s)
+            # Convert date/datetime to string
+            if session_dict.get("first_chat_date"):
+                session_dict["first_chat_date"] = str(session_dict["first_chat_date"])
+            if session_dict.get("last_chat_date"):
+                session_dict["last_chat_date"] = str(session_dict["last_chat_date"])
+            if session_dict.get("last_updated"):
+                session_dict["last_updated"] = session_dict["last_updated"].isoformat()
+            sessions_list.append(session_dict)
+        
         return {
             "email": email,
-            "total_sessions": len(sessions),
-            "sessions": [dict(s) for s in sessions]
+            "total_sessions": len(sessions_list),
+            "sessions": sessions_list
         }
         
     except Exception as e:
-        print(f"❌ Error retrieving sessions: {e}")
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error retrieving sessions: {error_detail}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

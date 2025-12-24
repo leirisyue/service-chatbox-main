@@ -13,7 +13,6 @@ import re
 import pandas as pd
 import io
 import psycopg2
-
 from config import settings
 from historiesapi import histories
 from historiesapi.histories import router as history_router
@@ -29,10 +28,6 @@ DB_CONFIG = {
 
 def get_db():
     return psycopg2.connect(**DB_CONFIG)
-# ========================================
-# CONFIGURATION
-# ========================================
-
 
 genai.configure(api_key=settings.My_GOOGLE_API_KEY)
 
@@ -44,20 +39,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# ========================================
-# PYDANTIC MODELS
-# ========================================
-
 class ChatMessage(BaseModel):
     session_id: str
     message: str
     email: Optional[str] = None  # Make email optional for backward compatibility
     context: Optional[Dict] = {}
-
-# ========================================
-# GEMINI AI HELPERS
-# ========================================
 
 def call_gemini_with_retry(model, prompt, max_retries=3):
     """Gọi Gemini với retry logic"""
@@ -72,7 +58,7 @@ def call_gemini_with_retry(model, prompt, max_retries=3):
                 print(f"⏳ Quota exceeded. Đợi {wait_time}s...")
                 time.sleep(wait_time)
                 continue
-            print(f"❌ Lỗi Gemini: {e}")
+            print(f"ERROR Gemini: {e}")
             return None
     return None
 
@@ -86,12 +72,8 @@ def generate_embedding(text: str):
         )
         return result['embedding']
     except Exception as e:
-        print(f"❌ Lỗi embedding: {e}")
+        print(f"ERROR embedding: {e}")
         return None
-
-# ========================================
-# ✨ [MỚI] HYBRID SEARCH FUNCTIONS
-# ========================================
 
 def expand_search_query(user_query: str, params: Dict) -> str:
     """AI mở rộng query ngắn thành mô tả chi tiết"""
@@ -113,12 +95,11 @@ Output (chỉ mô tả):
     try:
         response = call_gemini_with_retry(model, prompt, max_retries=2)
         if response:
-            print(f"✨ Expanded: '{user_query}' -> '{response[:80]}...'")
+            print(f"Expanded: '{user_query}' -> '{response[:80]}...'")
             return response.strip()
     except:
         pass
     return user_query
-
 
 def extract_product_keywords(query: str) -> list:
     """Trích xuất từ khóa quan trọng"""
@@ -146,9 +127,8 @@ def extract_product_keywords(query: str) -> list:
     
     keywords = list(set(keywords))
     if keywords:
-        print(f"🔑 Keywords: {keywords}")
+        print(f"INFO: Keywords => {keywords}")
     return keywords
-
 
 def search_products_hybrid(params: Dict):
     """HYBRID: Vector + Keyword Boosting"""
@@ -220,7 +200,7 @@ def search_products_hybrid(params: Dict):
                 "keyword_matched": bool(r.get("keyword_match"))
             } for r in results]
             
-            print(f"✅ Found {len(products)} products (Hybrid)")
+            print(f"SUCCESS: Found {len(products)} products (Hybrid)")
             conn.close()
             return {
                 "products": products,
@@ -228,14 +208,10 @@ def search_products_hybrid(params: Dict):
                 "expanded_query": expanded
             }
     except Exception as e:
-        print(f"❌ Hybrid failed: {e}")
+        print(f"ERROR Hybrid failed: {e}")
     
     conn.close()
     return {"products": [], "search_method": "hybrid_failed"}
-
-# ========================================
-# [NEW] AUTO CLASSIFICATION AI
-# ========================================
 
 def auto_classify_product(product_name: str, id_sap: str = "") -> Dict:
     """Tự động phân loại sản phẩm bằng AI"""
@@ -352,10 +328,6 @@ OUTPUT JSON ONLY:
             "material_subgroup": "Chưa phân loại"
         }
 
-# ========================================
-# HELPER - LẤY GIÁ MỚI NHẤT
-# ========================================
-
 def get_latest_material_price(material_subprice_json: str) -> float:
     """Lấy giá mới nhất từ JSON lịch sử giá"""
     if not material_subprice_json:
@@ -376,10 +348,6 @@ def get_latest_material_price(material_subprice_json: str) -> float:
     except:
         return 0.0
 
-# ========================================
-# HELPER - TÍNH TOTAL COST CHO SẢN PHẨM
-# ========================================
-
 def calculate_product_total_cost(headcode: str) -> float:
     """Tính tổng chi phí (total_cost) cho một sản phẩm"""
     conn = get_db()
@@ -398,7 +366,7 @@ def calculate_product_total_cost(headcode: str) -> float:
         cur.execute(sql, (headcode,))
         materials = cur.fetchall()
     except Exception as e:
-        print(f"❌ Query error in calculate_product_total_cost for {headcode}: {e}")
+        print(f"ERROR: Query error in calculate_product_total_cost for {headcode}: {e}")
         conn.close()
         return 0.0
     
@@ -419,10 +387,6 @@ def calculate_product_total_cost(headcode: str) -> float:
     
     total_cost = material_cost + labor_cost + overhead_cost + profit_margin
     return total_cost
-
-# ========================================
-# INTENT DETECTION
-# ========================================
 
 def get_intent_and_params(user_message: str, context: Dict) -> Dict:
     """AI Router với khả năng Reasoning & Soft Clarification"""
@@ -559,10 +523,6 @@ def get_intent_and_params(user_message: str, context: Dict) -> Dict:
         print(f"Parse Error: {e}")
         return {"intent": "error", "raw": response_text}
 
-# ========================================
-# [NEW] CROSS-TABLE SEARCH FUNCTIONS
-# ========================================
-
 def search_products_by_material(material_query: str, params: Dict):
     """
     🔍 TÌM SẢN PHẨM ĐƯỢC LÀM TỪ VẬT LIỆU CỤ THỂ
@@ -576,7 +536,7 @@ def search_products_by_material(material_query: str, params: Dict):
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    print(f"🔗 Cross-table search: Products made from '{material_query}'")
+    print(f"INFO: Cross-table search: Products made from '{material_query}'")
     
     # Bước 1: Tìm vật liệu phù hợp
     material_vector = generate_embedding(material_query)
@@ -608,7 +568,7 @@ def search_products_by_material(material_query: str, params: Dict):
         material_ids = [m['id_sap'] for m in matched_materials]
         material_names = [m['material_name'] for m in matched_materials]
         
-        print(f"✅ Found {len(material_ids)} matching materials: {material_names[:3]}")
+        print(f"SUCCESS: Found {len(material_ids)} matching materials: {material_names[:3]}")
         
         # Bước 2: Tìm products sử dụng materials này
         # Kết hợp filter category nếu có
@@ -683,7 +643,7 @@ def search_products_by_material(material_query: str, params: Dict):
             reverse=True
         )
         
-        print(f"✅ Found {len(products_list)} products using these materials")
+        print(f"SUCCESS: Found {len(products_list)} products using these materials")
         
         return {
             "products": products_list[:10],
@@ -693,11 +653,9 @@ def search_products_by_material(material_query: str, params: Dict):
         }
         
     except Exception as e:
-        print(f"❌ Cross-table search failed: {e}")
+        print(f"ERROR: Cross-table search failed: {e}")
         conn.close()
         return {"products": [], "search_method": "cross_table_error"}
-
-
 
 def search_materials_for_product(product_query: str, params: Dict):
     """
@@ -712,7 +670,7 @@ def search_materials_for_product(product_query: str, params: Dict):
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    print(f"🔗 Cross-table search: Materials for '{product_query}'")
+    print(f"INFO: Cross-table search: Materials for '{product_query}'")
     
     # Bước 1: Tìm products phù hợp
     product_vector = generate_embedding(product_query)
@@ -743,7 +701,7 @@ def search_materials_for_product(product_query: str, params: Dict):
         product_headcodes = [p['headcode'] for p in matched_products]
         product_names = [p['product_name'] for p in matched_products]
         
-        print(f"✅ Found {len(product_headcodes)} matching products: {product_names[:3]}")
+        print(f"SUCCESS: Found {len(product_headcodes)} matching products: {product_names[:3]}")
         
         # Bước 2: Lấy materials được dùng trong products này
         material_filter = ""
@@ -795,7 +753,7 @@ def search_materials_for_product(product_query: str, params: Dict):
             mat_dict['used_in_products_list'] = mat['used_in_products'][:5]  # Top 5
             materials_with_context.append(mat_dict)
         
-        print(f"✅ Found {len(materials_with_context)} materials used in these products")
+        print(f"SUCCESS: Found {len(materials_with_context)} materials used in these products")
         
         return {
             "materials": materials_with_context,
@@ -805,24 +763,14 @@ def search_materials_for_product(product_query: str, params: Dict):
         }
         
     except Exception as e:
-        print(f"❌ Cross-table materials search failed: {e}")
+        print(f"ERROR: Cross-table materials search failed: {e}")
         conn.close()
         return {"materials": [], "search_method": "cross_table_error"}
-
-
-# ========================================
-# [NEW] USER FEEDBACK LEARNING SYSTEM
-# ========================================
-
-
-# ========================================
-# THAY THẾ hàm save_user_feedback (dòng ~615)
-# ========================================
 
 def save_user_feedback(session_id: str, query: str, selected_items: list, 
                        rejected_items: list, search_type: str):
     """
-    💾 Lưu phản hồi của user về kết quả tìm kiếm
+    Lưu phản hồi của user về kết quả tìm kiếm
     
     Args:
         session_id: ID session
@@ -835,11 +783,11 @@ def save_user_feedback(session_id: str, query: str, selected_items: list,
         conn = get_db()
         cur = conn.cursor()
         
-        # ✅ TẠO EMBEDDING CHO QUERY NGAY KHI LƯU
+        # TẠO EMBEDDING CHO QUERY NGAY KHI LƯU
         query_embedding = generate_embedding(query)
         
         if not query_embedding:
-            print("⚠️ Không tạo được embedding, vẫn lưu feedback")
+            print("WARNING: Không tạo được embedding, vẫn lưu feedback")
         
         sql = """
             INSERT INTO user_feedback 
@@ -862,25 +810,21 @@ def save_user_feedback(session_id: str, query: str, selected_items: list,
         conn.commit()
         conn.close()
         
-        print(f"💾 Feedback saved: {len(selected_items)} selected, {len(rejected_items)} rejected")
+        print(f"Feedback saved: {len(selected_items)} selected, {len(rejected_items)} rejected")
         print(f"   → Feedback ID: {feedback_id}")
-        print(f"   → Embedding: {'✅ OK' if query_embedding else '❌ NULL'}")
+        print(f"   → Embedding: {'OK' if query_embedding else '❌ NULL'}")
         
         return True
         
     except Exception as e:
-        print(f"❌ Failed to save feedback: {e}")
+        print(f"ERROR: Failed to save feedback: {e}")
         import traceback
         traceback.print_exc()
         return False
 
-# ======================================
-# THAY THẾ hàm get_feedback_boost_for_query (dòng ~900)
-# ========================================
-
 def get_feedback_boost_for_query(query: str, search_type: str, similarity_threshold: float = 0.7) -> Dict:
     """
-    📊 V5.0 - Vector-based feedback matching
+    V5.0 - Vector-based feedback matching
     Tìm feedback từ các query TƯƠNG TỰ (không cần trùng 100%)
     
     Args:
@@ -896,7 +840,7 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
         query_vector = generate_embedding(query)
         
         if not query_vector:
-            print("❌ Không tạo được embedding cho query")
+            print("ERROR: Không tạo được embedding cho query")
             return {}
         
         conn = get_db()
@@ -920,21 +864,21 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
         conn.close()
         
         if not similar_feedbacks:
-            print(f"ℹ️  Không có feedback tương tự (threshold={similarity_threshold})")
+            print(f"INFO: Không có feedback tương tự (threshold={similarity_threshold})")
             return {}
         
         # 3. Tính điểm cho từng item (weighted by similarity)
         item_scores = {}
         
         print(f"\n{'='*60}")
-        print(f"📊 FEEDBACK BOOST: Tìm thấy {len(similar_feedbacks)} query tương tự")
+        print(f"INFO: FEEDBACK BOOST: Tìm thấy {len(similar_feedbacks)} query tương tự")
         print(f"{'='*60}\n")
         
         for fb in similar_feedbacks:
             sim = fb['similarity']
             
             try:
-                # ✅ FIX: Kiểm tra type trước khi parse
+                # FIX: Kiểm tra type trước khi parse
                 selected_items = fb['selected_items']
                 
                 # Nếu là string JSON → parse
@@ -944,10 +888,10 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
                 elif isinstance(selected_items, list):
                     selected = selected_items
                 else:
-                    print(f"⚠️ Unknown type for selected_items: {type(selected_items)}")
+                    print(f"WARNING: Unknown type for selected_items: {type(selected_items)}")
                     continue
                 
-                print(f"✅ Query: '{fb['query'][:50]}...' (sim={sim:.2f})")
+                print(f"SUCCESS: Query: '{fb['query'][:50]}...' (sim={sim:.2f})")
                 print(f"   → Selected: {selected[:3]}")
                 
                 for item_id in selected:
@@ -955,42 +899,38 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
                     item_scores[item_id] = item_scores.get(item_id, 0) + sim
                     
             except Exception as e:
-                print(f"⚠️ Skip feedback: {e}")
+                print(f"WARNING: Skip feedback: {e}")
                 continue
         
         if item_scores:
-            print(f"\n📈 Kết quả:")
+            print(f"\nINFO: Kết quả:")
             for item_id, score in sorted(item_scores.items(), key=lambda x: x[1], reverse=True)[:5]:
                 print(f"   {item_id}: {score:.2f} điểm")
         else:
-            print("ℹ️ Không có item nào được boost")
+            print("INFO: Không có item nào được boost")
             
         print(f"{'='*60}\n")
         
         return item_scores
         
     except Exception as e:
-        print(f"❌ Failed to get feedback boost: {e}")
+        print(f"ERROR: Failed to get feedback boost: {e}")
         import traceback
         traceback.print_exc()
         return {}
-# ========================================
-# THAY THẾ hàm rerank_with_feedback (dòng ~570)
-# Thêm LOG chi tiết
-# ========================================
 
 def rerank_with_feedback(items: list, feedback_scores: Dict, 
                          id_key: str = "headcode", boost_weight: float = 0.3):
     
     if not feedback_scores:
-        print("⚠️ Không có feedback scores để rerank")
+        print("WARNING: Không có feedback scores để rerank")
         return items
     
     max_feedback = max(feedback_scores.values()) if feedback_scores else 1
     
     print(f"\n{'='*60}")
-    print(f"🎯 RERANKING: {len(items)} items | Boost weight: {boost_weight}")
-    print(f"📊 Feedback history: {len(feedback_scores)} items có điểm")
+    print(f"RERANKING: {len(items)} items | Boost weight: {boost_weight}")
+    print(f"Feedback history: {len(feedback_scores)} items có điểm")
     print(f"{'='*60}\n")
     
     boosted_items = []
@@ -1017,7 +957,7 @@ def rerank_with_feedback(items: list, feedback_scores: Dict,
         # Phân loại
         if feedback_count > 0:
             boosted_items.append(item)
-            print(f"✅ BOOSTED: {item_id[:20]:20} | "
+            print(f"SUCCESS: BOOSTED: {item_id[:20]:20} | "
                   f"Original: {current_score:.3f} → "
                   f"Final: {new_score:.3f} | "
                   f"Feedback: {feedback_count:.2f} lần")
@@ -1027,22 +967,17 @@ def rerank_with_feedback(items: list, feedback_scores: Dict,
     # Sort lại theo final_score
     items.sort(key=lambda x: x.get('final_score', 0), reverse=True)
     
-    print(f"\n📈 Kết quả:")
+    print(f"\nINFO: Kết quả:")
     print(f"   - {len(boosted_items)} items được boost")
     print(f"   - {len(unchanged_items)} items không đổi")
     print(f"{'='*60}\n")
     
     return items
 
-# ========================================
-# THÊM VÀO chatbot_api.py SAU HÀM rerank_with_feedback
-# Dòng ~620
-# ========================================
-
 def apply_feedback_to_search(items: list, query: str, search_type: str, 
                              id_key: str = "headcode") -> list:
     """
-    🎯 Tự động áp dụng feedback ranking cho MỌI loại search
+    Tự động áp dụng feedback ranking cho MỌI loại search
     - Lấy feedback history
     - Rerank items
     - Thêm metadata để UI hiển thị
@@ -1067,7 +1002,7 @@ def apply_feedback_to_search(items: list, query: str, search_type: str,
     )
     
     if not feedback_scores:
-        print("ℹ️ Không có feedback history phù hợp (similarity < 0.85)")
+        print("INFO: Không có feedback history phù hợp (similarity < 0.85)")
         # Thêm metadata mặc định
         for item in items:
             item['has_feedback'] = False
@@ -1077,7 +1012,7 @@ def apply_feedback_to_search(items: list, query: str, search_type: str,
         return items
     
     # Apply reranking
-    print(f"\n🎯 Áp dụng feedback ranking cho {len(items)} items...")
+    print(f"\nINFO: Áp dụng feedback ranking cho {len(items)} items...")
     
     # Lưu rank gốc
     for idx, item in enumerate(items):
@@ -1096,12 +1031,8 @@ def apply_feedback_to_search(items: list, query: str, search_type: str,
         item['final_rank'] = idx + 1
         item['has_feedback'] = item.get('feedback_count', 0) > 0
     
-    print(f"✅ Reranking hoàn tất\n")
+    print(f"SUCCESS: Reranking hoàn tất\n")
     return reranked_items
-
-# ========================================
-# HOẶC LÀM THRESHOLD ĐỘNG (tùy chọn)
-# ========================================
 
 def get_adaptive_threshold(query: str) -> float:
     """
@@ -1116,16 +1047,11 @@ def get_adaptive_threshold(query: str) -> float:
     elif len(words) >= 5:
         return 0.82
     else:
-        return 0.90  # Query ngắn → nghiêm ngặt hơn
-    
-# Dùng trong apply_feedback_to_search:
-# threshold = get_adaptive_threshold(query)
-# feedback_scores = get_feedback_boost_for_query(query, search_type, threshold)
-
+        return 0.90  
 
 def get_ranking_summary(items: list) -> dict:
     """
-    📊 Tạo summary về ranking để hiển thị trong UI
+    Tạo summary về ranking để hiển thị trong UI
     Returns:
         {
             "total_items": 10,
@@ -1170,9 +1096,6 @@ def get_ranking_summary(items: list) -> dict:
         "max_feedback_count": max([i.get('feedback_count', 0) for i in items]),
         "ranking_changes": changes[:5]  # Top 5 changes
     }
-# ========================================
-# PRODUCT FUNCTIONS
-# ========================================
 
 def format_search_results(results):
     """Format results thành cấu trúc chuẩn"""
@@ -1202,7 +1125,7 @@ def search_products(params: Dict):
                 product["total_cost"] = calculate_product_total_cost(product["headcode"])
             return result
     except Exception as e:
-        print(f"⚠️ TIER 1 failed: {e}")
+        print(f"WARNING: TIER 1 failed: {e}")
     
     # TIER 2 & 3: GIỮ NGUYÊN CODE CŨ (Fallback)
     conn = get_db()
@@ -1239,12 +1162,12 @@ def search_products(params: Dict):
         results = cur.fetchall()
         
         if results:
-            print(f"✅ TIER 2: {len(results)} products")
+            print(f"SUCCESS: TIER 2: {len(results)} products")
             products = format_search_results(results[:8])
             conn.close()
             return {"products": products, "search_method": "vector_no_filter"}
     except Exception as e:
-        print(f"⚠️ TIER 2 failed: {e}")
+        print(f"WARNING: TIER 2 failed: {e}")
     
     # TIER 3: Keyword
     conn.close()
@@ -1286,7 +1209,7 @@ def search_products_keyword_only(params: Dict):
                 "products": []
             }
         
-        print(f"✅ TIER 3 Success: Found {len(results)} products")
+        print(f"SUCCESS: TIER 3 => Found {len(results)} products")
         products = []
         for r in results:
             product = dict(r)
@@ -1299,7 +1222,7 @@ def search_products_keyword_only(params: Dict):
         }
     except Exception as e:
         conn.close()
-        print(f"❌ TIER 3 failed: {e}")
+        print(f"ERROR: TIER 3 failed: {e}")
         return {
             "response": "Lỗi tìm kiếm.",
             "products": []
@@ -1337,9 +1260,9 @@ def get_product_materials(headcode: str):
     try:
         cur.execute(sql, (headcode,))
         materials = cur.fetchall()
-        print(f"📊 Found {len(materials)} materials for {headcode}")
+        print(f"INFO: Found {len(materials)} materials for {headcode}")
     except Exception as e:
-        print(f"❌ Query error: {e}")
+        print(f"ERROR: Query error: {e}")
         conn.close()
         return {"response": f"Lỗi truy vấn database: {str(e)}"}
     
@@ -1347,7 +1270,7 @@ def get_product_materials(headcode: str):
     
     if not materials:
         return {
-            "response": f"⚠️ Sản phẩm **{prod['product_name']}** ({headcode}) chưa có định mức vật liệu.\n\n"
+            "response": f"WARNING: Sản phẩm **{prod['product_name']}** ({headcode}) chưa có định mức vật liệu.\n\n"
                        f"Có thể:\n"
                        f"• Sản phẩm mới chưa nhập định mức\n"
                        f"• Chưa import file product_materials.csv\n"
@@ -1412,15 +1335,6 @@ def get_product_materials(headcode: str):
         "product_name": prod['product_name']
     }
 
-# ========================================
-# FIX BUG TRONG chatbot_api.py
-# Dòng 1230 - 1260 (hàm calculate_product_cost)
-# ========================================
-# ========================================
-# FIX 3: DÒNG ~1288-1370
-# Thay thế hàm calculate_product_cost
-# ========================================
-
 def calculate_product_cost(headcode: str):
     """Tính CHI PHÍ NGUYÊN VẬT LIỆU sản phẩm (Đơn giản hóa V4.7)"""
     conn = get_db()
@@ -1452,9 +1366,9 @@ def calculate_product_cost(headcode: str):
     try:
         cur.execute(sql, (headcode,))
         materials = cur.fetchall()
-        print(f"💰 Cost calculation for {headcode}: {len(materials)} materials")
+        print(f"INFO: Cost calculation for {headcode}: {len(materials)} materials")
     except Exception as e:
-        print(f"❌ Query error: {e}")
+        print(f"ERROR: Query error: {e}")
         conn.close()
         return {"response": f"Lỗi truy vấn database: {str(e)}"}
     
@@ -1529,10 +1443,6 @@ def calculate_product_cost(headcode: str):
         "materials": materials_detail
     }
 
-# ========================================
-# MATERIAL FUNCTIONS
-# ========================================
-
 def search_materials(params: Dict):
     """Tìm kiếm NGUYÊN VẬT LIỆU với giá từ material_subprice"""
     conn = get_db()
@@ -1577,7 +1487,7 @@ def search_materials(params: Dict):
             results = cur.fetchall()
             
             if results:
-                print(f"✅ Vector search: Found {len(results)} materials")
+                print(f"SUCCESS: Vector search: Found {len(results)} materials")
                 
                 materials_with_price = []
                 for mat in results:
@@ -1591,9 +1501,9 @@ def search_materials(params: Dict):
                     "search_method": "vector"
                 }
         except Exception as e:
-            print(f"⚠️ Vector search failed: {e}")
+            print(f"WARNING: Vector search failed: {e}")
     
-    print("ℹ️ Keyword search for materials")
+    print("INFO: Keyword search for materials")
     conditions = []
     values = []
     
@@ -1631,14 +1541,14 @@ def search_materials(params: Dict):
             mat_dict['price'] = get_latest_material_price(mat.get('material_subprice'))
             materials_with_price.append(mat_dict)
         
-        print(f"✅ Keyword search: Found {len(materials_with_price)} materials")
+        print(f"SUCCESS: Keyword search: Found {len(materials_with_price)} materials")
         return {
             "materials": materials_with_price,
             "search_method": "keyword"
         }
     except Exception as e:
         conn.close()
-        print(f"❌ Material search failed: {e}")
+        print(f"ERROR: Material search failed: {e}")
         return {
             "response": "Lỗi tìm kiếm vật liệu.",
             "materials": []
@@ -1684,9 +1594,9 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
     try:
         cur.execute(sql, (material['id_sap'],))
         used_in_products = cur.fetchall()
-        print(f"🔗 Material {material['id_sap']} used in {len(used_in_products)} products")
+        print(f"INFO: Material {material['id_sap']} used in {len(used_in_products)} products")
     except Exception as e:
-        print(f"❌ Query error: {e}")
+        print(f"ERROR: Query error: {e}")
         used_in_products = []
     
     try:
@@ -1701,7 +1611,7 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         """, (material['id_sap'],))
         stats = cur.fetchone()
     except Exception as e:
-        print(f"❌ Stats query error: {e}")
+        print(f"ERROR: Stats query error: {e}")
         stats = {
             'product_count': 0,
             'project_count': 0,
@@ -1837,10 +1747,6 @@ def list_material_groups():
         "response": response,
         "material_groups": groups_with_stats
     }
-
-# ========================================
-# MAIN CHAT ENDPOINT
-# ========================================
 
 @app.post("/chat")
 def chat(msg: ChatMessage):
@@ -2119,21 +2025,13 @@ def chat(msg: ChatMessage):
             if params.get("keywords_vector"):
                 keywords = extract_product_keywords(params["keywords_vector"])
         
-        # # Save to old chat_history table (keep for backward compatibility)
+        # Save chat history
         histories.save_chat_to_histories(
-            msg.session_id,
-            user_message,
-            result_response.get("response", ""),
-            intent,
-            params,
-            result_count,
-            search_type="text",
             email="test@gmail.com",
-            expanded_query=expanded,
-            extracted_keywords=keywords
+            session_id=msg.session_id,
+            question=user_message,
+            answer=result_response.get("response", "")
         )
-        
-
         return result_response
     
     except Exception as e:
@@ -2141,10 +2039,6 @@ def chat(msg: ChatMessage):
         import traceback
         traceback.print_exc()
         return {"response": f"⚠️ Lỗi hệ thống: {str(e)}"}
-
-# ========================================
-# NEW ENDPOINT: USER FEEDBACK
-# ========================================
 
 class FeedbackRequest(BaseModel):
     session_id: str
@@ -2169,153 +2063,20 @@ def submit_feedback(feedback: FeedbackRequest):
         
         if success:
             return {
-                "message": "✅ Cảm ơn phản hồi của bạn! Kết quả tìm kiếm sẽ được cải thiện.",
+                "message": "SUCCESS: Cảm ơn phản hồi của bạn! Kết quả tìm kiếm sẽ được cải thiện.",
                 "saved": True
             }
         else:
             return {
-                "message": "⚠️ Không thể lưu phản hồi",
+                "message": "WARNING: Không thể lưu phản hồi",
                 "saved": False
             }
             
     except Exception as e:
         return {
-            "message": f"❌ Lỗi: {str(e)}",
+            "message": f"ERROR: {str(e)}",
             "saved": False
         }
-
-
-# ========================================
-# IMAGE SEARCH
-# ========================================
-
-@app.post("/search-image")
-async def search_by_image(
-    file: UploadFile = File(...),
-    session_id: str = Form(default=str(uuid.uuid4()))
-):
-    """Tìm kiếm theo ảnh"""
-    file_path = f"./media/temp_{uuid.uuid4()}.jpg"
-    try:
-        # Read file content
-        contents = await file.read()
-        
-        # Save to temporary file
-        with open(file_path, "wb") as buffer:
-            buffer.write(contents)
-        
-        # Open image using PIL
-        img = Image.open(file_path)
-        model = genai.GenerativeModel("gemini-2.5-flash-lite")
-        
-        prompt = """
-        Đóng vai chuyên gia kỹ thuật AA Corporation.
-        Phân tích ảnh nội thất này để trích xuất thông tin tìm kiếm Database.
-        
-        OUTPUT JSON ONLY (no markdown, no backticks):
-        {
-          "category": "Loại SP (Bàn, Ghế, Sofa...)",
-          "visual_description": "Mô tả chi tiết kỹ thuật dùng cho Vector Search",
-          "material_detected": "Vật liệu chính (Gỗ, Da, Vải, Đá...)",
-          "color_tone": "Màu chủ đạo"
-        }
-        """
-        
-        response = model.generate_content([prompt, img])
-        
-        if not response.text:
-            return {
-                "response": "⚠️ Không phân tích được ảnh. Vui lòng thử ảnh khác.",
-                "products": []
-            }
-        
-        clean = response.text.strip()
-        
-        if "```json" in clean:
-            clean = clean.split("```json")[1].split("```")[0].strip()
-        elif "```" in clean:
-            clean = clean.split("```")[1].split("```")[0].strip()
-        
-        try:
-            ai_result = json.loads(clean)
-        except json.JSONDecodeError as e:
-            print(f"JSON Parse Error: {e}")
-            ai_result = {
-                "visual_description": clean[:200],
-                "category": "Nội thất"
-            }
-        
-        params = {
-            "category": ai_result.get("category"),
-            "keywords_vector": ai_result.get("visual_description"),
-            "material_primary": ai_result.get("material_detected")
-        }
-        
-        search_result = search_products(params)
-        products = search_result.get("products", [])
-        
-        histories.save_chat_to_histories(
-            email="test@gmail.com",
-            session_id=session_id,
-            user_message="[IMAGE_UPLOAD]",
-            bot_response=f"Phân tích ảnh: {ai_result.get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products)} sản phẩm",
-            intent="search_product",
-            params=params,
-            result_count=len(products),
-            search_type="image",
-            expanded_query=ai_result.get("visual_description"),
-            extracted_keywords=[
-                ai_result.get("category"),
-                ai_result.get("material_detected"),
-                ai_result.get("color_tone")
-            ]
-        )
-
-
-
-        if not products:
-            return {
-                "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm nội thất')}**.\n\n"
-                           f"Tuy nhiên, không tìm thấy sản phẩm tương tự trong kho dữ liệu.\n\n"
-                           f"💡 Gợi ý: Thử mô tả bằng từ khóa hoặc upload ảnh rõ hơn.",
-                "products": [],
-                "ai_interpretation": ai_result.get("visual_description", "")
-            }
-        
-        return {
-            "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm')}**.\n\n"
-                       f"✅ Đã tìm thấy **{len(products)} sản phẩm** tương đồng:",
-            "products": products,
-            "ai_interpretation": ai_result.get("visual_description", ""),
-            "search_method": "image_vector"
-        }
-    
-    except Exception as e:
-        print(f"❌ Image search error: {e}")
-        import traceback
-        traceback.print_exc()
-        
-        return {
-            "response": f"⚠️ Lỗi xử lý ảnh: {str(e)}. Vui lòng thử lại.",
-            "products": []
-        }
-    
-    finally:
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except:
-                pass
-
-# ========================================
-# IMPORT ENDPOINTS
-# ========================================
-# ========================================
-# THÊM VÀO chatbot_api.py
-# ========================================
-
-# [1] BATCH CLASSIFICATION FUNCTIONS
-# Thêm sau phần AUTO CLASSIFICATION AI (dòng ~100)
 
 def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     """
@@ -2385,8 +2146,9 @@ OUTPUT JSON ARRAY ONLY (no markdown, no backticks):
         return results
         
     except Exception as e:
-        print(f"❌ Batch classification parse error: {e}")
+        print(f"ERROR: Batch classification parse error: {e}")
         return default_results
+    
 def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     """
     Phân loại HÀNG LOẠT vật liệu
@@ -2450,12 +2212,115 @@ OUTPUT JSON ARRAY ONLY:
         return results
         
     except Exception as e:
-        print(f"❌ Batch materials classification error: {e}")
+        print(f"ERROR: Batch materials classification error: {e}")
         return default_results
 
+@app.post("/search-image")
+async def search_by_image(
+    file: UploadFile = File(...),
+    session_id: str = Form(default=str(uuid.uuid4()))
+):
+    """Tìm kiếm theo ảnh"""
+    file_path = f"./media/temp_{uuid.uuid4()}.jpg"
+    try:
+        # Read file content
+        contents = await file.read()
+        
+        # Save to temporary file
+        with open(file_path, "wb") as buffer:
+            buffer.write(contents)
+        
+        # Open image using PIL
+        img = Image.open(file_path)
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        
+        prompt = """
+        Đóng vai chuyên gia kỹ thuật AA Corporation.
+        Phân tích ảnh nội thất này để trích xuất thông tin tìm kiếm Database.
+        
+        OUTPUT JSON ONLY (no markdown, no backticks):
+        {
+          "category": "Loại SP (Bàn, Ghế, Sofa...)",
+          "visual_description": "Mô tả chi tiết kỹ thuật dùng cho Vector Search",
+          "material_detected": "Vật liệu chính (Gỗ, Da, Vải, Đá...)",
+          "color_tone": "Màu chủ đạo"
+        }
+        """
+        
+        response = model.generate_content([prompt, img])
+        
+        if not response.text:
+            return {
+                "response": "⚠️ Không phân tích được ảnh. Vui lòng thử ảnh khác.",
+                "products": []
+            }
+        
+        clean = response.text.strip()
+        
+        if "```json" in clean:
+            clean = clean.split("```json")[1].split("```")[0].strip()
+        elif "```" in clean:
+            clean = clean.split("```")[1].split("```")[0].strip()
+        
+        try:
+            ai_result = json.loads(clean)
+        except json.JSONDecodeError as e:
+            print(f"JSON Parse Error: {e}")
+            ai_result = {
+                "visual_description": clean[:200],
+                "category": "Nội thất"
+            }
+        
+        params = {
+            "category": ai_result.get("category"),
+            "keywords_vector": ai_result.get("visual_description"),
+            "material_primary": ai_result.get("material_detected")
+        }
+        
+        search_result = search_products(params)
+        products = search_result.get("products", [])
+        
+        histories.save_chat_to_histories(
+            email="test@gmail.com",
+            session_id=session_id,
+            question="[IMAGE_UPLOAD]",
+            answer=f"Phân tích ảnh: {ai_result.get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products)} sản phẩm"
+        )
 
-# Thay thế 2 endpoints import cũ
-# ========================================
+
+        if not products:
+            return {
+                "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm nội thất')}**.\n\n"
+                           f"Tuy nhiên, không tìm thấy sản phẩm tương tự trong kho dữ liệu.\n\n"
+                           f"💡 Gợi ý: Thử mô tả bằng từ khóa hoặc upload ảnh rõ hơn.",
+                "products": [],
+                "ai_interpretation": ai_result.get("visual_description", "")
+            }
+        
+        return {
+            "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm')}**.\n\n"
+                       f"✅ Đã tìm thấy **{len(products)} sản phẩm** tương đồng:",
+            "products": products,
+            "ai_interpretation": ai_result.get("visual_description", ""),
+            "search_method": "image_vector"
+        }
+    
+    except Exception as e:
+        print(f"ERROR: Image search error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        return {
+            "response": f"⚠️ Lỗi xử lý ảnh: {str(e)}. Vui lòng thử lại.",
+            "products": []
+        }
+    
+    finally:
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except:
+                pass
 
 @app.post("/import/products")
 async def import_products(file: UploadFile = File(...)):
@@ -2564,7 +2429,6 @@ async def import_products(file: UploadFile = File(...)):
         
     except Exception as e:
         return {"message": f"❌ Lỗi: {str(e)}"}
-
 
 @app.post("/import/materials")
 async def import_materials(file: UploadFile = File(...)):
@@ -2804,11 +2668,6 @@ async def import_product_materials(file: UploadFile = File(...)):
     except Exception as e:
         return {"message": f"❌ Lỗi hệ thống: {str(e)}"}
 
-# ========================================
-# [3] NEW BATCH CLASSIFICATION ENDPOINTS
-# Thêm 2 endpoints mới để classify sau khi import
-# ========================================
-
 @app.post("/classify-products")
 def classify_pending_products():
     """
@@ -2888,7 +2747,7 @@ def classify_pending_products():
                     time.sleep(4)
                 
             except Exception as e:
-                print(f"❌ Batch {i//BATCH_SIZE + 1} failed: {e}")
+                print(f"ERROR: Batch {i//BATCH_SIZE + 1} failed: {e}")
                 errors.append(f"Batch {i//BATCH_SIZE + 1}: {str(e)[:100]}")
                 # Tiếp tục với batch tiếp theo
                 continue
@@ -2964,7 +2823,7 @@ def classify_pending_materials():
                 'name': m['material_name']
             } for m in batch]
             
-            print(f"🤖 Classifying materials batch {i//BATCH_SIZE + 1} ({len(batch)} items)...")
+            print(f"BOT: Classifying materials batch {i//BATCH_SIZE + 1} ({len(batch)} items)...")
             
             try:
                 results = batch_classify_materials(batch_input)
@@ -2990,7 +2849,7 @@ def classify_pending_materials():
                     time.sleep(4)
                 
             except Exception as e:
-                print(f"❌ Materials batch {i//BATCH_SIZE + 1} failed: {e}")
+                print(f"ERROR: Materials batch {i//BATCH_SIZE + 1} failed: {e}")
                 errors.append(f"Batch {i//BATCH_SIZE + 1}: {str(e)[:100]}")
                 continue
         
@@ -3020,10 +2879,6 @@ def classify_pending_materials():
             "total": 0,
             "remaining": 0
         }
-
-# ========================================
-# GENERATE EMBEDDINGS
-# ========================================
 
 @app.post("/generate-embeddings")
 def generate_product_embeddings():
@@ -3131,10 +2986,6 @@ def generate_material_embeddings():
         "errors": errors[:5] if errors else []
     }
 
-# ========================================
-# DEBUG ENDPOINTS
-# ========================================
-
 @app.get("/debug/products")
 def debug_products():
     """Debug info vá»  products"""
@@ -3208,11 +3059,6 @@ def debug_chat_history():
         "recent_chats": [dict(h) for h in history]
     }
 
-# ========================================
-# [4] UPDATE ROOT ENDPOINT
-# Cập nhật danh sách endpoints
-# ========================================
-
 @app.get("/")
 def root():
     return {
@@ -3243,9 +3089,6 @@ def root():
         }
     }
 
-# ========================================
-# [4] ROUTE INCLUDES
-# ========================================
 app.include_router(media_router)
 app.include_router(history_router)
 

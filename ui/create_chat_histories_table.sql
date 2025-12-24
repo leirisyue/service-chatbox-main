@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS chat_histories (
     
     email TEXT NOT NULL,
     session_id TEXT NOT NULL,
+    session_name TEXT,
     
     chat_date DATE NOT NULL,          -- ngày chat (YYYY-MM-DD)
     time_block SMALLINT NOT NULL,     -- 1 = 0-12h, 2 = 12-24h

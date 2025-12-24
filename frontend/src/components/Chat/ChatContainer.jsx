@@ -16,7 +16,7 @@ function ChatContainer({ messages, isLoading, onSendMessage }) {
   return (
     <div className="chat-container">
       <div className="messages-wrapper">
-        {messages.map((message, index) => (
+        {messages?.map((message, index) => (
           <Message key={index} message={message} onSendMessage={onSendMessage} />
         ))}
         {isLoading && (
