@@ -257,13 +257,13 @@ def debug_products():
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT COUNT(*) as total FROM products")
+    cur.execute("SELECT COUNT(*) as total FROM products_gemi")
     total = cur.fetchone()['total']
     
-    cur.execute("SELECT COUNT(*) as with_emb FROM products WHERE description_embedding IS NOT NULL")
+    cur.execute("SELECT COUNT(*) as with_emb FROM products_gemi WHERE description_embedding IS NOT NULL")
     with_emb = cur.fetchone()['with_emb']
     
-    cur.execute("SELECT category, COUNT(*) as count FROM products GROUP BY category ORDER BY count DESC")
+    cur.execute("SELECT category, COUNT(*) as count FROM products_gemi GROUP BY category ORDER BY count DESC")
     by_category = cur.fetchall()
     
     conn.close()
@@ -281,13 +281,13 @@ def debug_materials():
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT COUNT(*) as total FROM materials")
+    cur.execute("SELECT COUNT(*) as total FROM materials_gemi")
     total = cur.fetchone()['total']
     
-    cur.execute("SELECT COUNT(*) as with_emb FROM materials WHERE description_embedding IS NOT NULL")
+    cur.execute("SELECT COUNT(*) as with_emb FROM materials_gemi WHERE description_embedding IS NOT NULL")
     with_emb = cur.fetchone()['with_emb']
     
-    cur.execute("SELECT material_group, COUNT(*) as count FROM materials GROUP BY material_group ORDER BY count DESC")
+    cur.execute("SELECT material_group, COUNT(*) as count FROM materials_gemi GROUP BY material_group ORDER BY count DESC")
     by_group = cur.fetchall()
     
     conn.close()

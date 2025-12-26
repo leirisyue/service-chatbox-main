@@ -14,8 +14,8 @@ def get_db():
 
 router = APIRouter()
 # Configure once
-if settings.GOOGLE_API_KEY:
-    genai.configure(api_key=settings.GOOGLE_API_KEY)
+if settings.My_GOOGLE_API_KEY:
+    genai.configure(api_key=settings.My_GOOGLE_API_KEY)
     
 # ========================================
 # FUNCTION DEFINITIONS
@@ -46,7 +46,7 @@ def generate_product_embeddings():
     
     cur.execute("""
         SELECT headcode, product_name, category, sub_category, material_primary
-        FROM products 
+        FROM products_gemi 
         WHERE name_embedding IS NULL OR description_embedding IS NULL
         LIMIT 100
     """)
@@ -70,7 +70,7 @@ def generate_product_embeddings():
             
             if name_emb and desc_emb:
                 cur.execute("""
-                    UPDATE products 
+                    UPDATE products_gemi 
                     SET name_embedding = %s, description_embedding = %s, updated_at = NOW()
                     WHERE headcode = %s
                 """, (name_emb, desc_emb, prod['headcode']))
@@ -99,7 +99,7 @@ def generate_material_embeddings():
     
     cur.execute("""
         SELECT id_sap, material_name, material_group, material_subgroup
-        FROM materials 
+        FROM materials_gemi 
         WHERE name_embedding IS NULL OR description_embedding IS NULL
         LIMIT 100
     """)

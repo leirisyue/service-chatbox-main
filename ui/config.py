@@ -13,6 +13,14 @@ class Settings(BaseSettings):
     DB_PASSWORD: str = "postgres"
     DB_HOST: str = "localhost"
     DB_PORT: str = "5432"
+    
+    # Qwen Embedding settings
+    QWEN_HOST: str = "192.168.4.102"
+    QWEN_PORT: int = 11434
+    QWEN_TIMEOUT: int = 30
+    QWEN_MODEL: str = "qwen3-embedding:latest"
+    QWEN_EMBED_MODEL: str = "qwen3-embedding:latest"
+    OLLAMA_HOST: str = "http://192.168.4.102:11434"
 
     class Config:
         env_file = ".env"

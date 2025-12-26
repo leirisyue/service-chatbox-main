@@ -192,7 +192,7 @@ def search_materials_for_product(product_query: str, params: Dict):
                 product_name,
                 category,
                 (description_embedding <=> %s::vector) as distance
-            FROM products
+            FROM products_gemi
             WHERE description_embedding IS NOT NULL
             ORDER BY distance ASC
             LIMIT 10
@@ -229,7 +229,7 @@ def search_materials_for_product(product_query: str, params: Dict):
                 COUNT(DISTINCT pm.product_headcode) as usage_count,
                 SUM(pm.quantity) as total_quantity,
                 array_agg(DISTINCT p.product_name) as used_in_products
-            FROM materials m
+            FROM materials_gemi m
             INNER JOIN product_materials pm ON m.id_sap = pm.material_id_sap
             INNER JOIN products p ON pm.product_headcode = p.headcode
             WHERE p.headcode = ANY(%s)
@@ -408,7 +408,7 @@ def search_products_hybrid(params: Dict):
                    material_primary, project, project_id,
                    (description_embedding <=> %s::vector) as raw_distance,
                    {boost} as keyword_match
-            FROM products
+            FROM products_gemi
             WHERE description_embedding IS NOT NULL
             ORDER BY (description_embedding <=> %s::vector) - ({boost} * 0.25) ASC
             LIMIT 10
@@ -510,9 +510,9 @@ def search_products_keyword_only(params: Dict):
     
     if conditions:
         where_clause = " OR ".join(conditions)
-        sql = f"SELECT * FROM products WHERE {where_clause} LIMIT 12"
+        sql = f"SELECT * FROM products_gemi WHERE {where_clause} LIMIT 12"
     else:
-        sql = "SELECT * FROM products ORDER BY RANDOM() LIMIT 10"
+        sql = "SELECT * FROM products_gemi ORDER BY RANDOM() LIMIT 10"
         values = []
     
     try:

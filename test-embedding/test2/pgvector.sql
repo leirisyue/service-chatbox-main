@@ -35,6 +35,22 @@
 -- ADD COLUMN name_embedding VECTOR,
 -- ADD COLUMN description_embedding VECTOR;
 
-ALTER TABLE products_qwen
+-- ALTER TABLE products_qwen
+-- ADD COLUMN name_embedding VECTOR,
+-- ADD COLUMN description_embedding VECTOR;
+
+-- ALTER TABLE materials_sparse
+-- DROP COLUMN name_embedding,
+-- DROP COLUMN description_embedding;
+
+-- ALTER TABLE products_sparse
+-- DROP COLUMN name_embedding,
+-- DROP COLUMN description_embedding;
+
+ALTER TABLE materials_sparse
+ADD COLUMN name_embedding VECTOR,
+ADD COLUMN description_embedding VECTOR;
+
+ALTER TABLE products_sparse
 ADD COLUMN name_embedding VECTOR,
 ADD COLUMN description_embedding VECTOR;

@@ -209,7 +209,7 @@ def search_products(params: Dict):
             SELECT headcode, product_name, category, sub_category, 
                   material_primary, project, project_id,
                   (description_embedding <=> %s::vector) as distance
-            FROM products
+            FROM products_gemi
             WHERE description_embedding IS NOT NULL
             ORDER BY distance ASC
             LIMIT 10
@@ -368,7 +368,7 @@ def search_products_by_material(material_query: str, params: Dict):
                 material_name,
                 material_group,
                 (description_embedding <=> %s::vector) as distance
-            FROM materials
+            FROM materials_gemi
             WHERE description_embedding IS NOT NULL
             ORDER BY distance ASC
             LIMIT 5
@@ -407,7 +407,7 @@ def search_products_by_material(material_query: str, params: Dict):
                 m.id_sap as material_id,
                 pm.quantity,
                 COUNT(*) OVER (PARTITION BY p.headcode) as material_match_count
-            FROM products p
+            FROM products_gemi p
             INNER JOIN product_materials pm ON p.headcode = pm.product_headcode
             INNER JOIN materials m ON pm.material_id_sap = m.id_sap
             WHERE m.id_sap = ANY(%s)
@@ -629,7 +629,7 @@ def get_product_materials(headcode: str):
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT product_name FROM products WHERE headcode = %s", (headcode,))
+    cur.execute("SELECT product_name FROM products_gemi WHERE headcode = %s", (headcode,))
     prod = cur.fetchone()
     
     if not prod:
@@ -737,7 +737,7 @@ def calculate_product_cost(headcode: str):
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT product_name, category FROM products WHERE headcode = %s", (headcode,))
+    cur.execute("SELECT product_name, category FROM products_gemi WHERE headcode = %s", (headcode,))
     prod = cur.fetchone()
     
     if not prod:
@@ -874,7 +874,7 @@ def search_materials(params: Dict):
                     id_sap, material_name, material_group, material_subgroup,
                     material_subprice, unit, image_url,
                     (description_embedding <=> %s::vector) as distance
-                FROM materials
+                FROM materials_gemi
                 WHERE description_embedding IS NOT NULL AND {filter_clause}
                 ORDER BY distance ASC
                 LIMIT 10
@@ -916,9 +916,9 @@ def search_materials(params: Dict):
     
     if conditions:
         where_clause = " OR ".join(conditions)
-        sql = f"SELECT * FROM materials WHERE {where_clause} LIMIT 15"
+        sql = f"SELECT * FROM materials_gemi WHERE {where_clause} LIMIT 15"
     else:
-        sql = "SELECT * FROM materials ORDER BY material_name ASC LIMIT 10"
+        sql = "SELECT * FROM materials_gemi ORDER BY material_name ASC LIMIT 10"
         values = []
     
     try:
@@ -958,9 +958,9 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     if id_sap:
-        cur.execute("SELECT * FROM materials WHERE id_sap = %s", (id_sap,))
+        cur.execute("SELECT * FROM materials_gemi WHERE id_sap = %s", (id_sap,))
     elif material_name:
-        cur.execute("SELECT * FROM materials WHERE material_name ILIKE %s LIMIT 1", (f"%{material_name}%",))
+        cur.execute("SELECT * FROM materials_gemi WHERE material_name ILIKE %s LIMIT 1", (f"%{material_name}%",))
     else:
         conn.close()
         return {"response": "⚠️ Cần cung cấp mã SAP hoặc tên vật liệu."}
@@ -1100,7 +1100,7 @@ def list_material_groups():
             material_group,
             COUNT(*) as count,
             array_agg(DISTINCT material_subprice) as all_prices
-        FROM materials
+        FROM materials_gemi
         WHERE material_group IS NOT NULL
         GROUP BY material_group
         ORDER BY count DESC

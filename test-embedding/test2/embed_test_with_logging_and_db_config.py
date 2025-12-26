@@ -466,119 +466,119 @@ def embed_with_qwen(
     """
 
     # Trường hợp đặc biệt: cập nhật trực tiếp bảng materials_qwen
-    # if table_name == "materials_qwen":
-    #     if not raw_rows:
-    #         return [], 0.0, 0, ""
+    if table_name == "materials_qwen":
+        if not raw_rows:
+            return [], 0.0, 0, ""
 
-    #     os.makedirs(output_dir, exist_ok=True)
-    #     timestamp = time.strftime("%Y%m%d_%H%M%S")
-    #     outfile = os.path.join(
-    #         output_dir,
-    #         f"{table_name}_qwen_embeddings_{timestamp}.jsonl",
-    #     )
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        outfile = os.path.join(
+            output_dir,
+            f"{table_name}_qwen_embeddings_{timestamp}.jsonl",
+        )
 
-    #     url = f"{QWEN_API_BASE}/api/embeddings"
+        url = f"{QWEN_API_BASE}/api/embeddings"
 
-    #     def _call_qwen(text: str) -> List[float]:
-    #         payload = {
-    #             "model": QWEN_EMBED_MODEL,
-    #             "prompt": text,
-    #         }
-    #         resp = requests.post(url, json=payload)
-    #         resp.raise_for_status()
-    #         data = resp.json()
-    #         emb = data.get("embedding") or data.get("data", [{}])[0].get("embedding")
-    #         if emb is None:
-    #             raise ValueError(f"Qwen API response không có 'embedding': {data}")
-    #         return emb
+        def _call_qwen(text: str) -> List[float]:
+            payload = {
+                "model": QWEN_EMBED_MODEL,
+                "prompt": text,
+            }
+            resp = requests.post(url, json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            emb = data.get("embedding") or data.get("data", [{}])[0].get("embedding")
+            if emb is None:
+                raise ValueError(f"Qwen API response không có 'embedding': {data}")
+            return emb
 
-    #     start = time.time()
-    #     description_embeddings: List[List[float]] = []
-    #     all_texts_for_token_est: List[str] = []
+        start = time.time()
+        description_embeddings: List[List[float]] = []
+        all_texts_for_token_est: List[str] = []
 
-    #     conn = get_pg_connection()
-    #     try:
-    #         with conn.cursor() as cur, open(outfile, "w", encoding="utf-8") as f:
-    #             for idx, row in enumerate(raw_rows):
-    #                 # Lấy các trường cần thiết từ dòng
-    #                 material_name = (row.get("material_name") or "").strip()
-    #                 material_subgroup = (row.get("material_subgroup") or "").strip()
-    #                 material_group = (row.get("material_group") or "").strip()
-    #                 id_sap = row.get("id_sap")
+        conn = get_pg_connection()
+        try:
+            with conn.cursor() as cur, open(outfile, "w", encoding="utf-8") as f:
+                for idx, row in enumerate(raw_rows):
+                    # Lấy các trường cần thiết từ dòng
+                    material_name = (row.get("material_name") or "").strip()
+                    material_subgroup = (row.get("material_subgroup") or "").strip()
+                    material_group = (row.get("material_group") or "").strip()
+                    id_sap = row.get("id_sap")
 
-    #                 if id_sap is None:
-    #                     logging.warning(
-    #                         "materials_qwen row index %s không có id_sap, bỏ qua cập nhật.",
-    #                         idx,
-    #                     )
-    #                     continue
+                    if id_sap is None:
+                        logging.warning(
+                            "materials_qwen row index %s không có id_sap, bỏ qua cập nhật.",
+                            idx,
+                        )
+                        continue
 
-    #                 name_text = material_name
-    #                 desc_parts = [p for p in [material_subgroup, material_group, material_name] if p]
-    #                 description_text = " ".join(desc_parts)
+                    name_text = material_name
+                    desc_parts = [p for p in [material_subgroup, material_group, material_name] if p]
+                    description_text = " ".join(desc_parts)
 
-    #                 # Gọi Qwen cho 2 đoạn text
-    #                 name_emb = _call_qwen(name_text)
-    #                 desc_emb = _call_qwen(description_text)
+                    # Gọi Qwen cho 2 đoạn text
+                    name_emb = _call_qwen(name_text)
+                    desc_emb = _call_qwen(description_text)
 
-    #                 description_embeddings.append(desc_emb)
-    #                 all_texts_for_token_est.append(name_text + " " + description_text)
+                    description_embeddings.append(desc_emb)
+                    all_texts_for_token_est.append(name_text + " " + description_text)
 
-    #                 # Ghi log ra JSONL để tiện debug
-    #                 record = {
-    #                     "row_index": idx,
-    #                     "id_sap": id_sap,
-    #                     "material_name": material_name,
-    #                     "material_subgroup": material_subgroup,
-    #                     "material_group": material_group,
-    #                     "name_embedding": to_jsonable(name_emb),
-    #                     "description_embedding": to_jsonable(desc_emb),
-    #                 }
-    #                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    # Ghi log ra JSONL để tiện debug
+                    record = {
+                        "row_index": idx,
+                        "id_sap": id_sap,
+                        "material_name": material_name,
+                        "material_subgroup": material_subgroup,
+                        "material_group": material_group,
+                        "name_embedding": to_jsonable(name_emb),
+                        "description_embedding": to_jsonable(desc_emb),
+                    }
+                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    #                 # Cập nhật trực tiếp vào bảng materials_qwen
-    #                 if EMBEDDING_STORAGE_TYPE == "vector":
-    #                     name_emb_str = "[" + ",".join(str(float(x)) for x in name_emb) + "]"
-    #                     desc_emb_str = "[" + ",".join(str(float(x)) for x in desc_emb) + "]"
-    #                     update_sql = (
-    #                         "UPDATE public.\"materials_qwen\" "
-    #                         "SET name_embedding = %s::vector, "
-    #                         "    description_embedding = %s::vector "
-    #                         "WHERE id_sap = %s"
-    #                     )
-    #                     params = (name_emb_str, desc_emb_str, id_sap)
-    #                 else:
-    #                     update_sql = (
-    #                         "UPDATE public.\"materials_qwen\" "
-    #                         "SET name_embedding = %s::jsonb, "
-    #                         "    description_embedding = %s::jsonb "
-    #                         "WHERE id_sap = %s"
-    #                     )
-    #                     params = (
-    #                         json.dumps(name_emb),
-    #                         json.dumps(desc_emb),
-    #                         id_sap,
-    #                     )
+                    # Cập nhật trực tiếp vào bảng materials_qwen
+                    if EMBEDDING_STORAGE_TYPE == "vector":
+                        name_emb_str = "[" + ",".join(str(float(x)) for x in name_emb) + "]"
+                        desc_emb_str = "[" + ",".join(str(float(x)) for x in desc_emb) + "]"
+                        update_sql = (
+                            "UPDATE public.\"materials_qwen\" "
+                            "SET name_embedding = %s::vector, "
+                            "    description_embedding = %s::vector "
+                            "WHERE id_sap = %s"
+                        )
+                        params = (name_emb_str, desc_emb_str, id_sap)
+                    else:
+                        update_sql = (
+                            "UPDATE public.\"materials_qwen\" "
+                            "SET name_embedding = %s::jsonb, "
+                            "    description_embedding = %s::jsonb "
+                            "WHERE id_sap = %s"
+                        )
+                        params = (
+                            json.dumps(name_emb),
+                            json.dumps(desc_emb),
+                            id_sap,
+                        )
 
-    #                 cur.execute(update_sql, params)
+                    cur.execute(update_sql, params)
 
-    #         conn.commit()
-    #     finally:
-    #         conn.close()
+            conn.commit()
+        finally:
+            conn.close()
 
-    #     elapsed = time.time() - start
-    #     token_est = estimate_tokens(all_texts_for_token_est)
+        elapsed = time.time() - start
+        token_est = estimate_tokens(all_texts_for_token_est)
 
-    #     logging.info(
-    #         "Qwen embeddings (materials_qwen) done: %d rows, time=%.2fs, tokens≈%d, output=%s",
-    #         len(description_embeddings),
-    #         elapsed,
-    #         token_est,
-    #         outfile,
-    #     )
+        logging.info(
+            "Qwen embeddings (materials_qwen) done: %d rows, time=%.2fs, tokens≈%d, output=%s",
+            len(description_embeddings),
+            elapsed,
+            token_est,
+            outfile,
+        )
 
-    #     # Trả về list description_embedding để tương thích run_test
-    #     return description_embeddings, elapsed, token_est, outfile
+        # Trả về list description_embedding để tương thích run_test
+        return description_embeddings, elapsed, token_est, outfile
 
     # Trường hợp đặc biệt: cập nhật trực tiếp bảng products_qwen
     if table_name == "products_qwen":
@@ -758,9 +758,240 @@ def embed_with_opensearch_sparse(
 ) -> Tuple[List[Any], float, int, str]:
     """Sinh sparse embedding (token -> weight) bằng model OpenSearch.
 
-    Sử dụng model "opensearch-project/opensearch-neural-sparse-encoding-doc-v2-mini".
-    Kết quả được lưu ra file JSONL và bảng Postgres opensearch_sparse_embeddings.
+        - Với bảng materials_sparse, products_sparse: cập nhật trực tiếp vào cột
+            name_embedding và description_embedding của bảng input (lưu dạng VECTOR
+            dày có kích thước bằng vocab_size, suy ra từ sparse tensor).
+        - Với bảng khác: lưu vào bảng opensearch_sparse_embeddings (JSONB) như cũ.
     """
+
+    # Trường hợp đặc biệt: cập nhật trực tiếp bảng materials_sparse
+    if table_name == "materials_sparse":
+        if not raw_rows:
+            return [], 0.0, 0, ""
+
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        outfile = os.path.join(
+            output_dir,
+            f"{table_name}_opensearch_sparse_embeddings_{timestamp}.jsonl",
+        )
+
+        model, tokenizer, special_token_ids, id_to_token = _load_opensearch_sparse_model()
+
+        def _encode_sparse(text: str) -> List[float]:
+            feature = tokenizer(
+                [text],
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+                return_token_type_ids=False,
+            )
+            with torch.no_grad():
+                output = model(**feature)[0]
+            sparse_tensor = _compute_sparse_tensor(
+                feature,
+                output,
+                special_token_ids,
+            )  # (1, vocab_size)
+            # Trả về vector dày (1, vocab_size) -> list[float]
+            dense_vector = sparse_tensor.squeeze(0).tolist()
+            # Giới hạn số chiều để phù hợp pgvector (<=16000)
+            if len(dense_vector) > 16000:
+                dense_vector = dense_vector[:16000]
+            return dense_vector
+
+        start = time.time()
+        description_embeddings: List[Any] = []
+        all_texts_for_token_est: List[str] = []
+
+        conn = get_pg_connection()
+        try:
+            with conn.cursor() as cur, open(outfile, "w", encoding="utf-8") as f:
+                for idx, row in enumerate(raw_rows):
+                    material_name_sparse = (row.get("material_name") or "").strip()
+                    material_subgroup = (row.get("material_subgroup") or "").strip()
+                    material_group = (row.get("material_group") or "").strip()
+                    id_sap = row.get("id_sap")
+
+                    if id_sap is None:
+                        logging.warning(
+                            "materials_qwen row index %s không có id_sap, bỏ qua cập nhật.",
+                            idx,
+                        )
+                        continue
+
+                    name_text = material_name_sparse
+                    desc_parts = [p for p in [material_subgroup, material_group, material_name_sparse] if p]
+                    description_text = " ".join(desc_parts)
+
+                    name_emb = _encode_sparse(name_text)
+                    desc_emb = _encode_sparse(description_text)
+
+                    description_embeddings.append(desc_emb)
+                    all_texts_for_token_est.append(name_text + " " + description_text)
+
+                    record = {
+                        "row_index": idx,
+                        "id_sap": id_sap,
+                        "material_name": material_name_sparse,
+                        "material_subgroup": material_subgroup,
+                        "material_group": material_group,
+                        "name_embedding": to_jsonable(name_emb),
+                        "description_embedding": to_jsonable(desc_emb),
+                    }
+                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+                    # Cập nhật trực tiếp vào bảng materials_sparse (VECTOR)
+                    name_emb_str = "[" + ",".join(str(float(x)) for x in name_emb) + "]"
+                    desc_emb_str = "[" + ",".join(str(float(x)) for x in desc_emb) + "]"
+                    update_sql = (
+                        "UPDATE public.\"materials_sparse\" "
+                        "SET name_embedding = %s::vector, "
+                        "    description_embedding = %s::vector "
+                        "WHERE id_sap = %s"
+                    )
+                    params = (
+                        name_emb_str,
+                        desc_emb_str,
+                        id_sap,
+                    )
+
+                    cur.execute(update_sql, params)
+
+            conn.commit()
+        finally:
+            conn.close()
+
+        elapsed = time.time() - start
+        token_est = estimate_tokens(all_texts_for_token_est)
+
+        logging.info(
+            "OpenSearch sparse embeddings (materials_sparse) done: %d rows, time=%.2fs, tokens≈%d, output=%s",
+            len(description_embeddings),
+            elapsed,
+            token_est,
+            outfile,
+        )
+
+        # Trả về list description_embedding để tương thích run_test
+        return description_embeddings, elapsed, token_est, outfile
+
+
+    # Trường hợp đặc biệt: cập nhật trực tiếp bảng products_sparse
+    if table_name == "products_sparse":
+        if not raw_rows:
+            return [], 0.0, 0, ""
+
+        os.makedirs(output_dir, exist_ok=True)
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        outfile = os.path.join(
+            output_dir,
+            f"{table_name}_opensearch_sparse_embeddings_{timestamp}.jsonl",
+        )
+
+        model, tokenizer, special_token_ids, id_to_token = _load_opensearch_sparse_model()
+
+        def _encode_sparse(text: str) -> List[float]:
+            feature = tokenizer(
+                [text],
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+                return_token_type_ids=False,
+            )
+            with torch.no_grad():
+                output = model(**feature)[0]
+            sparse_tensor = _compute_sparse_tensor(
+                feature,
+                output,
+                special_token_ids,
+            )  # (1, vocab_size)
+            # Trả về vector dày (1, vocab_size) -> list[float]
+            dense_vector = sparse_tensor.squeeze(0).tolist()
+            # Giới hạn số chiều để phù hợp pgvector (<=16000)
+            if len(dense_vector) > 16000:
+                dense_vector = dense_vector[:16000]
+            return dense_vector
+
+        start = time.time()
+        description_embeddings: List[Any] = []
+        all_texts_for_token_est: List[str] = []
+
+        conn = get_pg_connection()
+        try:
+            with conn.cursor() as cur, open(outfile, "w", encoding="utf-8") as f:
+                for idx, row in enumerate(raw_rows):
+                    product_name = (row.get("product_name") or "").strip()
+                    category = (row.get("category") or "").strip()
+                    sub_category = (row.get("sub_category") or "").strip()
+                    material_primary = (row.get("material_primary") or "").strip()
+                    id_sap = row.get("id_sap")
+
+                    if id_sap is None:
+                        logging.warning(
+                            "products_sparse row index %s không có id_sap, bỏ qua cập nhật.",
+                            idx,
+                        )
+                        continue
+
+                    name_text = product_name
+                    desc_parts = [p for p in [category, sub_category, material_primary] if p]
+                    description_text = " ".join(desc_parts)
+
+                    name_emb = _encode_sparse(name_text)
+                    desc_emb = _encode_sparse(description_text)
+
+                    description_embeddings.append(desc_emb)
+                    all_texts_for_token_est.append(name_text + " " + description_text)
+
+                    record = {
+                        "row_index": idx,
+                        "id_sap": id_sap,
+                        "product_name": product_name,
+                        "category": category,
+                        "sub_category": sub_category,
+                        "material_primary": material_primary,
+                        "name_embedding": to_jsonable(name_emb),
+                        "description_embedding": to_jsonable(desc_emb),
+                    }
+                    f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+                    # Cập nhật trực tiếp vào bảng materials_sparse (VECTOR)
+                    name_emb_str = "[" + ",".join(str(float(x)) for x in name_emb) + "]"
+                    desc_emb_str = "[" + ",".join(str(float(x)) for x in desc_emb) + "]"
+                    update_sql = (
+                        "UPDATE public.\"products_sparse\" "
+                        "SET name_embedding = %s::vector, "
+                        "    description_embedding = %s::vector "
+                        "WHERE id_sap = %s"
+                    )
+                    params = (
+                        name_emb_str,
+                        desc_emb_str,
+                        id_sap,
+                    )
+
+                    cur.execute(update_sql, params)
+
+            conn.commit()
+        finally:
+            conn.close()
+
+        elapsed = time.time() - start
+        token_est = estimate_tokens(all_texts_for_token_est)
+
+        logging.info(
+            "OpenSearch sparse embeddings (products_sparse) done: %d rows, time=%.2fs, tokens≈%d, output=%s",
+            len(description_embeddings),
+            elapsed,
+            token_est,
+            outfile,
+        )
+
+        # Trả về list description_embedding để tương thích run_test
+        return description_embeddings, elapsed, token_est, outfile
+
+    # Mặc định: behavior cũ, lưu vào bảng opensearch_sparse_embeddings (JSONB)
     if not texts:
         return [], 0.0, 0, ""
 
@@ -848,23 +1079,23 @@ def run_test(table_name: str, limit: int = 1000):
     # logging.info(f"Gemini - vectors: {len(gem_embs)}, time={gem_time:.2f}s, tokens≈{gem_tokens}")
 
     # Test Qwen
-    logging.info("=== Start Qwen embedding ===")
-    qwen_embs, qwen_time, qwen_tokens, qwen_file = embed_with_qwen(
-        table_name, texts, raw_rows, output_dir
-    )
-    logging.info(f"Qwen  - vectors: {len(qwen_embs)}, time={qwen_time:.2f}s, tokens≈{qwen_tokens}")
-
-    # Test OpenSearch sparse
-    # logging.info("=== Start OpenSearch sparse embedding ===")
-    # os_embs, os_time, os_tokens, os_file = embed_with_opensearch_sparse(
+    # logging.info("=== Start Qwen embedding ===")
+    # qwen_embs, qwen_time, qwen_tokens, qwen_file = embed_with_qwen(
     #     table_name, texts, raw_rows, output_dir
     # )
-    # logging.info(
-    #     "OpenSearch-sparse - vectors: %d, time=%.2fs, tokens≈%d",
-    #     len(os_embs),
-    #     os_time,
-    #     os_tokens,
-    # )
+    # logging.info(f"Qwen  - vectors: {len(qwen_embs)}, time={qwen_time:.2f}s, tokens≈{qwen_tokens}")
+
+    # Test OpenSearch sparse
+    logging.info("=== Start OpenSearch sparse embedding ===")
+    os_embs, os_time, os_tokens, os_file = embed_with_opensearch_sparse(
+        table_name, texts, raw_rows, output_dir
+    )
+    logging.info(
+        "OpenSearch-sparse - vectors: %d, time=%.2fs, tokens≈%d",
+        len(os_embs),
+        os_time,
+        os_tokens,
+    )
 
     # So sánh sơ bộ
     logging.info("=== Summary ===")

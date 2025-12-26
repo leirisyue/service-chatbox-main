@@ -123,7 +123,7 @@ async def import_products(file: UploadFile = File(...)):
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) FROM products 
+            SELECT COUNT(*) FROM products_gemi 
             WHERE category = 'Chưa phân loại' 
             OR sub_category = 'Chưa phân loại'
             OR material_primary = 'Chưa xác định'
@@ -232,7 +232,7 @@ async def import_materials(file: UploadFile = File(...)):
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) FROM materials 
+            SELECT COUNT(*) FROM materials_gemi 
             WHERE material_subgroup = 'Chưa phân loại'
         """)
         pending_count = cur.fetchone()[0]
@@ -287,10 +287,10 @@ async def import_product_materials(file: UploadFile = File(...)):
         errors = []
         
         # Pre-load dữ liệu để check nhanh
-        cur.execute("SELECT headcode FROM products")
+        cur.execute("SELECT headcode FROM products_gemi")
         existing_products = {row[0] for row in cur.fetchall()}
         
-        cur.execute("SELECT id_sap FROM materials")
+        cur.execute("SELECT id_sap FROM materials_gemi")
         existing_materials = {row[0] for row in cur.fetchall()}
 
         # Hàm làm sạch ID

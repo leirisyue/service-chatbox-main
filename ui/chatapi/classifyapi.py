@@ -284,7 +284,7 @@ def classify_pending_products():
         # Lấy sản phẩm chưa phân loại
         cur.execute("""
             SELECT headcode, id_sap, product_name 
-            FROM products 
+            FROM products_gemi 
             WHERE category = 'Chưa phân loại' 
                OR sub_category = 'Chưa phân loại'
                OR material_primary = 'Chưa xác định'
@@ -359,7 +359,7 @@ def classify_pending_products():
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) FROM products 
+            SELECT COUNT(*) FROM products_gemi 
             WHERE category = 'Chưa phân loại' 
             OR sub_category = 'Chưa phân loại'
             OR material_primary = 'Chưa xác định'
@@ -394,7 +394,7 @@ def classify_pending_materials():
         
         cur.execute("""
             SELECT id_sap, material_name, material_group
-            FROM materials 
+            FROM materials_gemi 
             WHERE material_subgroup = 'Chưa phân loại'
             LIMIT 100
         """)
@@ -459,7 +459,7 @@ def classify_pending_materials():
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) FROM materials 
+            SELECT COUNT(*) FROM materials_gemi 
             WHERE material_subgroup = 'Chưa phân loại'
         """)
         remaining = cur.fetchone()[0]
