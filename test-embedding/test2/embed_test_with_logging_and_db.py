@@ -9,6 +9,8 @@ from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import google.generativeai as genai
 import requests
+import torch
+from transformers import AutoModelForMaskedLM, AutoTokenizer
 
 try:
     import tiktoken
@@ -26,6 +28,11 @@ GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "models/text-embedding-004"
 
 QWEN_EMBED_MODEL = os.getenv("QWEN_EMBED_MODEL", "qwen3-embedding:latest")
 QWEN_API_BASE = os.getenv("QWEN_API_BASE", "http://localhost:11434")  # ví dụ Ollama
+
+OPENSEARCH_SPARSE_MODEL_ID = os.getenv(
+    "OPENSEARCH_SPARSE_MODEL_ID",
+    "opensearch-project/opensearch-neural-sparse-encoding-doc-v2-mini",
+)
 
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = os.getenv("PG_PORT", "5432")
@@ -102,7 +109,86 @@ def estimate_tokens(texts: List[str], model_name: str = "gpt-4o-mini") -> int:
 
 
 # =========================
-# 5. Postgres helpers
+# 5. OpenSearch sparse encoder helpers
+# =========================
+
+_opensearch_sparse_model = None
+_opensearch_sparse_tokenizer = None
+_opensearch_sparse_special_token_ids = None
+_opensearch_sparse_id_to_token = None
+
+
+def _load_opensearch_sparse_model():
+    """Lazy load Hugging Face model/tokenizer cho opensearch sparse encoder."""
+    global _opensearch_sparse_model, _opensearch_sparse_tokenizer, _opensearch_sparse_special_token_ids, _opensearch_sparse_id_to_token
+
+    if _opensearch_sparse_model is not None:
+        return (
+            _opensearch_sparse_model,
+            _opensearch_sparse_tokenizer,
+            _opensearch_sparse_special_token_ids,
+            _opensearch_sparse_id_to_token,
+        )
+
+    model = AutoModelForMaskedLM.from_pretrained(OPENSEARCH_SPARSE_MODEL_ID)
+    tokenizer = AutoTokenizer.from_pretrained(OPENSEARCH_SPARSE_MODEL_ID)
+
+    special_token_ids = [
+        tokenizer.vocab[token]
+        for token in tokenizer.special_tokens_map.values()
+        if token in tokenizer.vocab
+    ]
+
+    id_to_token = ["" for _ in range(tokenizer.vocab_size)]
+    for token, idx in tokenizer.vocab.items():
+        if 0 <= idx < tokenizer.vocab_size:
+            id_to_token[idx] = token
+
+    _opensearch_sparse_model = model
+    _opensearch_sparse_tokenizer = tokenizer
+    _opensearch_sparse_special_token_ids = special_token_ids
+    _opensearch_sparse_id_to_token = id_to_token
+
+    return model, tokenizer, special_token_ids, id_to_token
+
+
+def _compute_sparse_tensor(feature, output, special_token_ids):
+    """Từ output dense (batch, seq_len, vocab) -> sparse tensor (batch, vocab)."""
+    # attention_mask: (batch, seq_len) -> (batch, seq_len, 1)
+    attn = feature["attention_mask"].unsqueeze(-1)
+    # max pooling theo chiều seq_len, chỉ giữ token thật (mask=1)
+    values, _ = torch.max(output * attn, dim=1)  # (batch, vocab_size)
+    values = torch.log1p(torch.relu(values))
+    if special_token_ids:
+        values[:, special_token_ids] = 0
+    return values
+
+
+def _sparse_tensor_to_token_dicts(sparse_tensor, id_to_token):
+    """Chuyển tensor sparse (batch, vocab) -> list[dict[token -> weight]]."""
+    batch_size, _ = sparse_tensor.shape
+    sample_indices, token_indices = torch.nonzero(sparse_tensor, as_tuple=True)
+    non_zero_values = sparse_tensor[(sample_indices, token_indices)].tolist()
+
+    # Đếm số token khác 0 cho mỗi sample
+    counts = torch.bincount(sample_indices, minlength=batch_size).tolist()
+    tokens = [id_to_token[idx] for idx in token_indices.tolist()]
+
+    result: List[dict] = []
+    offset = 0
+    for c in counts:
+        if c == 0:
+            result.append({})
+            continue
+        token_slice = tokens[offset : offset + c]
+        value_slice = non_zero_values[offset : offset + c]
+        result.append(dict(zip(token_slice, value_slice)))
+        offset += c
+    return result
+
+
+# =========================
+# 6. Postgres helpers
 # =========================
 
 def get_pg_connection():
@@ -183,6 +269,21 @@ def ensure_embedding_tables():
                     );
                     """
                 )
+
+            # Bảng riêng cho sparse embedding của OpenSearch (luôn JSONB)
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS opensearch_sparse_embeddings (
+                    id SERIAL PRIMARY KEY,
+                    source_table TEXT NOT NULL,
+                    source_pk TEXT,
+                    row_index INT NOT NULL,
+                    text TEXT NOT NULL,
+                    embedding JSONB,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                );
+                """
+            )
         conn.commit()
     finally:
         conn.close()
@@ -193,21 +294,27 @@ def insert_embedding_rows(
     table_name: str,
     texts: List[str],
     raw_rows: List[Any],
-    embeddings: List[List[float]],
+    embeddings: List[Any],
 ):
-    """
-    Lưu embedding vào bảng:
-      - model = "gemini" -> gemini_embeddings
-      - model = "qwen"   -> qwen_embeddings
+    """Lưu embedding vào bảng.
+
+    Mapping:
+      - model = "gemini"          -> gemini_embeddings
+      - model = "qwen"            -> qwen_embeddings
+      - model = "opensearch_sparse" -> opensearch_sparse_embeddings (luôn JSONB)
     """
     if not embeddings:
         logging.info(f"No embeddings to insert for model={model}")
         return
 
-    if model not in ("gemini", "qwen"):
-        raise ValueError("model must be 'gemini' or 'qwen'")
-
-    target_table = "gemini_embeddings" if model == "gemini" else "qwen_embeddings"
+    if model == "gemini":
+        target_table = "gemini_embeddings"
+    elif model == "qwen":
+        target_table = "qwen_embeddings"
+    elif model == "opensearch_sparse":
+        target_table = "opensearch_sparse_embeddings"
+    else:
+        raise ValueError("Unsupported model type")
 
     conn = get_pg_connection()
     try:
@@ -221,7 +328,14 @@ def insert_embedding_rows(
                     elif "ID" in row:
                         source_pk = str(row["ID"])
 
-                if EMBEDDING_STORAGE_TYPE == "vector":
+                if model == "opensearch_sparse":
+                    # Sparse embedding lưu dạng JSONB (token -> weight)
+                    sql = f"""
+                        INSERT INTO {target_table} (source_table, source_pk, row_index, text, embedding)
+                        VALUES (%s, %s, %s, %s, %s::jsonb)
+                    """
+                    params = (table_name, source_pk, idx, text, json.dumps(emb))
+                elif EMBEDDING_STORAGE_TYPE == "vector":
                     # chèn dạng ARRAY -> VECTOR (pgvector)
                     # cú pháp: embedding = %s::vector
                     emb_str = "[" + ",".join(str(float(x)) for x in emb) + "]"
@@ -392,6 +506,84 @@ def embed_with_qwen(
 
 
 # =========================
+# 8. OpenSearch sparse embedding + logging + DB save
+# =========================
+def embed_with_opensearch_sparse(
+    table_name: str,
+    texts: List[str],
+    raw_rows: List[Any],
+    output_dir: str,
+) -> Tuple[List[Any], float, int, str]:
+    """Sinh sparse embedding (token -> weight) bằng model OpenSearch.
+
+    Sử dụng model "opensearch-project/opensearch-neural-sparse-encoding-doc-v2-mini".
+    Kết quả được lưu ra file JSONL và bảng Postgres opensearch_sparse_embeddings.
+    """
+    if not texts:
+        return [], 0.0, 0, ""
+
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    outfile = os.path.join(
+        output_dir,
+        f"{table_name}_opensearch_sparse_embeddings_{timestamp}.jsonl",
+    )
+
+    model, tokenizer, special_token_ids, id_to_token = _load_opensearch_sparse_model()
+
+    embeddings: List[Any] = []
+    start = time.time()
+    with open(outfile, "w", encoding="utf-8") as f:
+        for idx, (t, row) in enumerate(zip(texts, raw_rows)):
+            feature = tokenizer(
+                [t],
+                padding=True,
+                truncation=True,
+                return_tensors="pt",
+                return_token_type_ids=False,
+            )
+
+            with torch.no_grad():
+                output = model(**feature)[0]
+
+            sparse_tensor = _compute_sparse_tensor(
+                feature,
+                output,
+                special_token_ids,
+            )  # (1, vocab_size)
+
+            token_dict = _sparse_tensor_to_token_dicts(
+                sparse_tensor,
+                id_to_token,
+            )[0]
+            embeddings.append(token_dict)
+
+            record = {
+                "row_index": idx,
+                "text": t,
+                "raw_row": to_jsonable(row),
+                "embedding": to_jsonable(token_dict),
+            }
+            f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    elapsed = time.time() - start
+    token_est = estimate_tokens(texts)
+
+    logging.info(
+        "OpenSearch sparse embeddings done: %d rows, time=%.2fs, tokens≈%d, output=%s",
+        len(embeddings),
+        elapsed,
+        token_est,
+        outfile,
+    )
+
+    # Lưu vào DB (luôn JSONB)
+    insert_embedding_rows("opensearch_sparse", table_name, texts, raw_rows, embeddings)
+
+    return embeddings, elapsed, token_est, outfile
+
+
+# =========================
 # 8. Main test
 # =========================
 def run_test(table_name: str, limit: int = 1000):
@@ -407,29 +599,47 @@ def run_test(table_name: str, limit: int = 1000):
     os.makedirs(output_dir, exist_ok=True)
 
     # Test Gemini
-    logging.info("=== Start Gemini embedding ===")
-    gem_embs, gem_time, gem_tokens, gem_file = embed_with_gemini(
-        table_name, texts, raw_rows, output_dir
-    )
-    logging.info(f"Gemini - vectors: {len(gem_embs)}, time={gem_time:.2f}s, tokens≈{gem_tokens}")
+    # logging.info("=== Start Gemini embedding ===")
+    # gem_embs, gem_time, gem_tokens, gem_file = embed_with_gemini(
+    #     table_name, texts, raw_rows, output_dir
+    # )
+    # logging.info(f"Gemini - vectors: {len(gem_embs)}, time={gem_time:.2f}s, tokens≈{gem_tokens}")
 
     # Test Qwen
-    logging.info("=== Start Qwen embedding ===")
-    qwen_embs, qwen_time, qwen_tokens, qwen_file = embed_with_qwen(
+    # logging.info("=== Start Qwen embedding ===")
+    # qwen_embs, qwen_time, qwen_tokens, qwen_file = embed_with_qwen(
+    #     table_name, texts, raw_rows, output_dir
+    # )
+    # logging.info(f"Qwen  - vectors: {len(qwen_embs)}, time={qwen_time:.2f}s, tokens≈{qwen_tokens}")
+
+    # Test OpenSearch sparse
+    logging.info("=== Start OpenSearch sparse embedding ===")
+    os_embs, os_time, os_tokens, os_file = embed_with_opensearch_sparse(
         table_name, texts, raw_rows, output_dir
     )
-    logging.info(f"Qwen  - vectors: {len(qwen_embs)}, time={qwen_time:.2f}s, tokens≈{qwen_tokens}")
+    logging.info(
+        "OpenSearch-sparse - vectors: %d, time=%.2fs, tokens≈%d",
+        len(os_embs),
+        os_time,
+        os_tokens,
+    )
 
     # So sánh sơ bộ
     logging.info("=== Summary ===")
     logging.info(f"Rows: {len(texts)}")
-    logging.info(f"Gemini: time={gem_time:.2f}s, tokens≈{gem_tokens}, file={gem_file}")
-    logging.info(f"Qwen : time={qwen_time:.2f}s, tokens≈{qwen_tokens}, file={qwen_file}")
+    # logging.info(f"Gemini: time={gem_time:.2f}s, tokens≈{gem_tokens}, file={gem_file}")
+    # logging.info(f"Qwen : time={qwen_time:.2f}s, tokens≈{qwen_tokens}, file={qwen_file}")
+    logging.info(
+        f"OpenSearch-sparse: time={os_time:.2f}s, tokens≈{os_tokens}, file={os_file}"
+    )
 
     print("\n=== Summary ===")
     print(f"Rows: {len(texts)}")
-    print(f"Gemini: time={gem_time:.2f}s, tokens≈{gem_tokens}, file={gem_file}")
-    print(f"Qwen : time={qwen_time:.2f}s, tokens≈{qwen_tokens}, file={qwen_file}")
+    # print(f"Gemini: time={gem_time:.2f}s, tokens≈{gem_tokens}, file={gem_file}")
+    # print(f"Qwen : time={qwen_time:.2f}s, tokens≈{qwen_tokens}, file={qwen_file}")
+    print(
+        f"OpenSearch-sparse: time={os_time:.2f}s, tokens≈{os_tokens}, file={os_file}"
+    )
 
 
 if __name__ == "__main__":

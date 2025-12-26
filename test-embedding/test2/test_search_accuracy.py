@@ -2,13 +2,18 @@ import os
 import json
 import math
 import logging
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Dict
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 import requests
 import google.generativeai as genai
+from embed_test_with_logging_and_db import (
+    _load_opensearch_sparse_model,
+    _compute_sparse_tensor,
+    _sparse_tensor_to_token_dicts,
+)
 
 load_dotenv()
 
@@ -20,6 +25,11 @@ GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "models/text-embedding-004"
 
 QWEN_EMBED_MODEL = os.getenv("QWEN_EMBED_MODEL", "qwen3-embedding:latest")
 QWEN_API_BASE = os.getenv("QWEN_API_BASE", "http://localhost:11434")
+
+OPENSEARCH_SPARSE_MODEL_ID = os.getenv(
+    "OPENSEARCH_SPARSE_MODEL_ID",
+    "opensearch-project/opensearch-neural-sparse-encoding-doc-v2-mini",
+)
 
 PG_HOST = os.getenv("PG_HOST", "localhost")
 PG_PORT = os.getenv("PG_PORT", "5432")
@@ -90,6 +100,28 @@ def embed_query_qwen(query: str) -> List[float]:
     if emb is None:
         raise ValueError(f"Qwen API response không có 'embedding': {data}")
     return emb
+
+
+def embed_query_opensearch_sparse(query: str) -> Dict[str, float]:
+    """Embed câu query bằng model sparse OpenSearch (token -> weight).
+
+    Dùng cùng model với embed_with_opensearch_sparse trong embed_test_with_logging_and_db.py.
+    """
+    model, tokenizer, special_token_ids, id_to_token = _load_opensearch_sparse_model()
+
+    feature = tokenizer(
+        [query],
+        padding=True,
+        truncation=True,
+        return_tensors="pt",
+        return_token_type_ids=False,
+    )
+
+    # Gọi model để lấy dense output rồi convert sang sparse dict
+    output = model(**feature)[0]
+    sparse_tensor = _compute_sparse_tensor(feature, output, special_token_ids)
+    token_dict = _sparse_tensor_to_token_dicts(sparse_tensor, id_to_token)[0]
+    return token_dict
 
 
 # =========================
@@ -198,6 +230,56 @@ def search_with_jsonb(
         conn.close()
 
 
+def search_with_opensearch_sparse_jsonb(
+    query_emb: Dict[str, float],
+    top_k: int = 10,
+    max_rows: int = 10000,
+) -> List[dict]:
+    """Search cho sparse embedding lưu JSONB (token -> weight).
+
+    - Load embedding sparse từ bảng opensearch_sparse_embeddings
+    - Tính inner product giữa query_emb và document_emb (dict)
+    - Sort và lấy top_k
+    """
+    table = "opensearch_sparse_embeddings"
+    conn = get_pg_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            sql = f"""
+                SELECT
+                    id,
+                    source_table,
+                    source_pk,
+                    row_index,
+                    text,
+                    embedding
+                FROM {table}
+                LIMIT %s;
+            """
+            cur.execute(sql, (max_rows,))
+            rows = cur.fetchall()
+
+        def sparse_dot(q: Dict[str, float], d: Dict[str, float]) -> float:
+            return sum(v * d.get(tok, 0.0) for tok, v in q.items())
+
+        results = []
+        for r in rows:
+            emb = r["embedding"]
+            if isinstance(emb, str):
+                emb = json.loads(emb)
+            if not isinstance(emb, dict):
+                # nếu format khác (ví dụ list), bỏ qua
+                continue
+            score = sparse_dot(query_emb, emb)
+            r["score"] = score
+            results.append(r)
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[:top_k]
+    finally:
+        conn.close()
+
+
 # =========================
 # Main search
 # =========================
@@ -206,8 +288,9 @@ def search_top_k(
     query_text: str,
     top_k: int = 10,
 ):
-    """
-    - model: "gemini" hoặc "qwen"
+    """Thực hiện search top_k cho một câu query.
+
+    - model: "gemini", "qwen" hoặc "opensearch_sparse"
     - query_text: câu test
     - top_k: số dòng muốn lấy
     """
@@ -216,17 +299,24 @@ def search_top_k(
 
     if model == "gemini":
         query_emb = embed_query_gemini(query_text)
+        logging.info(f"Got query embedding dim={len(query_emb)}")
+        if EMBEDDING_STORAGE_TYPE == "vector":
+            results = search_with_pgvector(model, query_emb, top_k=top_k)
+        else:
+            results = search_with_jsonb(model, query_emb, top_k=top_k)
     elif model == "qwen":
         query_emb = embed_query_qwen(query_text)
+        logging.info(f"Got query embedding dim={len(query_emb)}")
+        if EMBEDDING_STORAGE_TYPE == "vector":
+            results = search_with_pgvector(model, query_emb, top_k=top_k)
+        else:
+            results = search_with_jsonb(model, query_emb, top_k=top_k)
+    elif model == "opensearch_sparse":
+        query_emb = embed_query_opensearch_sparse(query_text)
+        logging.info(f"Got sparse query embedding with {len(query_emb)} non-zero tokens")
+        results = search_with_opensearch_sparse_jsonb(query_emb, top_k=top_k)
     else:
-        raise ValueError("model must be 'gemini' or 'qwen'")
-
-    logging.info(f"Got query embedding dim={len(query_emb)}")
-
-    if EMBEDDING_STORAGE_TYPE == "vector":
-        results = search_with_pgvector(model, query_emb, top_k=top_k)
-    else:
-        results = search_with_jsonb(model, query_emb, top_k=top_k)
+        raise ValueError("model must be 'gemini', 'qwen' hoặc 'opensearch_sparse'")
 
     logging.info(f"Found {len(results)} results")
 
@@ -262,8 +352,11 @@ if __name__ == "__main__":
     parser.add_argument(
         "--model",
         required=True,
-        choices=["gemini", "qwen"],
-        help="Model dùng để embed và search (gemini hoặc qwen)",
+        choices=["gemini", "qwen", "opensearch_sparse"],
+        help=(
+            "Model dùng để embed và search "
+            "(gemini, qwen hoặc opensearch_sparse)"
+        ),
     )
     parser.add_argument(
         "--query",
