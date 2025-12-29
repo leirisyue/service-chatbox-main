@@ -10,7 +10,8 @@ import {
   generateMaterialEmbeddings,
   getDebugInfo,
   getChatSessions,
-  getSessionHistory
+  getSessionHistory,
+  getChatSessionId
 } from '../../services/api';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import Button from '@mui/material/Button';
@@ -57,7 +58,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
   const handleSessionClick = async (session) => {
     try {
       setSelectedSession(session.session_id);
-      const history = await getSessionHistory(session.session_id);
+      const history = await getChatSessionId(session.session_id);
 
       // Gọi callback để load lịch sử vào App
       if (onLoadSession) {

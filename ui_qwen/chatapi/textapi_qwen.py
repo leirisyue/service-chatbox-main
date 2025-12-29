@@ -1373,8 +1373,8 @@ def chat(msg: ChatMessage):
                     "response": response_text,
                     "materials": materials,
                     "suggested_prompts": suggested_prompts,
-                    "ranking_summary": ranking_summary,  # 🆕
-                    "can_provide_feedback": True  # 🆕
+                    "ranking_summary": ranking_summary,  
+                    "can_provide_feedback": True  
                 }      
         elif intent == "query_material_detail":
             id_sap = params.get("id_sap")

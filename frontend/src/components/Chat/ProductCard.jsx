@@ -15,7 +15,7 @@ function ProductCard({ product, onMaterialClick, onPriceClick }) {
         {!!product.project && <p style={{whiteSpace: 'nowrap',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          width: '100%'}}>🗂️ Dự án: {product.project}</p>}
+          width: '100%'}} title={`🗂️ Dự án: ${product.project}`}>🗂️ Dự án: {product.project}</p>}
       </div>
       <div className="product-actions" style={{ position: 'absolute', width: '90%', bottom: '15px' }}>
         <button

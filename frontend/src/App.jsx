@@ -196,12 +196,13 @@ function App() {
   };
 
   const handleLoadSession = (loadedSessionId, history) => {
+    console.log("🚀 ~ handleLoadSession ~ history:", history);
     // Chuyển đổi sang session được load
     setSessionId(loadedSessionId);
     localStorage.setItem('chat_session_id', loadedSessionId);
 
     // Convert history từ database sang format messages
-    const convertedMessages = history.map(item => ({
+    const convertedMessages = history?.histories(item => ({
       role: item.role,
       content: item.content,
       timestamp: new Date(item.timestamp).getTime(),
