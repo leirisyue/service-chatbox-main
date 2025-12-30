@@ -119,7 +119,7 @@ function Message({ message, onSendMessage, typing }) {
         </div>
 
         {/* PRODUCTS */}
-        {!isUser && typingDone && message.data?.products && (
+        {!isUser && typingDone && message.data?.products?.length > 0 && (
           <div className="products-section fade-in">
             <h3>
               📦 Kết quả tìm kiếm sản phẩm ({message.data.products.length})
@@ -141,11 +141,14 @@ function Message({ message, onSendMessage, typing }) {
         )}
 
         {/* MATERIALS */}
-        {!isUser && typingDone && message.data?.materials && (
+        {!isUser && typingDone && message.data?.materials?.length > 0 && (
           <div className="materials-section fade-in">
+            <h3>
+              📦 Kết quả tìm kiếm vật liệu ({message.data.materials.length})
+            </h3>
             <Grid container spacing={2}>
               {message.data.materials.slice(0, 9).map((material, index) => (
-                <Grid key={index} size={{ xs: 12, md: 6, lg: 4 }}>
+                <Grid key={index} size={{ xs: 12, md: 6 }}>
                   <Box sx={{ height: '100%' }}>
                     <MaterialCard
                       material={material}

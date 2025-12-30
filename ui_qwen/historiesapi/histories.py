@@ -408,7 +408,7 @@ def get_chat_history_by_session(email: str, session_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/chat_histories/session_id/{session_id}/list")
-def get_session_messages_v2(session_id: str):
+def get_sessionId_messages_list(session_id: str):
     """
     Phiên bản nâng cao: Xử lý timestamp chính xác hơn
     """
@@ -496,11 +496,11 @@ def get_session_messages_v2(session_id: str):
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        print(f"Error in get_session_messages_v2: {error_detail}")
+        print(f"Error in get_sessionId_messages_list: {error_detail}")
         return {"Error": str(e), "detail": error_detail}
 
 @router.get("/history/session_id/{session_id}/messages")
-def get_session_messages_v2(session_id: str):
+def get_sessionId_messages(session_id: str):
     """
     Phiên bản nâng cao với logic xác định welcome message thông minh hơn
     """
@@ -578,25 +578,77 @@ def get_session_messages_v2(session_id: str):
                         question_timestamp = int(base_timestamp.timestamp() * 1000)
                         answer_timestamp = question_timestamp + 1000
                     
+                    
+                    
                     # Thêm message user (câu hỏi)
                     if question:
                         user_message = {
                             "role": "user",
                             "content": str(question).strip(),
                             "timestamp": question_timestamp,
-                            "messages": qa.get("messages", []) if isinstance(qa, dict) else [],
                             "view_history": True
                         }
                         all_messages.append(user_message)
                     
                     # Thêm message bot (câu trả lời)
                     if answer:
+                                                
+                        # Lấy danh sách messages từ qa
+                        messages_list = qa.get("messages", []) if isinstance(qa, dict) else []
+                        
+                        # Phân loại thành products và materials dựa trên dataTemplate
+                        products = []
+                        materials = []
+                        
+                        for item in messages_list:
+                            if isinstance(item, dict):
+                                # Xác định loại dựa trên các trường đặc trưng
+                                is_product = False
+                                is_material = False
+                                
+                                # Các trường đặc trưng của product (theo dataTemplate)
+                                product_fields = ["category", "project", "product_name", "sub_category", 
+                                                "project_id", "final_rank", "original_rank", "total_cost"]
+                                
+                                # Các trường đặc trưng của material (theo dataTemplate)
+                                material_fields = ["material_group", "material_name", "material_subgroup", 
+                                                "unit", "price", "id_sap", "distance"]
+                                
+                                # Kiểm tra xem item có trường nào của product không
+                                for field in product_fields:
+                                    if field in item:
+                                        is_product = True
+                                        break
+                                
+                                # Kiểm tra xem item có trường nào của material không
+                                for field in material_fields:
+                                    if field in item:
+                                        is_material = True
+                                        break
+                                
+                                # Phân loại
+                                if is_product and not is_material:
+                                    products.append(item)
+                                elif is_material and not is_product:
+                                    materials.append(item)
+                                elif is_product and is_material:
+                                    # Nếu có cả hai, ưu tiên phân loại dựa trên trường quan trọng nhất
+                                    if "category" in item or "product_name" in item:
+                                        products.append(item)
+                                    elif "material_group" in item or "material_name" in item:
+                                        materials.append(item)
+                                    else:
+                                        products.append(item)  # Mặc định
+                        
                         bot_message = {
                             "role": "bot",
                             "content": str(answer).strip(),
                             "timestamp": answer_timestamp,
-                            "messages": qa.get("messages", []) if isinstance(qa, dict) else [],
-                            "view_history": True
+                            "view_history": True,
+                            "data":{
+                                "products": products,
+                                "materials": materials
+                            }
                         }
                         
                         # Xác định có phải là welcome message không
@@ -612,6 +664,7 @@ def get_session_messages_v2(session_id: str):
                                 bot_message["type"] = "welcome"
                             
                             first_message_processed = True
+
                         
                         all_messages.append(bot_message)
         
@@ -623,6 +676,6 @@ def get_session_messages_v2(session_id: str):
     except Exception as e:
         import traceback
         error_detail = traceback.format_exc()
-        print(f"Error in get_session_messages_v2: {error_detail}")
+        print(f"Error in get_sessionId_messages: {error_detail}")
         return {"Error": str(e), "detail": error_detail}
 

@@ -22,7 +22,7 @@ function App() {
   const [sessionId, setSessionId] = useState('');
   const [messages, setMessages] = useAtom(messagesAtom);
   const viewHistory = useAtomValue(viewHistoryAtom);
-  
+
   const [context, setContext] = useState({
     last_search_results: [],
     current_products: [],
@@ -39,8 +39,6 @@ function App() {
     const storedSessionId = localStorage.getItem('chat_session_id') || uuidv4();
     setSessionId(storedSessionId);
     localStorage.setItem('chat_session_id', storedSessionId);
-
-    // Thêm welcome message
     if (messages.length === 0 && !viewHistory) {
       setMessages([welcomeMessage]);
     }
@@ -179,12 +177,12 @@ function App() {
     };
   }, [messages]);
 
-  const handleResetChat = () => {
+  const handleResetChat = async () => {
+    await setMessages([]);
     const newSessionId = uuidv4();
     setSessionId(newSessionId);
     localStorage.setItem('chat_session_id', newSessionId);
 
-    setMessages([]);
     setContext({
       last_search_results: [],
       current_products: [],
@@ -194,13 +192,11 @@ function App() {
     setSuggestedPrompts([
       "🔍 Danh sách sản phẩm",
     ]);
-    
-    setMessages([welcomeMessage]);
+    const text = [welcomeMessage]
+    setMessages(text)
   };
 
   const handleLoadSession = (loadedSessionId, history) => {
-    console.log("🚀 ~ handleLoadSession ~ history:", history);
-    // Chuyển đổi sang session được load
     setSessionId(loadedSessionId);
     localStorage.setItem('chat_session_id', loadedSessionId);
 

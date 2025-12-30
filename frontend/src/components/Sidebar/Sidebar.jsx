@@ -21,8 +21,8 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
   const [selectedSession, setSelectedSession] = useState(null);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const emailUser = useAtomValue(emailUserAtom);
-  const [_, setMessages] = useAtom(messagesAtom);
-  const [ , setViewHistory] = useAtom(viewHistoryAtom);
+  const [, setMessages] = useAtom(messagesAtom);
+  const [, setViewHistory] = useAtom(viewHistoryAtom);
 
   // Load danh sách sessions khi component mount
   useEffect(() => {
@@ -51,19 +51,13 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
 
   const handleSessionClick = async (session) => {
     try {
+      await setMessages([]);
       setSelectedSession(session.session_id);
       const history = await getMessagersHistory(session.session_id);
-
-      // Gọi callback để load lịch sử vào App
-      // if (onLoadSession) {
-      //   onLoadSession(session.session_id, history);
-      // }
       if (history.length > 0) {
         setViewHistory(true);
-        setMessages([]); // Clear messages hiện tại
         setMessages(history);
       }
-
     } catch (error) {
       console.error('Error loading session history:', error);
       alert('Lỗi tải lịch sử: ' + error.message);
@@ -200,7 +194,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
       <div className="sidebar-header">
         <Button
           className="btn-new-chat"
-          onClick={() => { onResetChat(); setViewHistory(false); }}
+          onClick={() => { onResetChat(); setViewHistory(false) }}
           disabled={isProcessing}
           startIcon={<QuestionAnswerIcon />}
           variant="contained"
@@ -225,7 +219,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
               <div
                 key={session?.session_id}
                 className={`session-item ${selectedSession === session?.session_id ? 'active' : ''}`}
-                onClick={() => handleSessionClick(session)}
+                onClick={() => { handleSessionClick(session) }}
               >
                 <div className="session-header">
                   <span className="session-icon" style={{ paddingLeft: '10px' }}>
@@ -233,7 +227,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
                   </span>
                   <div className="session-info">
                     <div className="session-preview">
-                      {/* {getSessionPreview(session?.session_name)} */}
+                      {/* {getSessionPreview(session?.session_name)} */} 
                       {session?.session_name}
                     </div>
                     <div className="session-date">

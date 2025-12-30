@@ -281,8 +281,8 @@ def classify_pending_products():
             SELECT headcode, id_sap, product_name 
             FROM products_qwen 
             WHERE category = 'Chưa phân loại' 
-               OR sub_category = 'Chưa phân loại'
-               OR material_primary = 'Chưa xác định'
+                OR sub_category = 'Chưa phân loại'
+                OR material_primary = 'Chưa xác định'
             LIMIT 100
         """)
         

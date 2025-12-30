@@ -1,6 +1,6 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
-import { messagesAtom, viewHistoryAtom } from '../../atom/messageAtom';
+import { messagesAtom } from '../../atom/messageAtom';
 import './Chat.css';
 import Message from './Message';
 
@@ -8,7 +8,6 @@ function ChatContainer({ isLoading, onSendMessage }) {
 
   const messages = useAtomValue(messagesAtom);
   console.log("🚀 ~ ChatContainer ~ messages:", messages);
-  const viewHistory = useAtomValue(viewHistoryAtom);
 
   const messagesEndRef = useRef(null);
 
