@@ -3,7 +3,7 @@ import { useAtom, useAtomValue } from 'jotai/react';
 import { useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import './App.css';
-import { messagesAtom } from './atom/messageAtom';
+import { messagesAtom, viewHistoryAtom } from './atom/messageAtom';
 import { emailUserAtom } from './atom/variableAtom';
 import ChatContainer from './components/Chat/ChatContainer';
 import ChatInput from './components/Input/ChatInput';
@@ -21,6 +21,8 @@ function App() {
 
   const [sessionId, setSessionId] = useState('');
   const [messages, setMessages] = useAtom(messagesAtom);
+  const viewHistory = useAtomValue(viewHistoryAtom);
+  
   const [context, setContext] = useState({
     last_search_results: [],
     current_products: [],
@@ -39,7 +41,7 @@ function App() {
     localStorage.setItem('chat_session_id', storedSessionId);
 
     // Thêm welcome message
-    if (messages.length === 0) {
+    if (messages.length === 0 && !viewHistory) {
       setMessages([welcomeMessage]);
     }
   }, []);
@@ -192,6 +194,7 @@ function App() {
     setSuggestedPrompts([
       "🔍 Danh sách sản phẩm",
     ]);
+    
     setMessages([welcomeMessage]);
   };
 

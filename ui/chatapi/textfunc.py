@@ -53,47 +53,46 @@ def auto_classify_product(product_name: str, id_sap: str = "") -> Dict:
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     prompt = f"""
-Bạn là chuyên gia phân loại sản phẩm nội thất cao cấp.
+                Bạn là chuyên gia phân loại sản phẩm nội thất cao cấp.
 
-INPUT:
-- Tên sản phẩm: "{product_name}"
-- Mã SAP: "{id_sap}"
+                INPUT:
+                - Tên sản phẩm: "{product_name}"
+                - Mã SAP: "{id_sap}"
 
-NHIỆM VỤ: Phân tích và phân loại sản phẩm theo 3 tiêu chí:
+                NHIỆM VỤ: Phân tích và phân loại sản phẩm theo 3 tiêu chí:
 
-1. **category** (Danh mục chính):
-   - Bàn (Table)
-   - Ghế (Chair) 
-   - Sofa
-   - Tủ (Cabinet)
-   - Giường (Bed)
-   - Đèn (Lamp)
-   - Kệ (Shelf)
-   - Bàn làm việc (Desk)
-   - Khác (Other)
+                1. **category** (Danh mục chính):
+                    - Bàn (Table)
+                    - Ghế (Chair) 
+                    - Sofa
+                    - Tủ (Cabinet)
+                    - Giường (Bed)
+                    - Đèn (Lamp)
+                    - Kệ (Shelf)
+                    - Bàn làm việc (Desk)
+                    - Khác (Other)
 
-2. **sub_category** (Danh mục phụ - cụ thể hơn):
-   VD: "Bàn ăn", "Bàn coffee", "Ghế bar", "Ghế ăn", "Sofa góc", "Tủ quần áo", "Đèn bàn", "Đèn trần"...
+                2. **sub_category** (Danh mục phụ - cụ thể hơn):
+                    VD: "Bàn ăn", "Bàn coffee", "Ghế bar", "Ghế ăn", "Sofa góc", "Tủ quần áo", "Đèn bàn", "Đèn trần"...
 
-3. **material_primary** (Vật liệu chính):
-   - Gỗ (Wood)
-   - Da (Leather)
-   - Vải (Fabric)
-   - Kim loại (Metal)
-   - Đá (Stone)
-   - Kính (Glass)
-   - Nhựa (Plastic)
-   - Mây tre (Rattan)
-   - Hỗn hợp (Mixed)
+                3. **material_primary** (Vật liệu chính):
+                    - Gỗ (Wood)
+                    - Da (Leather)
+                    - Vải (Fabric)
+                    - Kim loại (Metal)
+                    - Đá (Stone)
+                    - Kính (Glass)
+                    - Nhựa (Plastic)
+                    - Mây tre (Rattan)
+                    - Hỗn hợp (Mixed)
 
-OUTPUT JSON ONLY (no markdown, no backticks):
-{{
-  "category": "...",
-  "sub_category": "...",
-  "material_primary": "..."
-}}
-"""
-    
+                    OUTPUT JSON ONLY (no markdown, no backticks):
+                    {{
+                        "category": "...",
+                        "sub_category": "...",
+                        "material_primary": "..."
+                    }}
+            """
     response_text = call_gemini_with_retry(model, prompt)
     
     if not response_text:
@@ -102,7 +101,6 @@ OUTPUT JSON ONLY (no markdown, no backticks):
             "sub_category": "Chưa phân loại", 
             "material_primary": "Chưa xác định"
         }
-    
     try:
         clean = response_text.strip()
         if "```json" in clean:
@@ -124,21 +122,18 @@ def auto_classify_material(material_name: str, id_sap: str = "") -> Dict:
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
     
     prompt = f"""
-Phân loại nguyên vật liệu nội thất:
-
-Tên: "{material_name}"
-Mã: "{id_sap}"
-
-Xác định:
-1. **material_group**: Gỗ, Da, Vải, Đá, Kim loại, Kính, Nhựa, Sơn, Keo, Phụ kiện, Khác
-2. **material_subgroup**: Nhóm con cụ thể (VD: "Gỗ tự nhiên", "Da thật", "Vải cao cấp"...)
-
-OUTPUT JSON ONLY:
-{{
-  "material_group": "...",
-  "material_subgroup": "..."
-}}
-"""
+                Phân loại nguyên vật liệu nội thất:
+                Tên: "{material_name}"
+                Mã: "{id_sap}"
+                Xác định:
+                1. **material_group**: Gỗ, Da, Vải, Đá, Kim loại, Kính, Nhựa, Sơn, Keo, Phụ kiện, Khác
+                2. **material_subgroup**: Nhóm con cụ thể (VD: "Gỗ tự nhiên", "Da thật", "Vải cao cấp"...)
+                OUTPUT JSON ONLY:
+                {{
+                "material_group": "...",
+                "material_subgroup": "..."
+                }}
+            """
     
     response_text = call_gemini_with_retry(model, prompt)
     
@@ -234,8 +229,7 @@ def search_materials_for_product(product_query: str, params: Dict):
             INNER JOIN products p ON pm.product_headcode = p.headcode
             WHERE p.headcode = ANY(%s)
             {material_filter}
-            GROUP BY m.id_sap, m.material_name, m.material_group, 
-                     m.material_subgroup, m.material_subprice, m.unit, m.image_url
+            GROUP BY m.id_sap, m.material_name, m.material_group, m.material_subgroup, m.material_subprice, m.unit, m.image_url
             ORDER BY usage_count DESC, m.material_name ASC
             LIMIT 15
         """

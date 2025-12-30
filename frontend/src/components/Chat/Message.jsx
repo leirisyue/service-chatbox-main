@@ -12,7 +12,7 @@ import rehypeSanitize from "rehype-sanitize";
 import remarkBreaks from "remark-breaks";
 import { schemaMarkdown } from '../../utils/mardownhtml';
 
-function Message({ message, onSendMessage }) {
+function Message({ message, onSendMessage, typing }) {
   const isUser = message.role === 'user';
 
   const [displayedText, setDisplayedText] = useState(message.content || "");
@@ -25,6 +25,7 @@ function Message({ message, onSendMessage }) {
       TYPING EFFECT
   ========================= */
   useEffect(() => {
+    if (!typing) return;
     if (isUser || typeof message.content !== 'string') {
       setDisplayedText(message.content);
       setTypingDone(true);
@@ -59,7 +60,7 @@ function Message({ message, onSendMessage }) {
 
     return () => clearInterval(interval);
 
-  }, [message.content, message.timestamp, isUser]);
+  }, [typing]);
 
   /* =========================
       AUTO SCROLL THEO TYPING

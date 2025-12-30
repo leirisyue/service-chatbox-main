@@ -1,17 +1,21 @@
 import { useAtomValue } from 'jotai';
 import { useEffect, useRef } from 'react';
-import { messagesAtom } from '../../atom/messageAtom';
+import { messagesAtom, viewHistoryAtom } from '../../atom/messageAtom';
 import './Chat.css';
 import Message from './Message';
 
 function ChatContainer({ isLoading, onSendMessage }) {
+
+  const messages = useAtomValue(messagesAtom);
+  console.log("🚀 ~ ChatContainer ~ messages:", messages);
+  const viewHistory = useAtomValue(viewHistoryAtom);
+
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const messages = useAtomValue(messagesAtom);
 
   useEffect(() => {
     scrollToBottom();
@@ -21,7 +25,7 @@ function ChatContainer({ isLoading, onSendMessage }) {
     <div className="chat-container">
       <div className="messages-wrapper">
         {messages?.map((message, index) => (
-          <Message key={index} message={message} onSendMessage={onSendMessage} />
+          <Message key={index} message={message} onSendMessage={onSendMessage} typing={index === messages.length - 1 && index !== 0 && !message.view_history} />
         ))}
         {isLoading && (
           <div className="loading-indicator">

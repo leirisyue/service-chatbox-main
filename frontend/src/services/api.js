@@ -136,7 +136,7 @@ export const getChatSessionId = async (session_id) => {
 
 export const getChatSessions = async (email) => {
   if (!email) return [];
-  const response = await api.get(`/chat_histories/${email}`);
+  const response = await api.get(`/chat_histories/email/${email}`);
   return response.data;
 };
 
@@ -144,3 +144,8 @@ export const getSessionHistory = async (email, sessionId) => {
   const response = await api.get(`/chat_histories/${email}/${sessionId}`);
   return response.data;
 };
+
+export const getMessagersHistory = async (sessionId) => {
+  const response = await api.get(`/history/session_id/${sessionId}/messages`);
+  return response.data;
+}

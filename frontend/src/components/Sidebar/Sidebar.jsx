@@ -1,23 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import './Sidebar.css';
-import {
-  importProducts,
-  importMaterials,
-  importProductMaterials,
-  classifyProducts,
-  classifyMaterials,
-  generateEmbeddings,
-  generateMaterialEmbeddings,
-  getDebugInfo,
-  getChatSessions,
-  getSessionHistory,
-  getChatSessionId
-} from '../../services/api';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import Button from '@mui/material/Button';
+import { useAtom, useAtomValue } from 'jotai/react';
+import { useEffect, useState } from 'react';
+import { messagesAtom, viewHistoryAtom } from '../../atom/messageAtom';
 import { emailUserAtom } from '../../atom/variableAtom';
-import { useAtomValue } from 'jotai/react';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
+import {
+  classifyMaterials, classifyProducts, generateEmbeddings,
+  generateMaterialEmbeddings, getChatSessions, getDebugInfo, getMessagersHistory, importMaterials,
+  importProductMaterials, importProducts
+} from '../../services/api';
+import './Sidebar.css';
 
 function Sidebar({ sessionId, onResetChat, onLoadSession }) {
 
@@ -28,6 +21,8 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
   const [selectedSession, setSelectedSession] = useState(null);
   const [isLoadingSessions, setIsLoadingSessions] = useState(false);
   const emailUser = useAtomValue(emailUserAtom);
+  const [_, setMessages] = useAtom(messagesAtom);
+  const [ , setViewHistory] = useAtom(viewHistoryAtom);
 
   // Load danh sách sessions khi component mount
   useEffect(() => {
@@ -38,7 +33,6 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
     setIsLoadingSessions(true);
     try {
       const sessions = await getChatSessions(emailUser);
-      console.log("🚀 ~ loadChatSessions ~ sessions:", sessions);
       setChatSessions(sessions);
     } catch (error) {
       console.error('Error loading sessions:', error);
@@ -58,12 +52,18 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
   const handleSessionClick = async (session) => {
     try {
       setSelectedSession(session.session_id);
-      const history = await getChatSessionId(session.session_id);
+      const history = await getMessagersHistory(session.session_id);
 
       // Gọi callback để load lịch sử vào App
-      if (onLoadSession) {
-        onLoadSession(session.session_id, history);
+      // if (onLoadSession) {
+      //   onLoadSession(session.session_id, history);
+      // }
+      if (history.length > 0) {
+        setViewHistory(true);
+        setMessages([]); // Clear messages hiện tại
+        setMessages(history);
       }
+
     } catch (error) {
       console.error('Error loading session history:', error);
       alert('Lỗi tải lịch sử: ' + error.message);
@@ -200,7 +200,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
       <div className="sidebar-header">
         <Button
           className="btn-new-chat"
-          onClick={onResetChat}
+          onClick={() => { onResetChat(); setViewHistory(false); }}
           disabled={isProcessing}
           startIcon={<QuestionAnswerIcon />}
           variant="contained"
@@ -228,7 +228,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
                 onClick={() => handleSessionClick(session)}
               >
                 <div className="session-header">
-                  <span className="session-icon" style={{paddingLeft:'10px'}}>
+                  <span className="session-icon" style={{ paddingLeft: '10px' }}>
                     <ChatBubbleOutlineIcon sx={{ fontSize: 15 }} />
                   </span>
                   <div className="session-info">
@@ -248,7 +248,7 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
                 )} */}
               </div>
             ))}
-            
+
           </div>
         )}
       </div>

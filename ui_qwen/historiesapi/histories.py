@@ -1,12 +1,13 @@
 
 import json
-from datetime import datetime
 from typing import Dict, List, Optional
 
 import psycopg2
 from config import settings
 from fastapi import APIRouter, HTTPException, Request
 from psycopg2.extras import RealDictCursor
+from datetime import datetime, time, timedelta
+import json
 
 
 def get_db():
@@ -259,7 +260,7 @@ def get_session_chat_history(email: str, session_id: str):
 # API ENDPOINTS
 # ========================================
 
-@router.get("/history/{session_id}")
+@router.get("/chat_histories/session_id/{session_id}")
 def get_session_history(session_id: str):
     try:
         conn = get_db()
@@ -319,8 +320,7 @@ def get_session_history(session_id: str):
         print(f"Error in get_session_history: {error_detail}")
         return {"Error": str(e), "detail": error_detail}
 
-
-@router.get("/chat_histories/{email}")
+@router.get("/chat_histories/email/{email}")
 def get_all_sessions_by_email(email: str):
     """
     Lấy danh sách tất cả sessions của một user, grouped by session_id
@@ -407,4 +407,222 @@ def get_chat_history_by_session(email: str, session_id: str):
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/chat_histories/session_id/{session_id}/list")
+def get_session_messages_v2(session_id: str):
+    """
+    Phiên bản nâng cao: Xử lý timestamp chính xác hơn
+    """
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        sql = """
+            SELECT 
+                chat_date,
+                time_block,
+                history::text as history_json,
+                created_at,
+                updated_at
+            FROM chat_histories
+            WHERE session_id = %s AND isDeleted = false
+            ORDER BY chat_date ASC, time_block ASC, created_at ASC
+        """
+        cur.execute(sql, (session_id,))
+        records = cur.fetchall()
+        conn.close()
+
+        all_messages = []
+        
+        for record in records:
+            chat_date = record['chat_date']
+            time_block = record['time_block']
+            history_json = record['history_json']
+            record_created_at = record['created_at']
+            
+            try:
+                history_list = json.loads(history_json)
+            except:
+                history_list = []
+            
+            if isinstance(history_list, list):
+                for idx, qa in enumerate(history_list):
+                    # Tính toán timestamp dựa trên created_at của record và thứ tự trong mảng
+                    # Giả sử mỗi Q&A cách nhau 1 giây
+                    message_timestamp = record_created_at
+                    if idx > 0:
+                        message_timestamp = record_created_at + timedelta(seconds=idx)
+                    
+                    # Xử lý question và answer (giống như phiên bản trước)
+                    question = ""
+                    answer = ""
+                    
+                    if isinstance(qa, dict):
+                        # Xác định cấu trúc dữ liệu
+                        if "question" in qa and "answer" in qa:
+                            question = qa.get("question", "")
+                            answer = qa.get("answer", "")
+                            # Kiểm tra xem có timestamp riêng không
+                            if "timestamp" in qa:
+                                try:
+                                    message_timestamp = datetime.fromisoformat(
+                                        qa["timestamp"].replace('Z', '+00:00')
+                                    )
+                                except:
+                                    pass
+                        elif "q" in qa and "a" in qa:
+                            question = qa.get("q", "")
+                            answer = qa.get("a", "")
+                        else:
+                            # Xử lý các cấu trúc khác
+                            question = qa.get("content", qa.get("message", qa.get("query", "")))
+                            answer = qa.get("response", qa.get("reply", ""))
+                    
+                    # Chuyển answer thành string
+                    if isinstance(answer, dict) or isinstance(answer, list):
+                        answer = json.dumps(answer, ensure_ascii=False)
+                    
+                    all_messages.append({
+                        "q": str(question) if question else "",
+                        "a": str(answer) if answer else "",
+                        "timestamp": message_timestamp.isoformat(),
+                        "messages": qa.get("messages", []) if isinstance(qa, dict) else []
+                    })
+        
+        # Sắp xếp theo timestamp
+        all_messages.sort(key=lambda x: x['timestamp'])
+        
+        return all_messages
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error in get_session_messages_v2: {error_detail}")
+        return {"Error": str(e), "detail": error_detail}
+
+@router.get("/history/session_id/{session_id}/messages")
+def get_session_messages_v2(session_id: str):
+    """
+    Phiên bản nâng cao với logic xác định welcome message thông minh hơn
+    """
+    try:
+        conn = get_db()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        sql = """
+            SELECT 
+                chat_date,
+                time_block,
+                history::text as history_json,
+                created_at
+            FROM chat_histories
+            WHERE session_id = %s AND isDeleted = false
+            ORDER BY chat_date ASC, time_block ASC, created_at ASC
+        """
+        cur.execute(sql, (session_id,))
+        records = cur.fetchall()
+        conn.close()
+
+        all_messages = []
+        first_message_processed = False
+        
+        for record in records:
+            chat_date = record['chat_date']
+            time_block = record['time_block']
+            history_json = record['history_json']
+            record_created_at = record['created_at']
+            
+            try:
+                history_list = json.loads(history_json)
+            except:
+                history_list = []
+            
+            if isinstance(history_list, list):
+                for idx, qa in enumerate(history_list):
+                    # Tính toán timestamp
+                    base_timestamp = record_created_at
+                    if idx > 0:
+                        base_timestamp = record_created_at + timedelta(seconds=idx)
+                    
+                    # Xác định loại message và nội dung
+                    message_type = None
+                    question = ""
+                    answer = ""
+                    
+                    if isinstance(qa, dict):
+                        # Lấy thông tin từ qa
+                        if "question" in qa and "answer" in qa:
+                            question = qa.get("question", "")
+                            answer = qa.get("answer", "")
+                            message_type = qa.get("type")
+                        elif "q" in qa and "a" in qa:
+                            question = qa.get("q", "")
+                            answer = qa.get("a", "")
+                            message_type = qa.get("type")
+                        else:
+                            question = qa.get("content", qa.get("message", qa.get("query", "")))
+                            answer = qa.get("response", qa.get("reply", ""))
+                            message_type = qa.get("type")
+                    
+                    # Xác định timestamp
+                    if isinstance(qa, dict) and "timestamp" in qa:
+                        try:
+                            q_timestamp = datetime.fromisoformat(
+                                qa["timestamp"].replace('Z', '+00:00')
+                            )
+                            question_timestamp = int(q_timestamp.timestamp() * 1000)
+                            answer_timestamp = question_timestamp + 1000
+                        except:
+                            question_timestamp = int(base_timestamp.timestamp() * 1000)
+                            answer_timestamp = question_timestamp + 1000
+                    else:
+                        question_timestamp = int(base_timestamp.timestamp() * 1000)
+                        answer_timestamp = question_timestamp + 1000
+                    
+                    # Thêm message user (câu hỏi)
+                    if question:
+                        user_message = {
+                            "role": "user",
+                            "content": str(question).strip(),
+                            "timestamp": question_timestamp,
+                            "messages": qa.get("messages", []) if isinstance(qa, dict) else [],
+                            "view_history": True
+                        }
+                        all_messages.append(user_message)
+                    
+                    # Thêm message bot (câu trả lời)
+                    if answer:
+                        bot_message = {
+                            "role": "bot",
+                            "content": str(answer).strip(),
+                            "timestamp": answer_timestamp,
+                            "messages": qa.get("messages", []) if isinstance(qa, dict) else [],
+                            "view_history": True
+                        }
+                        
+                        # Xác định có phải là welcome message không
+                        # Logic 1: Nếu được chỉ định type trong dữ liệu
+                        if message_type:
+                            bot_message["type"] = message_type
+                        # Logic 2: Nếu là message bot đầu tiên và có chứa từ khóa chào hỏi
+                        elif not first_message_processed:
+                            # Kiểm tra nếu nội dung có chứa từ khóa chào hỏi
+                            welcome_keywords = ["xin chào", "hello", "hi", "chào bạn", "welcom"]
+                            content_lower = str(answer).lower()
+                            if any(keyword in content_lower for keyword in welcome_keywords):
+                                bot_message["type"] = "welcome"
+                            
+                            first_message_processed = True
+                        
+                        all_messages.append(bot_message)
+        
+        # Sắp xếp theo timestamp tăng dần
+        all_messages.sort(key=lambda x: x['timestamp'])
+        
+        return all_messages
+        
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error in get_session_messages_v2: {error_detail}")
+        return {"Error": str(e), "detail": error_detail}
 
