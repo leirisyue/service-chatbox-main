@@ -25,7 +25,7 @@ from imageapi.media import router as media_router
 from .textfunc import format_search_results,calculate_product_total_cost,get_latest_material_price,extract_product_keywords,call_gemini_with_retry, search_products_hybrid, search_products_keyword_only
 from .unit import ChatMessage
 from .embeddingapi import generate_embedding_qwen
-
+from prettytable import PrettyTable
 
 def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
@@ -804,14 +804,12 @@ def calculate_product_cost(headcode: str):
         })
     
     # ✅ RESPONSE ĐƠN GIẢN - CHỈ CHI PHÍ VẬT LIỆU
-    response = f"""
-                💰 **BÁO GIÁ NGUYÊN VẬT LIỆU**
-                📦 **Sản phẩm:** {prod['product_name']}
-                🏷️ **Mã:** `{headcode}`
-                📂 **Danh mục:** {prod['category'] or 'N/A'}
-                ---
-                **CHI TIẾT NGUYÊN VẬT LIỆU ({material_count} loại):**
-    """
+    response = f"**BÁO GIÁ NGUYÊN VẬT LIỆU**\n"
+    response += f"📦 **Sản phẩm:** {prod['product_name']}\n"
+    response += f"🏷️ **Mã:** `{headcode}`\n"
+    response += f"📂 **Danh mục:** {prod['category'] or 'N/A'}\n"
+    response += f"---\n"
+    response += f"**CHI TIẾT NGUYÊN VẬT LIỆU ({material_count} loại):**\n"
     
     for idx, mat in enumerate(materials_detail[:15], 1):
         response += f"{idx}. **{mat['material_name']}** ({mat['material_group']})\n"
@@ -1203,7 +1201,19 @@ def chat(msg: ChatMessage):
             result_count = len(products)
             
             if not products:
-                result_response = {"response": search_result.get("response", "Không tìm thấy sản phẩm.")}
+                result_response = {
+                    "response": f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
+                                '**Gợi ý cho bạn:**\n'
+                                '• Thử tìm kiếm với từ khóa khác (ví dụ: "bàn ăn" thay vì "bàn bếp")\n'
+                                '• Mô tả chi tiết hơn về mục đích sử dụng\n'
+                                '• Hoặc để tôi gợi ý các danh mục phổ biến',
+                    "suggested_prompts": [
+                        "Bàn làm việc văn phòng",
+                        "Ghế sofa phòng khách",
+                        "Tủ bếp hiện đại",
+                        "Xem tất cả sản phẩm nổi bật"
+                    ]
+                }
             else:
                 response_text = ""
                 suggested_prompts = []
@@ -1211,29 +1221,97 @@ def chat(msg: ChatMessage):
                 if intent_data.get("is_broad_query"):
                     follow_up = intent_data.get("follow_up_question", "Bạn muốn tìm loại cụ thể nào?")
                     response_text = (
-                        f"🔎 Tìm thấy **{len(products)} sản phẩm** phù hợp với từ khóa chung.\n"
-                        f"*(Tôi đã chọn lọc các mẫu phổ biến nhất bên dưới)*\n\n"
-                        f"💡 **Gợi ý:** {follow_up}"
+                        f"🎯 **TÌM KIẾM MỞ RỘNG**\n"
+                        f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n\n"
+                        f"💡 **{follow_up}**\n\n"
+                        f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:"
                     )
                     actions = intent_data.get("suggested_actions", [])
                     suggested_prompts = [f"🔍 {a}" for a in actions] if actions else []
+                    suggested_prompts.extend([
+                        "💰 Xem báo giá chi tiết",
+                        "🎨 Tư vấn phối màu",
+                        "📏 Yêu cầu kích thước tùy chỉnh"
+                    ])
                 else:
-                    response_text = f"✅ Đã tìm thấy **{len(products)} sản phẩm** đúng yêu cầu của bạn."
+                    response_text = (
+                        f"✅ **KẾT QUẢ TÌM KIẾM CHUYÊN SÂU**\n"
+                        f"Tôi đã chọn lọc **{len(products)}** phù hợp nhất với yêu cầu của bạn.\n\n"
+                    )
                     
                     # ✅ THÊM: Hiển thị thông tin ranking nếu có
                     if ranking_summary['ranking_applied']:
                         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} sản phẩm** được ưu tiên dựa trên lịch sử tìm kiếm."
                     
+                    response_text += "\n**Bảng tóm tắt các vật liệu:**\n"
+                    table = PrettyTable()
+                    table.field_names = [
+                        "STT",
+                        "Tên vật liệu",
+                        "Mã SAP",
+                        "Nhóm",
+                        "Giá (VNĐ/ĐV)",
+                        "Phản hồi"
+                    ]
+
+                    table.align = {
+                        "Tên vật liệu": "l",
+                        "Mã SAP": "l",
+                        "Nhóm": "l",
+                        "Giá (VNĐ/ĐV)": "r",
+                        "Phản hồi": "c"
+                    }
+
+                    for idx, mat in enumerate(materials, 1):
+                        price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
+                        material_name = mat["material_name"]
+                        feedback = (
+                            f"{mat['feedback_count']} lượt"
+                            if mat.get("has_feedback")
+                            else "-"
+                        )
+                        table.add_row([
+                            idx,
+                            material_name,
+                            mat["id_sap"],
+                            mat["material_group"],
+                            price,
+                            feedback
+                        ])
+                    response_text += (
+                        "\n📦 **DANH SÁCH VẬT LIỆU ƯU TIÊN**\n"
+                        "```\n"
+                        f"{table}\n"
+                        "```\n"
+                    )
+                    
+                    # Thêm phần link hình ảnh riêng (ngoài bảng)
+                    materials_with_images = [m for m in materials[:3] if m.get('image_url')]
+                    if materials_with_images:
+                        response_text += "\n**📷 XEM ẢNH MẪU:**\n"
+                        for mat in materials_with_images:
+                            response_text += f"• [{mat['material_name']}]({mat.get('image_url', '#')})\n"
+                    
+                    
+                    response_text += (
+                        f"**Các vật :**\n"
+                        f"• Các sản phẩm được liệt kê dưới đây đều đáp ứng yêu cầu về sản phẩm\n"
+                        f"• Nếu cần thay đổi tiêu chí (màu sắc, kích thước, chất liệu), hãy cho tôi biết\n"
+                        f"• Tôi có thể tư vấn thêm về phong cách thiết kế phù hợp\n\n"
+                        f"**Bạn muốn:**"
+                    )
                     suggested_prompts = [
-                        f"💰 Tính chi phí {products[0]['headcode']}",
-                        f"📋 Xem vật liệu {products[0]['headcode']}"
+                        f"💰 Phân tích chi phí {products[0]['headcode']}",
+                        f"🧱 Xem cấu tạo vật liệu {products[0]['headcode']}",
+                        f"🎯 So sánh với sản phẩm tương tự",
+                        "📞 Kết nối với chuyên viên tư vấn"
                     ]
                 result_response = {
                     "response": response_text,
                     "products": products,
                     "suggested_prompts": suggested_prompts,
-                    "ranking_summary": ranking_summary,  # ✅ THÊM
-                    "can_provide_feedback": True  # ✅ THÊM
+                    "ranking_summary": ranking_summary,  
+                    "can_provide_feedback": True 
                 }
             
         elif intent == "search_product_by_material":
@@ -1241,11 +1319,16 @@ def chat(msg: ChatMessage):
             
             if not material_query:
                 result_response = {
-                    "response": "⚠️ Bạn muốn tìm sản phẩm làm từ vật liệu nào?",
+                    "response": "🎯 **TÌM SẢN PHẨM THEO VẬT LIỆU**\n\n"
+                                "Để tôi tư vấn sản phẩm phù hợp, vui lòng cho biết:\n"
+                                "• Bạn quan tâm đến vật liệu nào? (gỗ, đá, kim loại...)\n"
+                                "• Sản phẩm dùng cho không gian nào?\n"
+                                "• Ngân sách dự kiến là bao nhiêu?",
                     "suggested_prompts": [
-                        "🔍 Bàn làm từ đá marble",
-                        "🔍 Ghế gỗ teak",
-                        "🔍 Tủ gỗ sồi"
+                        "Sản phẩm làm từ gỗ sồi tự nhiên",
+                        "Nội thất kim loại cho văn phòng",
+                        "Bàn đá marble cao cấp",
+                        "Ghế vải bọc chống thấm"
                     ]
                 }
             else:
@@ -1261,21 +1344,47 @@ def chat(msg: ChatMessage):
                 if not products:
                     matched_mats = search_result.get("matched_materials", [])
                     result_response = {
-                        "response": f"🔍 Đã tìm thấy vật liệu: **{', '.join(matched_mats)}**\n\n"
-                                f"Nhưng không có sản phẩm nào sử dụng vật liệu này trong hệ thống.\n\n"
-                                f"💡 Thử tìm kiếm khác hoặc mở rộng điều kiện.",
+                        "response": f"🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
+                                    f"Tôi tìm thấy vật liệu **{', '.join(matched_mats)}** trong hệ thống.\n\n"
+                                    f"**Tuy nhiên, hiện chưa có sản phẩm nào sử dụng vật liệu này.**\n\n"
+                                    f"💡 **Gợi ý cho bạn:**\n"
+                                    f"• Tìm sản phẩm với vật liệu tương tự\n"
+                                    f"• Liên hệ bộ phận thiết kế để đặt hàng riêng\n"
+                                    f"• Xem vật liệu thay thế có tính năng tương đồng",
+                        "materials": matched_mats,
+                        "suggested_prompts": [
+                            "Tìm vật liệu thay thế phù hợp",
+                            "Tư vấn sản phẩm custom theo yêu cầu",
+                            "Xem danh mục vật liệu có sẵn"
+                        ],
                         "materials": []
                     }
                 else:
                     explanation = search_result.get("explanation", "")
                     response_text = f"✅ {explanation}\n\n"
+                    response_text = (
+                        f"✅ **SẢN PHẨM SỬ DỤNG {material_query.upper()}**\n\n"
+                        f"{explanation}\n\n"
+                        f"📊 **Tìm thấy {len(products)} sản phẩm:**\n"
+                        f"Các sản phẩm này đều sử dụng {material_query} - một lựa chọn tuyệt vời về độ bền và thẩm mỹ.\n\n"
+                        f"**Ưu điểm nổi bật:**\n"
+                        f"• Chất lượng vật liệu được đảm bảo\n"
+                        f"• Thiết kế phù hợp với xu hướng hiện đại\n"
+                        f"• Dễ dàng bảo trì và vệ sinh\n\n"
+                        f"Bạn quan tâm đến mẫu nào nhất?"
+                    )
                     response_text += f"📦 Tìm thấy **{len(products)} sản phẩm**:"
                     
                     result_response = {
                         "response": response_text,
                         "products": products,
                         "search_method": "cross_table",
-                        "can_provide_feedback": True
+                        "can_provide_feedback": True,
+                        "suggested_prompts": [
+                            "So sánh 3 mẫu phổ biến nhất",
+                            "Xem báo giá chi tiết",
+                            "Tư vấn phối màu phù hợp"
+                        ]
                     }
                     
         elif intent == "query_product_materials":
@@ -1326,7 +1435,17 @@ def chat(msg: ChatMessage):
             
             if not materials:
                 result_response = {
-                    "response": search_result.get("response", "Không tìm thấy vật liệu phù hợp."),
+                    "response": f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
+                    "**Đề xuất:**\n"
+                                "• Kiểm tra lại tên vật liệu (ví dụ: 'gỗ sồi Mỹ' thay vì 'gỗ sồi')\n"
+                                "• Mô tả ứng dụng cụ thể (ví dụ: 'vật liệu chịu nước cho nhà tắm')\n"
+                                "• Hoặc xem danh sách nhóm vật liệu phổ biến",
+                    "suggested_prompts": [
+                        "Vật liệu chịu nhiệt",
+                        "Gỗ công nghiệp cao cấp",
+                        "Đá tự nhiên trang trí",
+                        "Vải bọc chống thấm"
+                    ],
                     "materials": []
                 }
             else:
@@ -1335,47 +1454,97 @@ def chat(msg: ChatMessage):
                 if intent_data.get("is_broad_query"):
                     follow_up = intent_data.get("follow_up_question", "Bạn cần tìm loại vật liệu cụ thể nào?")
                     response_text = (
-                        f"🔎 Tìm thấy **{len(materials)} nguyên vật liệu** phù hợp.\n\n"
-                        f"💡 **Gợi ý:** {follow_up}"
+                        f"🔎 **TÌM KIẾM VẬT LIỆU**\n"
+                        f"Tìm thấy **{len(materials)} nguyên vật liệu** liên quan.\n\n"
+                        f"💡 **Để tôi tư vấn chính xác hơn:** {follow_up}\n\n"
+                        f"*Dưới đây là các vật liệu đang được sử dụng phổ biến:*"
                     )
                 else:
-                    response_text = f"✅ Đã tìm thấy **{len(materials)} nguyên vật liệu** đúng yêu cầu."
-                    
+                    # response_text = f"✅ Đã tìm thấy **{len(materials)} nguyên vật liệu** đúng yêu cầu."
+                    response_text = (
+                        f"✅ **TƯ VẤN VẬT LIỆU CHUYÊN SÂU**\n"
+                        f"Dựa trên nhu cầu của bạn, **{len(materials)} vật liệu** dưới đây đang được sử dụng phổ biến và phù hợp nhất.\n\n"
+                    )
                     # 🆕 Hiển thị ranking info
                     if ranking_summary['ranking_applied']:
                         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên."
+
+                response_text += "\n**Bảng tóm tắt các vật liệu:**\n"
+                table = PrettyTable()
+                table.field_names = [
+                    "STT",
+                    "Tên vật liệu",
+                    "Mã SAP",
+                    "Nhóm",
+                    "Giá (VNĐ/ĐV)",
+                    "Phản hồi"
+                ]
+
+                table.align = {
+                    "Tên vật liệu": "l",
+                    "Mã SAP": "l",
+                    "Nhóm": "l",
+                    "Giá (VNĐ/ĐV)": "r",
+                    "Phản hồi": "c"
+                }
+
+                for idx, mat in enumerate(materials, 1):
+                    price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
+                    material_name = mat["material_name"]
+                    feedback = (
+                        f"{mat['feedback_count']} lượt"
+                        if mat.get("has_feedback")
+                        else "-"
+                    )
+                    table.add_row([
+                        idx,
+                        material_name,
+                        mat["id_sap"],
+                        mat["material_group"],
+                        price,
+                        feedback
+                    ])
+                response_text += (
+                    "\n📦 **DANH SÁCH VẬT LIỆU ƯU TIÊN**\n"
+                    "```\n"
+                    f"{table}\n"
+                    "```\n"
+                )
                 
-                response_text += "\n\n📦 **KẾT QUẢ:**\n"
-                for idx, mat in enumerate(materials[:8], 1):
-                    response_text += f"\n{idx}. **{mat['material_name']}**"
-                    response_text += f"\n   • Mã: `{mat['id_sap']}`"
-                    response_text += f"\n   • Nhóm: {mat['material_group']}"
-                    response_text += f"\n   • Giá: {mat.get('price', 0):,.2f} VNĐ/{mat.get('unit', '')}"
-                    
-                    # 🆕 Hiển thị feedback indicator
-                    if mat.get('has_feedback'):
-                        response_text += f"\n   ⭐ {mat['feedback_count']} người đã chọn"
-                    
-                    if mat.get('image_url'):
-                        response_text += f"\n   • [📷 Xem ảnh]({mat['image_url']})"
+                # Thêm phần link hình ảnh riêng (ngoài bảng)
+                materials_with_images = [m for m in materials[:3] if m.get('image_url')]
+                if materials_with_images:
+                    response_text += "\n**📷 XEM ẢNH MẪU:**\n"
+                    for mat in materials_with_images:
+                        response_text += f"• [{mat['material_name']}]({mat.get('image_url', '#')})\n"
                 
-                if len(materials) > 8:
-                    response_text += f"\n\n*...và {len(materials)-8} vật liệu khác*"
+                
+                response_text += (
+                        f"**Nếu các vật liệu trên chưa đúng ý, tôi có thể:**\n"
+                        f"• Gợi ý vật liệu thay thế với đặc tính tương tự\n"
+                        f"• Tư vấn vật liệu theo ngân sách cụ thể\n"
+                        f"• Giới thiệu sản phẩm đã sử dụng các vật liệu này\n\n"
+                    )
+                response_text += "\n\n**Bạn cần tôi hỗ trợ thêm điều gì?**"
                 
                 suggested_prompts = []
                 if materials:
                     first_mat = materials[0]
                     suggested_prompts = [
-                        f"🔍 Chi tiết {first_mat['material_name']}",
-                        "📋 Xem nhóm vật liệu khác"
+                        f"📊 So sánh {first_mat['material_name']} với vật liệu khác",
+                        f"🔍 Xem sản phẩm sử dụng {first_mat['material_name']}",
+                        "💰 Tư vấn vật liệu theo ngân sách",
+                        "📋 Xem bảng giá đầy đủ"
                     ]
                 result_response = {
                     "response": response_text,
                     "materials": materials,
                     "suggested_prompts": suggested_prompts,
                     "ranking_summary": ranking_summary,  
-                    "can_provide_feedback": True  
+                    "can_provide_feedback": True,
+                    "show_comparison": True   
                 }      
+        
         elif intent == "query_material_detail":
             id_sap = params.get("id_sap")
             material_name = params.get("material_name")
@@ -1439,3 +1608,4 @@ def chat(msg: ChatMessage):
         import traceback
         traceback.print_exc()
         return {"response": f"⚠️ Lỗi hệ thống: {str(e)}"}
+    

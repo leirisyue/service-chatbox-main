@@ -56,10 +56,6 @@ function App() {
 
     try {
       const response = await sendMessage(sessionId, message, context);
-      // const min_score = 0.5; // example value
-      // const text = message;
-      // const top_k = 5; // example value
-      // const response = await queryChat(min_score, text, top_k);
 
       // Cập nhật context nếu có
       if (response.context) {

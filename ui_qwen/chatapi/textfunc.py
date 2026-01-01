@@ -535,3 +535,4 @@ def search_products_keyword_only(params: Dict):
             "response": "Lỗi tìm kiếm.",
             "products": []
         }
+        
