@@ -389,7 +389,7 @@ def classify_pending_materials():
         
         cur.execute("""
             SELECT id_sap, material_name, material_group
-            FROM materials 
+            FROM materials_qwen 
             WHERE material_subgroup = 'Chưa phân loại'
             LIMIT 100
         """)
@@ -454,7 +454,7 @@ def classify_pending_materials():
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) FROM materials 
+            SELECT COUNT(*) FROM materials_qwen 
             WHERE material_subgroup = 'Chưa phân loại'
         """)
         remaining = cur.fetchone()[0]

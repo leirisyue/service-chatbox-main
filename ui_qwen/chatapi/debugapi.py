@@ -281,13 +281,13 @@ def debug_materials():
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    cur.execute("SELECT COUNT(*) as total FROM materials")
+    cur.execute("SELECT COUNT(*) as total FROM materials_qwen")
     total = cur.fetchone()['total']
     
-    cur.execute("SELECT COUNT(*) as with_emb FROM materials WHERE description_embedding IS NOT NULL")
+    cur.execute("SELECT COUNT(*) as with_emb FROM materials_qwen WHERE description_embedding IS NOT NULL")
     with_emb = cur.fetchone()['with_emb']
     
-    cur.execute("SELECT material_group, COUNT(*) as count FROM materials GROUP BY material_group ORDER BY count DESC")
+    cur.execute("SELECT material_group, COUNT(*) as count FROM materials_qwen GROUP BY material_group ORDER BY count DESC")
     by_group = cur.fetchall()
     
     conn.close()

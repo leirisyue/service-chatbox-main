@@ -36,7 +36,7 @@ from .embeddingapi import generate_embedding_qwen
 from .textfunc import (calculate_product_total_cost, call_gemini_with_retry,
                        extract_product_keywords, format_search_results,
                        get_latest_material_price, search_products_hybrid,calculate_personalized_score,generate_consolidated_report,
-                       search_products_keyword_only)
+                       search_products_keyword_only,search_materials_for_product)
 from .unit import (BatchProductRequest, ChatMessage, ConsolidatedBOMRequest,
                    TrackingRequest)
 
@@ -233,7 +233,7 @@ def search_products(params: Dict, session_id: str = None):
                         
                         cur.execute("""
                             SELECT description_embedding 
-                            FROM products 
+                            FROM products_qwen 
                             WHERE headcode = %s AND description_embedding IS NOT NULL
                         """, (product['headcode'],))
                         
@@ -890,9 +890,9 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
     try:
         cur.execute(sql, (material['id_sap'],))
         used_in_products = cur.fetchall()
-        print(f"INFO: Material {material['id_sap']} used in {len(used_in_products)} products")
+        print(f"🔗 Material {material['id_sap']} used in {len(used_in_products)} products")
     except Exception as e:
-        print(f"ERROR: Query error: {e}")
+        print(f"❌ Query error: {e}")
         used_in_products = []
     
     try:
@@ -907,7 +907,7 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         """, (material['id_sap'],))
         stats = cur.fetchone()
     except Exception as e:
-        print(f"ERROR: Stats query error: {e}")
+        print(f"❌ Stats query error: {e}")
         stats = {
             'product_count': 0,
             'project_count': 0,
@@ -981,15 +981,17 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         "response": response,
         # "material_detail": dict(material),
         "materials": [{  # ✅ Đổi thành list giống search_materials
-            **dict(material),
-            'price': latest_price  # ✅ Thêm key 'price'
-        }],
+        **dict(material),
+        'price': latest_price  # ✅ Thêm key 'price'
+    }],
         "latest_price": latest_price,
         "price_history": price_history,
         "used_in_products": [dict(p) for p in used_in_products],
         "stats": dict(stats) if stats else {},
         "has_image": bool(material.get('image_url'))
     }
+
+
 
 def list_material_groups():
     """Liệt kê các nhóm vật liệu với giá tính từ material_subprice"""
@@ -1329,7 +1331,7 @@ def chat(msg: ChatMessage):
                     # Hiển thị thông báo nếu có Ranking
                     if ranking_summary['ranking_applied']:
                          response_text += f"⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên dựa trên lịch sử.\n\n"
-                         
+
                     response_text += f"🧱 Tìm thấy **{len(materials)} vật liệu** thường dùng:\n\n"
                     
                     for idx, mat in enumerate(materials[:5], 1):
@@ -1595,7 +1597,7 @@ def batch_product_operations(request: BatchProductRequest):
             cur.execute("""
                 SELECT headcode, product_name, category, sub_category, 
                        material_primary, project, unit
-                FROM products
+                FROM products_qwen
                 WHERE headcode = ANY(%s)
                 ORDER BY product_name
             """, (headcodes,))
@@ -1646,7 +1648,7 @@ def batch_product_operations(request: BatchProductRequest):
                     pm.quantity,
                     pm.unit as pm_unit
                 FROM product_materials pm
-                INNER JOIN products p ON pm.product_headcode = p.headcode
+                INNER JOIN products_qwen p ON pm.product_headcode = p.headcode
                 INNER JOIN materials m ON pm.material_id_sap = m.id_sap
                 WHERE p.headcode = ANY(%s)
                 ORDER BY p.product_name, m.material_name
@@ -1690,11 +1692,36 @@ def batch_product_operations(request: BatchProductRequest):
                 
                 total_cost = sum(m['total'] for m in prod_data['materials'])
                 
+                # Tạo bảng PrettyTable cho vật liệu
+                table = PrettyTable()
+                table.field_names = [
+                    "STT",
+                    "Tên vật liệu",
+                    "Nhóm",
+                    "Số lượng",
+                    "Đơn giá (VNĐ)",
+                    "Thành tiền (VNĐ)"
+                ]
+                
+                table.align["Tên vật liệu"] = "l"
+                table.align["Nhóm"] = "l"
+                table.align["Số lượng"] = "r"
+                table.align["Đơn giá (VNĐ)"] = "r"
+                table.align["Thành tiền (VNĐ)"] = "r"
+                
                 for idx, mat in enumerate(prod_data['materials'][:10], 1):
-                    response += f"{idx}. **{mat['name']}** ({mat['group']})\n"
-                    response += f"   • Số lượng: {mat['quantity']} {mat['unit']}\n"
-                    response += f"   • Đơn giá: {mat['price']:,.0f} VNĐ\n"
-                    response += f"   • Thành tiền: **{mat['total']:,.0f} VNĐ**\n\n"
+                    table.add_row([
+                        idx,
+                        mat['name'],
+                        mat['group'],
+                        f"{mat['quantity']} {mat['unit']}",
+                        f"{mat['price']:,.0f}",
+                        f"{mat['total']:,.0f}"
+                    ])
+                
+                response += "```\n"
+                response += str(table)
+                response += "\n```\n\n"
                 
                 if len(prod_data['materials']) > 10:
                     response += f"*...và {len(prod_data['materials'])-10} vật liệu khác*\n\n"
@@ -1729,7 +1756,7 @@ def batch_product_operations(request: BatchProductRequest):
                     pm.quantity,
                     pm.unit
                 FROM product_materials pm
-                INNER JOIN products p ON pm.product_headcode = p.headcode
+                INNER JOIN products_qwen p ON pm.product_headcode = p.headcode
                 INNER JOIN materials m ON pm.material_id_sap = m.id_sap
                 WHERE p.headcode = ANY(%s)
                 ORDER BY p.product_name
@@ -1842,12 +1869,12 @@ def create_consolidated_report(request: ConsolidatedBOMRequest):
         )
         
     except ValueError as e:
-        return {"message": f"❌ {str(e)}"}
+        return {"message": f"ERROR: {str(e)}"}
     except Exception as e:
-        print(f"❌ Report generation error: {e}")
+        print(f"ERROR: Report generation error: {e}")
         import traceback
         traceback.print_exc()
-        return {"message": f"❌ Lỗi tạo báo cáo: {str(e)}"}
+        return {"message": f"ERROR: {str(e)}"}
 
 
 @router.post("/track/view")
@@ -1862,7 +1889,7 @@ def track_product_view(request: TrackingRequest):
         # Lấy embedding của sản phẩm
         cur.execute("""
             SELECT description_embedding 
-            FROM products 
+            FROM products_qwen 
             WHERE headcode = %s AND description_embedding IS NOT NULL
         """, (request.product_headcode,))
         
@@ -1895,14 +1922,14 @@ def track_product_view(request: TrackingRequest):
         return {"message": "✅ Tracked successfully", "type": "view"}
         
     except Exception as e:
-        print(f"❌ Tracking error: {e}")
+        print(f"ERROR: Tracking error: {e}")
         return {"message": f"Error: {str(e)}"}
 
 
 @router.post("/track/reject")
 def track_product_reject(request: TrackingRequest):
     """
-    ❌ Track khi user BỎ QUA/REJECT sản phẩm (Negative Signal)
+    ERROR: Track khi user BỎ QUA/REJECT sản phẩm (Negative Signal)
     """
     try:
         conn = get_db()
@@ -1910,7 +1937,7 @@ def track_product_reject(request: TrackingRequest):
         
         cur.execute("""
             SELECT description_embedding 
-            FROM products 
+            FROM products_qwen 
             WHERE headcode = %s AND description_embedding IS NOT NULL
         """, (request.product_headcode,))
         
@@ -1937,11 +1964,11 @@ def track_product_reject(request: TrackingRequest):
         conn.commit()
         conn.close()
         
-        print(f"❌ Tracked REJECT: {request.product_headcode} by {request.session_id[:8]}")
+        print(f"ERROR: Tracked REJECT: {request.product_headcode} by {request.session_id[:8]}")
         
         return {"message": "✅ Tracked rejection", "type": "reject"}
         
     except Exception as e:
-        print(f"❌ Tracking error: {e}")
+        print(f"ERROR: Tracking error: {e}")
         return {"message": f"Error: {str(e)}"}
 

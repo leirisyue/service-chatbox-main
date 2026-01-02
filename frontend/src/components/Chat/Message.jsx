@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ProductCard from './ProductCard';
+import ProductListWithFeedback from './ProductListWithFeedback';
 import MaterialCard from './MaterialCard';
 import Grid from '@mui/material/Grid';
 import Box from '@mui/material/Box';
 import { formatTimestamp } from '../../utils/helpers';
+import { useAtom } from 'jotai';
+import { messagesAtom } from '../../atom/messageAtom';
+import { batchProducts, trackReject, trackView, exportBOMReport } from '../../services/api';
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -17,6 +21,10 @@ function Message({ message, onSendMessage, typing }) {
 
   const [displayedText, setDisplayedText] = useState(message.content || "");
   const [typingDone, setTypingDone] = useState(true);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [feedbackSelected, setFeedbackSelected] = useState([]);
+
+  const [, setMessages] = useAtom(messagesAtom);
 
   const hasMountedRef = useRef(false);
   const bottomRef = useRef(null);
@@ -89,6 +97,114 @@ function Message({ message, onSendMessage, typing }) {
     onSendMessage?.(`Chi tiết vật liệu ${materialName}`);
   };
 
+  const handleToggleSelected = (headcode) => {
+    setSelectedProducts((prev) =>
+      prev.includes(headcode)
+        ? prev.filter((h) => h !== headcode)
+        : [...prev, headcode]
+    );
+  };
+
+  const handleToggleFeedback = (headcode) => {
+    setFeedbackSelected((prev) =>
+      prev.includes(headcode)
+        ? prev.filter((h) => h !== headcode)
+        : [...prev, headcode]
+    );
+  };
+
+  const sessionId = typeof window !== 'undefined'
+    ? window.localStorage.getItem('chat_session_id')
+    : null;
+
+  const appendBotExchange = (userText, botData) => {
+    const userMessage = {
+      role: 'user',
+      content: userText,
+      timestamp: Date.now(),
+    };
+
+    const botMessage = {
+      role: 'bot',
+      content: botData?.response || 'Xin lỗi, tôi không hiểu.',
+      data: botData,
+      timestamp: Date.now(),
+    };
+
+    setMessages((prev) => [...prev, userMessage, botMessage]);
+  };
+
+  const handleBatchOperation = async (operation) => {
+    if (!sessionId || selectedProducts.length === 0) return;
+
+    try {
+      if (operation === 'detail') {
+        // Track view cho từng sản phẩm được chọn
+        await Promise.all(
+          selectedProducts.map((hc) => trackView(sessionId, hc))
+        );
+      }
+
+      const result = await batchProducts(sessionId, selectedProducts, operation);
+
+      let userTextPrefix = '';
+      if (operation === 'detail') userTextPrefix = '📋 Xem chi tiết';
+      else if (operation === 'materials') userTextPrefix = '🧱 Xem định mức';
+      else if (operation === 'cost') userTextPrefix = '💰 Xem chi phí';
+
+      const userText = `${userTextPrefix} ${selectedProducts.length} sản phẩm`;
+      appendBotExchange(userText, result);
+    } catch (error) {
+      console.error('Batch operation error:', error);
+      appendBotExchange(
+        '⚠️ Lỗi khi thực hiện thao tác hàng loạt',
+        { response: '⚠️ Lỗi khi thực hiện thao tác hàng loạt. Vui lòng thử lại.' }
+      );
+    }
+  };
+
+  const handleReject = async () => {
+    if (!sessionId) return;
+
+    const products = message.data?.products || [];
+    try {
+      await Promise.all(
+        products.slice(0, 5).map((p) =>
+          p.headcode ? trackReject(sessionId, p.headcode) : Promise.resolve()
+        )
+      );
+    } catch (error) {
+      console.error('Error tracking reject:', error);
+    }
+
+    const originalQuery = message.data?.query || '';
+    onSendMessage?.(
+      `Tìm thêm sản phẩm tương tự nhưng khác với kết quả vừa rồi: ${originalQuery}`
+    );
+  };
+
+  const handleExportBOM = async () => {
+    if (!sessionId || selectedProducts.length === 0) return;
+
+    try {
+      const blob = await exportBOMReport(sessionId, selectedProducts);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `BOM_${selectedProducts.length}SP.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export BOM error:', error);
+      appendBotExchange(
+        '📊 Xuất BOM',
+        { response: '❌ Lỗi khi tạo báo cáo BOM. Vui lòng thử lại.' }
+      );
+    }
+  };
+
   const renderContent = () => (
     <div className={message.type === 'welcome' ? 'welcome-md' : ''}>
       <ReactMarkdown
@@ -118,30 +234,70 @@ function Message({ message, onSendMessage, typing }) {
           <div ref={bottomRef} />
         </div>
 
-        {/* PRODUCTS */}
+        {/* PRODUCTS – giao diện mới với feedback & debug */}
         {!isUser && typingDone && message.data?.products?.length > 0 && (
-          <div className="products-section fade-in">
-            <h3>
-              📦 Kết quả tìm kiếm sản phẩm ({message.data.products.length})
-            </h3>
-            <Grid container spacing={2}>
-              {message.data.products.slice(0, 9).map((product, index) => (
-                <Grid key={index} size={{ xs: 12, md: 6 }}>
-                  <Box sx={{ height: '100%' }}>
-                    <ProductCard
-                      product={product}
-                      onMaterialClick={() => handleMaterialClick(product.headcode)}
-                      onPriceClick={() => handlePriceClick(product.headcode)}
-                    />
-                  </Box>
-                </Grid>
-              ))}
-            </Grid>
-          </div>
+          <>
+            <ProductListWithFeedback
+              products={message.data.products}
+              onMaterialClick={handleMaterialClick}
+              onPriceClick={handlePriceClick}
+              selectedProducts={selectedProducts}
+              onToggleSelected={handleToggleSelected}
+              feedbackSelected={feedbackSelected}
+              onToggleFeedback={handleToggleFeedback}
+            />
+
+            <div className="batch-actions">
+              <hr />
+              {selectedProducts.length > 0 ? (
+                <>
+                  <div className="batch-actions-row">
+                    <button
+                      className="batch-btn primary"
+                      onClick={() => handleBatchOperation('detail')}
+                    >
+                      📋 Chi tiết SP
+                    </button>
+                    <button
+                      className="batch-btn primary"
+                      onClick={() => handleBatchOperation('materials')}
+                    >
+                      🧱 Định mức VL
+                    </button>
+                    <button
+                      className="batch-btn primary"
+                      onClick={() => handleBatchOperation('cost')}
+                    >
+                      💰 Chi phí
+                    </button>
+                  </div>
+
+                  <div className="batch-actions-row">
+                    <button
+                      className="batch-btn secondary"
+                      onClick={handleReject}
+                    >
+                      🔄 Xem cái khác
+                    </button>
+                    <button
+                      className="batch-btn secondary"
+                      onClick={handleExportBOM}
+                    >
+                      📊 Xuất BOM
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="batch-hint">
+                  💡 Tích chọn sản phẩm để xem chi tiết, định mức, hoặc xuất báo cáo
+                </div>
+              )}
+            </div>
+          </>
         )}
 
         {/* MATERIALS */}
-        {!isUser && typingDone && message.data?.materials?.length > 0 && (
+        {/* {!isUser && typingDone && message.data?.materials?.length > 0 && (
           <div className="materials-section fade-in">
             <h3>
               📦 Kết quả tìm kiếm vật liệu ({message.data.materials.length})
@@ -161,7 +317,7 @@ function Message({ message, onSendMessage, typing }) {
               ))}
             </Grid>
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

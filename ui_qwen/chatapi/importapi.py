@@ -232,7 +232,7 @@ async def import_materials(file: UploadFile = File(...)):
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
-            SELECT COUNT(*) FROM materials 
+            SELECT COUNT(*) FROM materials_qwen 
             WHERE material_subgroup = 'Chưa phân loại'
         """)
         pending_count = cur.fetchone()[0]
@@ -290,7 +290,7 @@ async def import_product_materials(file: UploadFile = File(...)):
         cur.execute("SELECT headcode FROM products_qwen")
         existing_products = {row[0] for row in cur.fetchall()}
         
-        cur.execute("SELECT id_sap FROM materials")
+        cur.execute("SELECT id_sap FROM materials_qwen")
         existing_materials = {row[0] for row in cur.fetchall()}
 
         # Hàm làm sạch ID

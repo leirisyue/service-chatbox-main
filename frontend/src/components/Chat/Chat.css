@@ -103,10 +103,10 @@
   background: white;
   border-radius: 12px;
   padding: 15px;
-  box-shadow: var(--card-shadow);
+  /* box-shadow: var(--card-shadow); */
   transition: transform 0.2s, box-shadow 0.2s;
   border-left: 4px solid #667eea;
-  height: 190px;
+  min-height: 190px;
 }
 
 .product-card:hover {
@@ -181,6 +181,147 @@
   background: #fde68a;
 }
 
+/* === UI mới cho danh sách sản phẩm (feedback + debug + checkbox) === */
+
+.products-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.products-toggles {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.products-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.products-toggles input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.product-card-extended {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #10b981;
+}
+
+.feedback-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.feedback-rank {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #ffffff;
+}
+
+.feedback-rank--up {
+  background-color: #10b981;
+}
+
+.feedback-rank--down {
+  background-color: #ef4444;
+}
+
+.product-debug-panel {
+  background: #1e293b;
+  color: #94a3b8;
+  padding: 6px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  margin-top: 2px;
+}
+
+.product-debug-panel div {
+  margin: 2px 0;
+}
+
+.product-checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.product-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.product-checkbox input[type="checkbox"] {
+  cursor: pointer;
+}
+
+/* Batch action buttons under product list (Streamlit-style actions) */
+
+.batch-actions {
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+
+.batch-actions-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.batch-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.batch-btn.primary {
+  background: #667eea;
+  color: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 118, 110, 0.3);
+}
+
+.batch-btn.primary:hover {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+}
+
+.batch-btn.secondary {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.batch-btn.secondary:hover {
+  background: #d1d5db;
+}
+
+.batch-hint {
+  margin-top: 8px;
+  color: #64748b;
+}
+
 .materials-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -188,7 +329,7 @@
 }
 
 .material-card {
-  background: #f0fdf4;
+  background: #eaf8ff;
   border-radius: 12px;
   padding: 15px;
   /* box-shadow: var(--card-shadow); */

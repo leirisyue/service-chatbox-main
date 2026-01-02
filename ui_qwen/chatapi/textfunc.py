@@ -226,9 +226,9 @@ def search_materials_for_product(product_query: str, params: Dict):
                 COUNT(DISTINCT pm.product_headcode) as usage_count,
                 SUM(pm.quantity) as total_quantity,
                 array_agg(DISTINCT p.product_name) as used_in_products
-            FROM materials m
+            FROM materials_qwen m
             INNER JOIN product_materials pm ON m.id_sap = pm.material_id_sap
-            INNER JOIN products p ON pm.product_headcode = p.headcode
+            INNER JOIN products_qwen p ON pm.product_headcode = p.headcode
             WHERE p.headcode = ANY(%s)
             {material_filter}
             GROUP BY m.id_sap, m.material_name, m.material_group, 
@@ -654,7 +654,7 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
     # 1. LẤY THÔNG TIN SẢN PHẨM
     cur.execute("""
         SELECT headcode, product_name, category, sub_category, project
-        FROM products 
+        FROM products_qwen 
         WHERE headcode = ANY(%s)
         ORDER BY product_name
     """, (product_headcodes,))
@@ -678,7 +678,7 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
             pm.unit as pm_unit,
             m.material_subprice
         FROM product_materials pm
-        INNER JOIN products p ON pm.product_headcode = p.headcode
+        INNER JOIN products_qwen p ON pm.product_headcode = p.headcode
         INNER JOIN materials m ON pm.material_id_sap = m.id_sap
         WHERE p.headcode = ANY(%s)
         ORDER BY p.product_name, m.material_name

@@ -44,6 +44,57 @@ export const searchByImage = async (file) => {
   return response.data;
 };
 
+// Tracking endpoints
+export const trackView = async (sessionId, productHeadcode) => {
+  try {
+    await api.post('/track/view', {
+      session_id: sessionId,
+      product_headcode: productHeadcode,
+      interaction_type: 'view',
+    });
+  } catch (error) {
+    console.error('Error tracking view:', error);
+  }
+};
+
+export const trackReject = async (sessionId, productHeadcode) => {
+  try {
+    await api.post('/track/reject', {
+      session_id: sessionId,
+      product_headcode: productHeadcode,
+      interaction_type: 'reject',
+    });
+  } catch (error) {
+    console.error('Error tracking reject:', error);
+  }
+};
+
+// Batch products operations
+export const batchProducts = async (sessionId, productHeadcodes, operation) => {
+  const response = await api.post('/batch/products', {
+    product_headcodes: productHeadcodes,
+    session_id: sessionId,
+    operation,
+  });
+  return response.data;
+};
+
+// Export consolidated BOM report
+export const exportBOMReport = async (sessionId, productHeadcodes) => {
+  const response = await api.post(
+    '/report/consolidated',
+    {
+      product_headcodes: productHeadcodes,
+      session_id: sessionId,
+    },
+    {
+      responseType: 'blob',
+    }
+  );
+
+  return response.data; // Blob
+};
+
 // Import endpoints
 export const importProducts = async (file) => {
   const formData = new FormData();
