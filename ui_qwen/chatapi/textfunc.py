@@ -21,9 +21,15 @@ from openpyxl.styles import Font, PatternFill, Alignment
 import re  # <--- Thêm cái này
 from io import BytesIO
 from typing import List
+import numpy as np
 
 def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
+
+def format_suggested_prompts(prompts: list[str]) -> str:
+    if not prompts:
+        return ""
+    return "\n".join([f"• {p}" for p in prompts])
 
 def extract_product_keywords(query: str) -> list:
     """Trích xuất từ khóa quan trọng"""

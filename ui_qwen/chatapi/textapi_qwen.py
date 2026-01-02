@@ -35,7 +35,7 @@ from rankingapi.ranking import (apply_feedback_to_search, get_ranking_summary,
 from .embeddingapi import generate_embedding_qwen
 from .textfunc import (calculate_product_total_cost, call_gemini_with_retry,
                        extract_product_keywords, format_search_results,
-                       get_latest_material_price, search_products_hybrid,calculate_personalized_score,generate_consolidated_report,
+                       get_latest_material_price, search_products_hybrid,format_suggested_prompts,generate_consolidated_report,
                        search_products_keyword_only,search_materials_for_product)
 from .unit import (BatchProductRequest, ChatMessage, ConsolidatedBOMRequest,
                    TrackingRequest)
@@ -55,6 +55,230 @@ router = APIRouter()
 # ========================================
 # FUNCTION DEFINITIONS
 # ========================================
+
+def generate_suggested_prompts(context_type: str, context_data: Dict = None, count: int = 4) -> List[str]:
+    
+    model = genai.GenerativeModel("gemini-2.5-flash-lite")
+    
+    prompt = f"""
+        Bạn là chuyên viên tư vấn nội thất cao cấp của AA Corporation.
+        Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh.
+
+        NGỮ CẢNH: {context_type}
+        """
+
+    if context_type == "greeting":
+        prompt += """
+        User vừa mới vào chat. Tạo 4 câu gợi ý giúp user bắt đầu:
+        - Tìm sản phẩm phổ biến
+        - Tư vấn vật liệu
+        - Hỏi về giá
+        - Hỗ trợ khác
+        YÊU CẦU:
+        - Ngắn gọn, rõ ràng (8-12 từ)
+        - Không dùng emoji
+        - Tự nhiên như lời nói
+        - Đa dạng chủ đề
+        """
+    
+    elif context_type == "search_product_found":
+        products_info = context_data.get("products", [])
+        query = context_data.get("query", "")
+        prompt += f"""
+        User vừa tìm: "{query}"
+        Tìm thấy {len(products_info)} sản phẩm.
+        Sản phẩm đầu tiên: {products_info[0].get('product_name', '')} ({products_info[0].get('headcode', '')})
+        Tạo 4 gợi ý HÀNH ĐỘNG TIẾP THEO:
+        - Xem chi tiết/giá sản phẩm cụ thể
+        - So sánh hoặc tìm tương tự
+        - Hỏi về vật liệu/cấu tạo
+        - Tư vấn thêm
+        YÊU CẦU:
+        - Cụ thể, dựa trên kết quả tìm kiếm
+        - Có tên sản phẩm/mã nếu cần
+        - Tự nhiên, không máy móc
+        - Không dùng emoji
+        """
+    
+    elif context_type == "search_product_broad":
+        query = context_data.get("query", "")
+        prompt += f"""
+        User tìm quá rộng: "{query}"
+        Cần thu hẹp phạm vi.
+        Tạo 4 câu hỏi GỢI Ý giúp user CỤ THỂ HÓA:
+        - Về mục đích sử dụng
+        - Về phong cách/chất liệu
+        - Về kích thước/không gian
+        - Về ngân sách
+        YÊU CẦU:
+        - Dạng câu hỏi tự nhiên
+        - Liên quan trực tiếp đến "{query}"
+        - Giúp thu hẹp tìm kiếm
+        - Không dùng emoji
+        """
+    
+    elif context_type == "search_product_not_found":
+        query = context_data.get("query", "")
+        prompt += f"""
+        User tìm: "{query}" - KHÔNG TÌM THẤY
+        Tạo 4 gợi ý GIẢI PHÁP:
+        - Tìm từ khóa tương tự
+        - Xem danh mục liên quan
+        - Tư vấn sản phẩm thay thế
+        - Liên hệ tư vấn
+        YÊU CẦU:
+        - Tích cực, giúp đỡ
+        - Cụ thể, có hướng giải quyết
+        - Không dùng emoji
+        """
+            
+    elif context_type == "search_material_found":
+        materials_info = context_data.get("materials", [])
+        query = context_data.get("query", "")
+        prompt += f"""
+        User tìm vật liệu: "{query}"
+        Tìm thấy {len(materials_info)} vật liệu.
+        Vật liệu đầu: {materials_info[0].get('material_name', '')}
+        Tạo 4 gợi ý HÀNH ĐỘNG:
+        - Xem chi tiết vật liệu
+        - So sánh giá/tính năng
+        - Xem sản phẩm dùng vật liệu này
+        - Tư vấn vật liệu thay thế
+        YÊU CẦU:
+        - Có tên vật liệu cụ thể
+        - Hành động rõ ràng
+        - Không dùng emoji
+        """
+            
+    elif context_type == "product_materials":
+        product_name = context_data.get("product_name", "")
+        headcode = context_data.get("headcode", "")
+        prompt += f"""
+        User đang xem định mức vật liệu của:
+        {product_name} ({headcode})
+        Tạo 4 gợi ý TIẾP THEO:
+        - Xem giá/chi phí
+        - So sánh với sản phẩm khác
+        - Tìm vật liệu thay thế
+        - Xuất báo cáo
+        YÊU CẦU:
+        - Dùng mã {headcode} nếu cần
+        - Hành động cụ thể
+        - Không dùng emoji
+        """
+    
+    elif context_type == "product_cost":
+        product_name = context_data.get("product_name", "")
+        headcode = context_data.get("headcode", "")
+        prompt += f"""
+        User đang xem chi phí của:
+        {product_name} ({headcode})
+        Tạo 4 gợi ý:
+        - Xem chi tiết vật liệu
+        - So sánh giá với SP khác
+        - Tối ưu chi phí
+        - Xuất báo cáo
+        YÊU CẦU:
+        - Liên quan đến chi phí/giá
+        - Không dùng emoji
+        """
+    
+    elif context_type == "batch_materials":
+        product_count = context_data.get("product_count", 0)
+        first_product = context_data.get("first_product", "")
+        prompt += f"""
+        User vừa xem định mức {product_count} sản phẩm.
+        Sản phẩm đầu: {first_product}
+        Tạo 4 gợi ý:
+        - Xem báo cáo chi phí
+        - Xuất Excel
+        - Phân tích chi tiết
+        - So sánh giá vật liệu
+        YÊU CẦU:
+        - Phù hợp với batch operation
+        - Không dùng emoji
+        """
+    
+    elif context_type == "batch_cost":
+        product_count = context_data.get("product_count", 0)
+        first_headcode = context_data.get("first_headcode", "")
+        prompt += f"""
+        User vừa xem chi phí {product_count} sản phẩm.
+        Tạo 4 gợi ý:
+        - Xem định mức chi tiết
+        - Xuất báo cáo Excel
+        - Phân tích vật liệu
+        - Tìm vật liệu giá tốt hơn
+        YÊU CẦU:
+        - Liên quan đến tối ưu chi phí
+        - Không dùng emoji
+        """
+    
+    else:
+        prompt += """
+        Tạo 4 gợi ý chung:
+        - Tìm sản phẩm
+        - Tìm vật liệu  
+        - Xem giá
+        - Trợ giúp
+        """
+            
+    prompt += """
+    OUTPUT FORMAT (JSON array only):
+    [
+        "Gợi ý 1 - tự nhiên, không emoji",
+        "Gợi ý 2 - tự nhiên, không emoji",
+        "Gợi ý 3 - tự nhiên, không emoji",
+        "Gợi ý 4 - tự nhiên, không emoji"
+    ]
+    """
+    try:
+        response_text = call_gemini_with_retry(model, prompt)
+        if not response_text:
+            return _get_fallback_prompts(context_type)
+        
+        clean_text = response_text.strip()
+        if "```json" in clean_text:
+            clean_text = clean_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in clean_text:
+            clean_text = clean_text.split("```")[1].split("```")[0].strip()
+        
+        prompts = json.loads(clean_text)
+        return prompts[:count]
+        
+    except Exception as e:
+        print(f"WARNING: Prompt generation failed: {e}")
+        return _get_fallback_prompts(context_type)
+
+def _get_fallback_prompts(context_type: str) -> List[str]:
+    """Fallback prompts nếu genai thất bại"""
+    fallbacks = {
+        "greeting": [
+            "Tìm bàn làm việc hiện đại",
+            "Xem các loại gỗ cao cấp",
+            "Tư vấn báo giá sản phẩm",
+            "Danh sách vật liệu phổ biến"
+        ],
+        "search_product_found": [
+            "Xem chi tiết sản phẩm đầu tiên",
+            "So sánh với mẫu tương tự",
+            "Phân tích vật liệu sử dụng",
+            "Tư vấn thêm về sản phẩm"
+        ],
+        "search_material_found": [
+            "Xem chi tiết vật liệu đầu tiên",
+            "So sánh giá các loại vật liệu",
+            "Xem sản phẩm dùng vật liệu này",
+            "Tư vấn vật liệu thay thế"
+        ]
+    }
+    return fallbacks.get(context_type, [
+        "Tìm sản phẩm mới",
+        "Tìm nguyên vật liệu",
+        "Xem bảng giá",
+        "Trợ giúp khác"
+    ])
+
 def get_intent_and_params(user_message: str, context: Dict) -> Dict:
     """AI Router với khả năng Reasoning & Soft Clarification"""
     model = genai.GenerativeModel("gemini-2.5-flash-lite")
@@ -213,45 +437,6 @@ def search_products(params: Dict, session_id: str = None):
             if session_id:
                 print(f"\n🎯 Personalization for {session_id[:8]}...")
                 
-                # ✅ CHECK trước xem user có history không
-                conn = get_db()
-                cur = conn.cursor()
-                cur.execute("""
-                    SELECT COUNT(*) FROM user_preferences 
-                    WHERE session_id = %s
-                """, (session_id,))
-                history_count = cur.fetchone()[0]
-                conn.close()
-                
-                if history_count > 0:
-                    has_personalization = True
-                    print(f"   ✅ Found {history_count} interactions")
-                    
-                    for product in products:
-                        conn = get_db()
-                        cur = conn.cursor(cursor_factory=RealDictCursor)
-                        
-                        cur.execute("""
-                            SELECT description_embedding 
-                            FROM products_qwen 
-                            WHERE headcode = %s AND description_embedding IS NOT NULL
-                        """, (product['headcode'],))
-                        
-                        vec_result = cur.fetchone()
-                        conn.close()
-                        
-                        if vec_result and vec_result['description_embedding']:
-                            personal_score = calculate_personalized_score(
-                                vec_result['description_embedding'],
-                                session_id
-                            )
-                            product['personal_score'] = float(personal_score)
-                        else:
-                            product['personal_score'] = 0.5
-                else:
-                    print(f"   ℹ️ No history - Skip personalization")
-            
-            # ✅ Nếu không có personalization → set neutral 0.5
             if not has_personalization:
                 for product in products:
                     product['personal_score'] = 0.5
@@ -259,7 +444,7 @@ def search_products(params: Dict, session_id: str = None):
             print(f"✅ Personalization done\n")
             
             # ========== STEP 3: FEEDBACK SCORES ==========
-            print(f"🎯 Feedback Scoring...")
+            print(f"MAIN: Feedback Scoring...")
             
             feedback_dict = get_feedback_boost_for_query(
                 params.get("keywords_vector", ""),
@@ -276,10 +461,10 @@ def search_products(params: Dict, session_id: str = None):
                 product['feedback_score'] = float(raw_feedback / max_feedback) if max_feedback > 0 else 0.0
                 product['feedback_count'] = float(raw_feedback)
             
-            print(f"✅ Feedback Scoring done\n")
+            print(f"SUCCESS: Feedback Scoring done\n")
             
             # ========== STEP 4: WEIGHTED SUM ==========
-            print(f"🎯 Final Ranking (Weighted Sum)...")
+            # print(f"MAIN: Final Ranking (Weighted Sum)...")
             
             # ✅ ADAPTIVE WEIGHTS
             if has_personalization:
@@ -290,7 +475,7 @@ def search_products(params: Dict, session_id: str = None):
             else:
                 # User mới → ưu tiên base + social proof
                 W_BASE = 0.6
-                W_PERSONAL = 0.0  # ❌ KHÔNG dùng personal_score
+                W_PERSONAL = 0.0  
                 W_FEEDBACK = 0.4
             
             for idx, product in enumerate(products):
@@ -307,9 +492,9 @@ def search_products(params: Dict, session_id: str = None):
                 product['final_score'] = float(final_score)
                 product['original_rank'] = idx + 1
                 
-                print(f"  {product['headcode']}: "
-                      f"base={base:.3f} | pers={personal:.3f} | fb={feedback:.3f} "
-                      f"→ final={final_score:.3f}")
+                # print(f"  {product['headcode']}: "
+                #         f"base={base:.3f} | pers={personal:.3f} | fb={feedback:.3f} "
+                #         f"→ final={final_score:.3f}")
             
             # ========== STEP 5: SORT FINAL ==========
             products.sort(key=lambda x: x.get('final_score', 0), reverse=True)
@@ -360,7 +545,6 @@ def search_products(params: Dict, session_id: str = None):
             ORDER BY distance ASC
             LIMIT 10
         """
-        
         cur.execute(sql, [query_vector])
         results = cur.fetchall()
         
@@ -548,21 +732,26 @@ def get_product_materials(headcode: str):
     
     conn.close()
     
+    # Lấy lịch sử giá (nếu cần) từ vật liệu đầu tiên có dữ liệu
     price_history = []
     try:
-        if materials['material_subprice']:
-            price_history = json.loads(materials['material_subprice'])
-    except:
+        first_with_price = next(
+            (m for m in materials if m.get('material_subprice')),
+            None
+        )
+        if first_with_price and first_with_price['material_subprice']:
+            price_history = json.loads(first_with_price['material_subprice'])
+    except Exception:
         pass
     
     if not materials:
         return {
             "response": f"WARNING: Sản phẩm **{prod['product_name']}** ({headcode}) chưa có định mức vật liệu.\n\n"
-                       f"Có thể:\n"
-                       f"• Sản phẩm mới chưa nhập định mức\n"
-                       f"• Chưa import file product_materials.csv\n"
-                       f"• Mã sản phẩm trong product_materials không khớp\n\n"
-                       f"Vui lòng kiểm tra lại hoặc liên hệ bộ phận kỹ thuật."
+                        f"Có thể:\n"
+                        f"• Sản phẩm mới chưa nhập định mức\n"
+                        f"• Chưa import file product_materials.csv\n"
+                        f"• Mã sản phẩm trong product_materials không khớp\n\n"
+                        f"Vui lòng kiểm tra lại hoặc liên hệ bộ phận kỹ thuật."
         }
     
     total = 0
@@ -617,22 +806,23 @@ def get_product_materials(headcode: str):
     response += f"\n---\n\n💰 **TỔNG CHI PHÍ NGUYÊN VẬT LIỆU: {total:,.2f} VNĐ**"
     response += f"\n\n⚠️ **Lưu ý:** Giá được tính từ lịch sử mua hàng gần nhất. Giá thực tế có thể thay đổi."
     
-    
-    if materials.get('image_url'):
-        response += f"---\n\n🖼️ **Xem ảnh vật liệu:** [Google Drive Link]({material['image_url']})\n"
+    # Thêm link ảnh (nếu có ít nhất một vật liệu có image_url)
+    first_image_url = next(
+        (m['image_url'] for m in materials_with_price if m.get('image_url')),
+        None
+    )
+    if first_image_url:
+        response += f"---\n\n🖼️ **Xem ảnh vật liệu:** [Google Drive Link]({first_image_url})\n"
         response += f"_(Click để xem ảnh chi tiết)_"
+    
+    latest_price_summary = materials_with_price[0]['price'] if materials_with_price else 0
     
     return {
         "response": response,
-        # "material_detail": dict(material),
-        "materials": [{  # ✅ Đổi thành list giống search_materials
-            **dict(materials),
-            'price': latest_price  # ✅ Thêm key 'price'
-        }],
         "materials": materials_with_price,
         "total_cost": total,
         "product_name": prod['product_name'],
-        "latest_price": latest_price,
+        "latest_price": latest_price_summary,
         "price_history": price_history
     }
 
@@ -646,7 +836,7 @@ def calculate_product_cost(headcode: str):
     
     if not prod:
         conn.close()
-        return {"response": f"❌ Không tìm thấy sản phẩm với mã **{headcode}**"}
+        return {"response": f"ERROR: Không tìm thấy sản phẩm với mã **{headcode}**"}
     
     sql = """
         SELECT 
@@ -753,7 +943,7 @@ def search_materials(params: Dict):
         query_parts.append(params["keywords_vector"])
     
     query_text = " ".join(query_parts) if query_parts else "vật liệu nội thất"
-    print(f"🔍 Searching materials for: {query_text}")
+    print(f"SEARCH: Searching materials for: {query_text}")
     
     query_vector = generate_embedding_qwen(query_text)
     
@@ -859,13 +1049,13 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         cur.execute("SELECT * FROM materials WHERE material_name ILIKE %s LIMIT 1", (f"%{material_name}%",))
     else:
         conn.close()
-        return {"response": "⚠️ Cần cung cấp mã SAP hoặc tên vật liệu."}
+        return {"response": "WARNING: Cần cung cấp mã SAP hoặc tên vật liệu."}
     
     material = cur.fetchone()
     
     if not material:
         conn.close()
-        return {"response": f"❌ Không tìm thấy vật liệu **{id_sap or material_name}**"}
+        return {"response": f"ERROR: Không tìm thấy vật liệu **{id_sap or material_name}**"}
     
     latest_price = get_latest_material_price(material['material_subprice'])
 
@@ -888,9 +1078,9 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
     try:
         cur.execute(sql, (material['id_sap'],))
         used_in_products = cur.fetchall()
-        print(f"🔗 Material {material['id_sap']} used in {len(used_in_products)} products")
+        print(f"INFO: Material {material['id_sap']} used in {len(used_in_products)} products")
     except Exception as e:
-        print(f"❌ Query error: {e}")
+        print(f"ERROR: Query error: {e}")
         used_in_products = []
     
     try:
@@ -905,7 +1095,7 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         """, (material['id_sap'],))
         stats = cur.fetchone()
     except Exception as e:
-        print(f"❌ Stats query error: {e}")
+        print(f"ERROR: Stats query error: {e}")
         stats = {
             'product_count': 0,
             'project_count': 0,
@@ -922,27 +1112,23 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         pass
     
     response = f"""
-🧱 **CHI TIẾT NGUYÊN VẬT LIỆU**
+                🧱 **CHI TIẾT NGUYÊN VẬT LIỆU**
 
-📦 **Tên:** {material['material_name']}
-🏷️ **Mã SAP:** `{material['id_sap']}`
-📂 **Nhóm:** {material['material_group']}"""
-    
+                📦 **Tên:** {material['material_name']}
+                🏷️ **Mã SAP:** `{material['id_sap']}`
+                📂 **Nhóm:** {material['material_group']}"""
+                    
     if material.get('material_subgroup'):
         response += f" - {material['material_subgroup']}"
-    
-    response += f"""
-💰 **Giá mới nhất:** {latest_price:,.2f} VNĐ/{material['unit']}
-
----
-
-📊 **THỐNG KÊ SỬ DỤNG:**
-• Được sử dụng trong **{stats['product_count']} sản phẩm**
-• Xuất hiện ở **{stats['project_count']} dự án**
-• Tổng số lượng: **{stats.get('total_quantity', 0) or 0} {material['unit']}**
-
----
-"""
+        response += f"""
+                💰 **Giá mới nhất:** {latest_price:,.2f} VNĐ/{material['unit']}
+                ---
+                📊 **THỐNG KÊ SỬ DỤNG:**
+                • Được sử dụng trong **{stats['product_count']} sản phẩm**
+                • Xuất hiện ở **{stats['project_count']} dự án**
+                • Tổng số lượng: **{stats.get('total_quantity', 0) or 0} {material['unit']}**
+                ---
+            """
     
     if price_history and len(price_history) > 0:
         response += "📈 **LỊCH SỬ GIÁ:**\n\n"
@@ -988,8 +1174,6 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         "stats": dict(stats) if stats else {},
         "has_image": bool(material.get('image_url'))
     }
-
-
 
 def list_material_groups():
     """Liệt kê các nhóm vật liệu với giá tính từ material_subprice"""
@@ -1075,20 +1259,18 @@ def chat(msg: ChatMessage):
         listProducts = []
         # GREETING
         if intent == "greeting":
+            tmp = generate_suggested_prompts("greeting")
+            suggested_prompts_mess = format_suggested_prompts(tmp)
             result_response = {
                 "response": "👋 Xin chào! Tôi là trợ lý AI của AA Corporation.\n\n"
                         "Tôi có thể giúp bạn:\n"
-                           "• 🔍 **Tìm sản phẩm** (bàn, ghế, sofa...)\n"
-                           "• 🧱 **Tìm nguyên vật liệu** (gỗ, da, đá, vải...)\n"
-                           "• 💰 **Tính chi phí** sản phẩm\n"
-                           "• 📋 **Xem định mức** nguyên vật liệu\n\n"
+                        #    "• 🔍 **Tìm sản phẩm** (bàn, ghế, sofa...)\n"
+                        #    "• 🧱 **Tìm nguyên vật liệu** (gỗ, da, đá, vải...)\n"
+                        #    "• 💰 **Tính chi phí** sản phẩm\n"
+                        #    "• 📋 **Xem định mức** nguyên vật liệu\n\n"
+                        f"{suggested_prompts_mess}"
                         "Bạn cần tìm gì hôm nay?",
-                "suggested_prompts": [
-                    "🔍 Tìm sản phẩm", 
-                    "🧱 Tìm nguyên vật liệu", 
-                    "💰 Xem giá sản phẩm",
-                    "📋 Danh sách nhóm vật liệu"
-                ]
+                "suggested_prompts": suggested_prompts
             }
         
         elif intent == "search_product":
@@ -1101,44 +1283,40 @@ def chat(msg: ChatMessage):
             result_count = len(products)
             
             if not products:
+                suggested_prompts_mess = generate_suggested_prompts(
+                    "search_product_not_found",
+                    {"query": user_message}
+                )
                 result_response = {
-                    "response": f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
-                                '**Gợi ý cho bạn:**\n'
-                                '• Thử tìm kiếm với từ khóa khác (ví dụ: "bàn ăn" thay vì "bàn bếp")\n'
-                                '• Mô tả chi tiết hơn về mục đích sử dụng\n'
-                                '• Hoặc để tôi gợi ý các danh mục phổ biến',
-                    "suggested_prompts": [
-                        "Bàn làm việc văn phòng",
-                        "Ghế sofa phòng khách",
-                        "Tủ bếp hiện đại",
-                        "Xem tất cả sản phẩm nổi bật"
-                    ]
+                    "response": (
+                        f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
+                        '**Gợi ý cho bạn:**\n'
+                        f"{suggested_prompts_mess}"
+                    ),
+                    "suggested_prompts": suggested_prompts
                 }
             else:
                 response_text = ""
                 suggested_prompts = []
-                
+                tmp = generate_suggested_prompts(
+                        "search_product_broad",
+                        {"query": user_message, "products": products}
+                )
+                suggested_prompts_mess = format_suggested_prompts(tmp)
                 if intent_data.get("is_broad_query"):
                     follow_up = intent_data.get("follow_up_question", "Bạn muốn tìm loại cụ thể nào?")
                     response_text = (
                         f"🎯 **TÌM KIẾM MỞ RỘNG**\n"
-                        f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n\n"
-                        f"💡 **{follow_up}**\n\n"
-                        f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:"
+                        f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n"
+                        f"💡 **{follow_up}**\n"
+                        f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:\n"
+                        f"{suggested_prompts_mess}"
                     )
-                    actions = intent_data.get("suggested_actions", [])
-                    suggested_prompts = [f"🔍 {a}" for a in actions] if actions else []
-                    suggested_prompts.extend([
-                        "💰 Xem báo giá chi tiết",
-                        "🎨 Tư vấn phối màu",
-                        "📏 Yêu cầu kích thước tùy chỉnh"
-                    ])
                 else:
                     response_text = (
                         f"✅ **KẾT QUẢ TÌM KIẾM CHUYÊN SÂU**\n"
                         f"Tôi đã chọn lọc **{len(products)}** phù hợp nhất với yêu cầu của bạn.\n\n"
                     )
-                    
                     # ✅ THÊM: Hiển thị thông tin ranking nếu có
                     if ranking_summary['ranking_applied']:
                         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} sản phẩm** được ưu tiên dựa trên lịch sử tìm kiếm."
@@ -1153,7 +1331,6 @@ def chat(msg: ChatMessage):
                         "Giá (VNĐ/ĐV)",
                         "Phản hồi"
                     ]
-
                     table.align = {
                         "Tên vật liệu": "l",
                         "Mã SAP": "l",
@@ -1161,7 +1338,6 @@ def chat(msg: ChatMessage):
                         "Giá (VNĐ/ĐV)": "r",
                         "Phản hồi": "c"
                     }
-
                     for idx, mat in enumerate(materials, 1):
                         price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
                         material_name = mat["material_name"]
@@ -1192,20 +1368,24 @@ def chat(msg: ChatMessage):
                         for mat in materials_with_images:
                             response_text += f"• [{mat['material_name']}]({mat.get('image_url', '#')})\n"
                     
-                    
-                    response_text += (
-                        f"**Các vật :**\n"
-                        f"• Các sản phẩm được liệt kê dưới đây đều đáp ứng yêu cầu về sản phẩm\n"
-                        f"• Nếu cần thay đổi tiêu chí (màu sắc, kích thước, chất liệu), hãy cho tôi biết\n"
-                        f"• Tôi có thể tư vấn thêm về phong cách thiết kế phù hợp\n\n"
-                        f"**Bạn muốn:**"
-                    )
                     suggested_prompts = [
                         f"💰 Phân tích chi phí {products[0]['headcode']}",
                         f"🧱 Xem cấu tạo vật liệu {products[0]['headcode']}",
                         f"🎯 So sánh với sản phẩm tương tự",
                         "📞 Kết nối với chuyên viên tư vấn"
                     ]
+                    suggested_prompts_mess = generate_suggested_prompts(
+                        "search_product_found",
+                        {"query": user_message, "products": products}
+                    )
+                    response_text += (
+                        f"**Các vật :**\n"
+                        # f"• Các sản phẩm được liệt kê dưới đây đều đáp ứng yêu cầu về sản phẩm\n"
+                        # f"• Nếu cần thay đổi tiêu chí (màu sắc, kích thước, chất liệu), hãy cho tôi biết\n"
+                        # f"• Tôi có thể tư vấn thêm về phong cách thiết kế phù hợp"
+                        f"{suggested_prompts_mess}"
+                    )
+                    
                 result_response = {
                     "response": response_text,
                     "products": products,
@@ -1220,10 +1400,11 @@ def chat(msg: ChatMessage):
             if not material_query:
                 result_response = {
                     "response": "🎯 **TÌM SẢN PHẨM THEO VẬT LIỆU**\n\n"
-                                "Để tôi tư vấn sản phẩm phù hợp, vui lòng cho biết:\n"
-                                "• Bạn quan tâm đến vật liệu nào? (gỗ, đá, kim loại...)\n"
-                                "• Sản phẩm dùng cho không gian nào?\n"
-                                "• Ngân sách dự kiến là bao nhiêu?",
+                                # "Để tôi tư vấn sản phẩm phù hợp, vui lòng cho biết:\n"
+                                # "• Bạn quan tâm đến vật liệu nào? (gỗ, đá, kim loại...)\n"
+                                # "• Sản phẩm dùng cho không gian nào?\n"
+                                # "• Ngân sách dự kiến là bao nhiêu?",
+                                f"{suggested_prompts_mess}",
                     "suggested_prompts": [
                         "Sản phẩm làm từ gỗ sồi tự nhiên",
                         "Nội thất kim loại cho văn phòng",
@@ -1248,9 +1429,10 @@ def chat(msg: ChatMessage):
                                     f"Tôi tìm thấy vật liệu **{', '.join(matched_mats)}** trong hệ thống.\n\n"
                                     f"**Tuy nhiên, hiện chưa có sản phẩm nào sử dụng vật liệu này.**\n\n"
                                     f"💡 **Gợi ý cho bạn:**\n"
-                                    f"• Tìm sản phẩm với vật liệu tương tự\n"
-                                    f"• Liên hệ bộ phận thiết kế để đặt hàng riêng\n"
-                                    f"• Xem vật liệu thay thế có tính năng tương đồng",
+                                    # f"• Tìm sản phẩm với vật liệu tương tự\n"
+                                    # f"• Liên hệ bộ phận thiết kế để đặt hàng riêng\n"
+                                    # f"• Xem vật liệu thay thế có tính năng tương đồng",
+                                    f"{suggested_prompts_mess}",
                         "materials": matched_mats,
                         "suggested_prompts": [
                             "Tìm vật liệu thay thế phù hợp",
@@ -1270,8 +1452,7 @@ def chat(msg: ChatMessage):
                         f"**Ưu điểm nổi bật:**\n"
                         f"• Chất lượng vật liệu được đảm bảo\n"
                         f"• Thiết kế phù hợp với xu hướng hiện đại\n"
-                        f"• Dễ dàng bảo trì và vệ sinh\n\n"
-                        f"Bạn quan tâm đến mẫu nào nhất?"
+                        f"• Dễ dàng bảo trì và vệ sinh"
                     )
                     response_text += f"📦 Tìm thấy **{len(products)} sản phẩm**:"
                     
@@ -1329,7 +1510,6 @@ def chat(msg: ChatMessage):
                     # Hiển thị thông báo nếu có Ranking
                     if ranking_summary['ranking_applied']:
                          response_text += f"⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên dựa trên lịch sử.\n\n"
-
                     response_text += f"🧱 Tìm thấy **{len(materials)} vật liệu** thường dùng:\n\n"
                     
                     for idx, mat in enumerate(materials[:5], 1):
@@ -1359,7 +1539,6 @@ def chat(msg: ChatMessage):
                 }
             else:
                 result_response = get_product_materials(headcode)
-                result_count = len(result_response.get("materials", []))
                 
         elif intent == "calculate_product_cost":
             headcode = params.get("headcode")
@@ -1389,16 +1568,16 @@ def chat(msg: ChatMessage):
             
             # 🆕 Lấy ranking summary
             ranking_summary = get_ranking_summary(materials)
-            
-            result_count = len(materials)
-            
+                        
             if not materials:
+                suggested_prompts_mess = generate_suggested_prompts(
+                    "search_material_not_found",
+                    {"query": user_message}
+                )
                 result_response = {
                     "response": f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
                     "**Đề xuất:**\n"
-                                "• Kiểm tra lại tên vật liệu (ví dụ: 'gỗ sồi Mỹ' thay vì 'gỗ sồi')\n"
-                                "• Mô tả ứng dụng cụ thể (ví dụ: 'vật liệu chịu nước cho nhà tắm')\n"
-                                "• Hoặc xem danh sách nhóm vật liệu phổ biến",
+                            f"{suggested_prompts_mess}",
                     "suggested_prompts": [
                         "Vật liệu chịu nhiệt",
                         "Gỗ công nghiệp cao cấp",
@@ -1446,7 +1625,6 @@ def chat(msg: ChatMessage):
                     "Giá (VNĐ/ĐV)": "r",
                     "Phản hồi": "c"
                 }
-
                 for idx, mat in enumerate(materials, 1):
                     price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
                     material_name = mat["material_name"]
@@ -1477,24 +1655,15 @@ def chat(msg: ChatMessage):
                     for mat in materials_with_images:
                         response_text += f"• [{mat['material_name']}]({mat.get('image_url', '#')})\n"
                 
-                
+                suggested_prompts_mess = generate_suggested_prompts(
+                    "search_material_found",
+                    {"query": user_message, "materials": materials}
+                )
                 response_text += (
                         f"**Nếu các vật liệu trên chưa đúng ý, tôi có thể:**\n"
-                        f"• Gợi ý vật liệu thay thế với đặc tính tương tự\n"
-                        f"• Tư vấn vật liệu theo ngân sách cụ thể\n"
-                        f"• Giới thiệu sản phẩm đã sử dụng các vật liệu này\n\n"
+                        f"{suggested_prompts_mess}"
                     )
-                response_text += "\n\n**Bạn cần tôi hỗ trợ thêm điều gì?**"
-                
-                suggested_prompts = []
-                if materials:
-                    first_mat = materials[0]
-                    suggested_prompts = [
-                        f"📊 So sánh {first_mat['material_name']} với vật liệu khác",
-                        f"🔍 Xem sản phẩm sử dụng {first_mat['material_name']}",
-                        "💰 Tư vấn vật liệu theo ngân sách",
-                        "📋 Xem bảng giá đầy đủ"
-                    ]
+
                 result_response = {
                     "response": response_text,
                     "materials": materials,
@@ -1570,7 +1739,7 @@ def chat(msg: ChatMessage):
         print(f"Server Error: {e}")
         import traceback
         traceback.print_exc()
-        return {"response": f"⚠️ Lỗi hệ thống: {str(e)}"}
+        return {"response": f"WARNING: Lỗi hệ thống: {str(e)}"}
     
 @router.post("/batch/products")
 def batch_product_operations(request: BatchProductRequest):
@@ -1585,7 +1754,7 @@ def batch_product_operations(request: BatchProductRequest):
         headcodes = request.product_headcodes
         operation = request.operation
         
-        print(f"📦 Batch {operation}: {len(headcodes)} products")
+        print(f"INFO: Batch {operation}: {len(headcodes)} products")
         
         # ========== OPERATION: CHI TIẾT SẢN PHẨM ==========
         if operation == "detail":
@@ -1593,8 +1762,7 @@ def batch_product_operations(request: BatchProductRequest):
             cur = conn.cursor(cursor_factory=RealDictCursor)
             
             cur.execute("""
-                SELECT headcode, product_name, category, sub_category, 
-                       material_primary, project, unit
+                SELECT headcode, product_name, category, sub_category, material_primary, project, unit
                 FROM products_qwen
                 WHERE headcode = ANY(%s)
                 ORDER BY product_name
@@ -1604,7 +1772,7 @@ def batch_product_operations(request: BatchProductRequest):
             conn.close()
             
             if not products:
-                return {"response": "❌ Không tìm thấy sản phẩm"}
+                return {"response": "ERROR: Không tìm thấy sản phẩm"}
             
             response = f"📋 **CHI TIẾT {len(products)} SẢN PHẨM:**\n\n"
             
@@ -1656,7 +1824,7 @@ def batch_product_operations(request: BatchProductRequest):
             conn.close()
             
             if not records:
-                return {"response": "⚠️ Các sản phẩm này chưa có định mức vật liệu"}
+                return {"response": "WARNING: Các sản phẩm này chưa có định mức vật liệu"}
             
             # Group by product
             products_dict = {}
@@ -1732,10 +1900,24 @@ def batch_product_operations(request: BatchProductRequest):
             for prod_data in products_dict.values():
                 all_materials.extend(prod_data['materials'])
             
+            # Tạo suggested prompts
+            first_product_name = ""
+            if len(products_dict) > 0:
+                first_product_name = list(products_dict.values())[0]['product_name']
+            
+            suggested_prompts_mess = generate_suggested_prompts(
+                "batch_materials",
+                {
+                    "product_count": len(products_dict),
+                    "first_product": first_product_name
+                }
+            )
+            response += suggested_prompts_mess
+            
             return {
                 "response": response,
                 "products_materials": products_dict,
-                "materials": all_materials  # Để UI render material cards
+                "materials": all_materials
             }
         
         # ========== OPERATION: CHI PHÍ ==========
@@ -1764,7 +1946,7 @@ def batch_product_operations(request: BatchProductRequest):
             conn.close()
             
             if not records:
-                return {"response": "⚠️ Không có dữ liệu định mức"}
+                return {"response": "WARNING: Không có dữ liệu định mức"}
             
             # Tính chi phí từng sản phẩm
             products_cost = {}
@@ -1810,6 +1992,20 @@ def batch_product_operations(request: BatchProductRequest):
             response += f"## 💵 TỔNG CHI PHÍ NVL: {grand_total:,.0f} VNĐ\n\n"
             response += "📋 *Chi phí được tính từ giá nguyên vật liệu gần nhất*"
             
+            # Tạo suggested prompts
+            first_headcode = ""
+            if len(products_cost) > 0:
+                first_headcode = list(products_cost.values())[0]['headcode']
+            
+            suggested_prompts_mess = generate_suggested_prompts(
+                "batch_cost",
+                {
+                    "product_count": len(products_cost),
+                    "first_headcode": first_headcode
+                }
+            )
+            response += suggested_prompts_mess
+            
             return {
                 "response": response,
                 "products_cost": products_cost,
@@ -1817,13 +2013,14 @@ def batch_product_operations(request: BatchProductRequest):
             }
         
         else:
-            return {"response": "❌ Operation không hợp lệ"}
+            return {"response": "ERROR: Operation không hợp lệ"}
     
     except Exception as e:
-        print(f"❌ Batch operation error: {e}")
+        print(f"ERROR: Batch operation error: {e}")
         import traceback
         traceback.print_exc()
-        return {"response": f"❌ Lỗi: {str(e)}"}
+        return {"response": f"ERROR: {str(e)}"}
+    
 # ========================================
 # MODULE 1: CONSOLIDATED BOM REPORT
 # ========================================
@@ -1838,9 +2035,9 @@ def create_consolidated_report(request: ConsolidatedBOMRequest):
     """
     try:
         if not request.product_headcodes or len(request.product_headcodes) == 0:
-            return {"message": "⚠️ Vui lòng chọn ít nhất 1 sản phẩm"}
+            return {"message": "WARNING: Vui lòng chọn ít nhất 1 sản phẩm"}
         
-        print(f"📊 Generating report for {len(request.product_headcodes)} products...")
+        print(f"INFO: Generating report for {len(request.product_headcodes)} products...")
         
         # Tạo file Excel
         excel_buffer = generate_consolidated_report(request.product_headcodes)
@@ -1856,8 +2053,7 @@ def create_consolidated_report(request: ConsolidatedBOMRequest):
             #     result_count=len(request.product_headcodes),
             #     search_type="report"
             # )
-    
-        
+
         filename = f"BOM_Consolidated_{len(request.product_headcodes)}SP_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
         return StreamingResponse(
@@ -1915,14 +2111,13 @@ def track_product_view(request: TrackingRequest):
         conn.commit()
         conn.close()
         
-        print(f"✅ Tracked VIEW: {request.product_headcode} by {request.session_id[:8]}")
+        print(f"SUCCESS: Tracked VIEW: {request.product_headcode} by {request.session_id[:8]}")
         
-        return {"message": "✅ Tracked successfully", "type": "view"}
+        return {"message": "SUCCESS: Tracked successfully", "type": "view"}
         
     except Exception as e:
         print(f"ERROR: Tracking error: {e}")
-        return {"message": f"Error: {str(e)}"}
-
+        return {"message": f"ERROR: {str(e)}"}
 
 @router.post("/track/reject")
 def track_product_reject(request: TrackingRequest):
@@ -1964,9 +2159,8 @@ def track_product_reject(request: TrackingRequest):
         
         print(f"ERROR: Tracked REJECT: {request.product_headcode} by {request.session_id[:8]}")
         
-        return {"message": "✅ Tracked rejection", "type": "reject"}
+        return {"message": "SUCCESS: Tracked rejection", "type": "reject"}
         
     except Exception as e:
         print(f"ERROR: Tracking error: {e}")
-        return {"message": f"Error: {str(e)}"}
-
+        return {"message": f"ERROR: {str(e)}"}
