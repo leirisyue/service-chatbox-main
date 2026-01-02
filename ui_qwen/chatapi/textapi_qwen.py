@@ -518,7 +518,7 @@ def get_product_materials(headcode: str):
     
     if not prod:
         conn.close()
-        return {"response": f"❌ Không tìm thấy sản phẩm với mã **{headcode}**"}
+        return {"response": f"ERROR: Không tìm thấy sản phẩm với mã **{headcode}**"}
     
     sql = """
         SELECT 
@@ -558,11 +558,11 @@ def get_product_materials(headcode: str):
     if not materials:
         return {
             "response": f"WARNING: Sản phẩm **{prod['product_name']}** ({headcode}) chưa có định mức vật liệu.\n\n"
-                        f"Có thể:\n"
-                        f"• Sản phẩm mới chưa nhập định mức\n"
-                        f"• Chưa import file product_materials.csv\n"
-                        f"• Mã sản phẩm trong product_materials không khớp\n\n"
-                        f"Vui lòng kiểm tra lại hoặc liên hệ bộ phận kỹ thuật."
+                       f"Có thể:\n"
+                       f"• Sản phẩm mới chưa nhập định mức\n"
+                       f"• Chưa import file product_materials.csv\n"
+                       f"• Mã sản phẩm trong product_materials không khớp\n\n"
+                       f"Vui lòng kiểm tra lại hoặc liên hệ bộ phận kỹ thuật."
         }
     
     total = 0
@@ -582,6 +582,7 @@ def get_product_materials(headcode: str):
             'material_unit': mat['material_unit'],
             'image_url': mat['image_url'],
             'quantity': quantity,
+            'pm_unit': mat['pm_unit'],
             'price': latest_price,
             'unit_price': latest_price,
             'unit': mat['material_unit'],
@@ -632,10 +633,7 @@ def get_product_materials(headcode: str):
         "total_cost": total,
         "product_name": prod['product_name'],
         "latest_price": latest_price,
-        "price_history": price_history,
-        "used_in_products": [dict(p) for p in used_in_products],
-        "stats": dict(stats) if stats else {},
-        "has_image": bool(material.get('image_url'))
+        "price_history": price_history
     }
 
 def calculate_product_cost(headcode: str):
@@ -981,9 +979,9 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
         "response": response,
         # "material_detail": dict(material),
         "materials": [{  # ✅ Đổi thành list giống search_materials
-        **dict(material),
-        'price': latest_price  # ✅ Thêm key 'price'
-    }],
+            **dict(material),
+            'price': latest_price  # ✅ Thêm key 'price'
+        }],
         "latest_price": latest_price,
         "price_history": price_history,
         "used_in_products": [dict(p) for p in used_in_products],

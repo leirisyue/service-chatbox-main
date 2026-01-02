@@ -43,10 +43,8 @@ function ProductListWithFeedback({
       <div className="">
         <Grid container spacing={2}>
           {products.slice(0, 9).map((product, pidx) => {
-
             const headcode = product.headcode || 'N/A';
             const productName = (product.product_name || 'N/A').slice(0, 50);
-
             const originalRank =
               product.original_rank !== undefined
                 ? product.original_rank
@@ -80,7 +78,6 @@ function ProductListWithFeedback({
                     onMaterialClick={() => onMaterialClick?.(headcode)}
                     onPriceClick={() => onPriceClick?.(headcode)}
                   />
-
                   {/* Badge feedback giống Streamlit */}
                   {hasFeedback && (
                     <div className="product-feedback">
@@ -97,7 +94,6 @@ function ProductListWithFeedback({
                       )}
                     </div>
                   )}
-
                   {/* Panel debug */}
                   {debugMode && (
                     <div className="product-debug-panel">
@@ -111,7 +107,6 @@ function ProductListWithFeedback({
                       <div>Feedback: {feedbackCount} lượt</div>
                     </div>
                   )}
-
                   {/* Checkbox chọn / feedback giống Streamlit */}
                   <div className="product-checkbox-group">
                     <label className="product-checkbox">
@@ -122,7 +117,6 @@ function ProductListWithFeedback({
                       />
                       <span>Chọn để xem chi tiết</span>
                     </label>
-
                     {feedbackMode && (
                       <label className="product-checkbox">
                         <input
