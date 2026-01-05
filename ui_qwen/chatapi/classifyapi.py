@@ -20,9 +20,9 @@ def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
+# ================================================================================================
     
 def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     """
@@ -86,7 +86,6 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     except Exception as e:
         print(f"ERROR: Batch materials classification error: {e}")
         return default_results
-
 
 def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     """
@@ -155,9 +154,9 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
         print(f"ERROR: Batch classification parse error: {e}")
         return default_results
 
-# ========================================
+# ================================================================================================
 # API ENDPOINTS
-# ========================================
+# ================================================================================================
 @router.post("/search-image")
 async def search_by_image(
     file: UploadFile = File(...),

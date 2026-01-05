@@ -14,9 +14,9 @@ def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
+# ================================================================================================
 
 def get_feedback_boost_for_query(query: str, search_type: str, similarity_threshold: float = 0.7) -> Dict:
     """
@@ -169,9 +169,9 @@ def save_user_feedback(session_id: str, query: str, selected_items: list, reject
         traceback.print_exc()
         return False
 
-# ========================================
+# ================================================================================================
 # API ENDPOINTS
-# ========================================
+# ================================================================================================
 
 @router.post("/feedback")
 def submit_feedback(feedback: FeedbackRequest):

@@ -5,23 +5,22 @@ import os
 import re  # <--- Thêm cái này
 import time
 import uuid
+from datetime import datetime
 from io import BytesIO
 from typing import Dict, List, Optional
-from datetime import datetime
 
 import google.generativeai as genai
 import pandas as pd
 import psycopg2
 from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils.dataframe import dataframe_to_rows
 from PIL import Image
 from psycopg2.extras import RealDictCursor
 from pydantic import BaseModel
-
-from fastapi.responses import StreamingResponse
 
 from config import settings
 from feedbackapi.feedback import get_feedback_boost_for_query
@@ -33,11 +32,12 @@ from rankingapi.ranking import (apply_feedback_to_search, get_ranking_summary,
 
 from .embeddingapi import generate_embedding_qwen
 from .textfunc import (calculate_product_total_cost, call_gemini_with_retry,
-                       extract_product_keywords, format_search_results,
-                       get_latest_material_price, search_products_hybrid,format_suggested_prompts,generate_consolidated_report,
-                       search_products_keyword_only,search_materials_for_product)
+                        extract_product_keywords, format_search_results,
+                        format_suggested_prompts, generate_consolidated_report,
+                        get_latest_material_price, search_materials_for_product,
+                        search_products_hybrid, search_products_keyword_only)
 from .unit import (BatchProductRequest, ChatMessage, ConsolidatedBOMRequest,
-                   TrackingRequest)
+                    TrackingRequest)
 
 # --- TỰ ĐỊNH NGHĨA REGEX ĐỂ LỌC KÝ TỰ LỖI ---
 # Regex này lọc các ký tự ASCII điều khiển (Control chars) không hợp lệ trong file Excel (XML)
@@ -66,16 +66,15 @@ def build_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
 
     return "\n".join([header_row, separator_row] + body_rows)
 
-
 def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 genai.configure(api_key=settings.My_GOOGLE_API_KEY)
 
 router = APIRouter()
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
+# ================================================================================================
 
 def generate_suggested_prompts(context_type: str, context_data: Dict = None, count: int = 4) -> List[str]:
     
@@ -1308,8 +1307,6 @@ def list_material_groups():
         "response": response,
         "material_groups": groups_with_stats
     }
-    
-    
 
 # ================================================================================================
 # API ENDPOINTS
@@ -2074,9 +2071,9 @@ def batch_product_operations(request: BatchProductRequest):
         traceback.print_exc()
         return {"response": f"ERROR: {str(e)}"}
     
-# ========================================
+# ================================================================================================
 # MODULE 1: CONSOLIDATED BOM REPORT
-# ========================================
+# ================================================================================================
 
 @router.post("/report/consolidated")
 def create_consolidated_report(request: ConsolidatedBOMRequest):
@@ -2122,7 +2119,6 @@ def create_consolidated_report(request: ConsolidatedBOMRequest):
         import traceback
         traceback.print_exc()
         return {"message": f"ERROR: {str(e)}"}
-
 
 @router.post("/track/view")
 def track_product_view(request: TrackingRequest):

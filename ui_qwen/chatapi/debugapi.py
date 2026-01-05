@@ -12,9 +12,9 @@ def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
+# ================================================================================================
 
 # FUNC cũ để lưu lịch sử chat
 def save_chat_to_history(session_id: str, user_message: str, bot_response: str, 
@@ -247,9 +247,9 @@ def get_session_chat_history(email: str, session_id: str):
         print(f"Error retrieving chat history: {e}")
         return None
 
-# ========================================
+# ================================================================================================
 # API ENDPOINTS
-# ========================================
+# ================================================================================================
 
 @router.get("/debug/products")
 def debug_products():

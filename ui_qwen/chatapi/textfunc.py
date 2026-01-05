@@ -337,7 +337,6 @@ def calculate_product_total_cost(headcode: str) -> float:
         INNER JOIN materials m ON pm.material_id_sap = m.id_sap
         WHERE pm.product_headcode = %s
     """
-
     try:
         cur.execute(sql, (headcode,))
         materials = cur.fetchall()
@@ -345,9 +344,7 @@ def calculate_product_total_cost(headcode: str) -> float:
         print(f"ERROR: Query error in calculate_product_total_cost for {headcode}: {e}")
         conn.close()
         return 0.0
-    
     conn.close()
-    
     if not materials:
         return 0.0
     
@@ -547,7 +544,6 @@ def search_products_keyword_only(params: Dict):
             "response": "Lỗi tìm kiếm.",
             "products": []
         }
-        
 
 def calculate_personalized_score(
     candidate_vector: list, 
@@ -642,7 +638,6 @@ def calculate_personalized_score(
     except Exception as e:
         print(f"⚠️ Personalization error: {e}")
         return 0.5
-
 
 def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
     """

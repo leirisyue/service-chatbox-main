@@ -1,43 +1,37 @@
 
+import io
 import json
-from datetime import datetime
-from typing import Dict
-from fastapi import APIRouter
-from psycopg2.extras import RealDictCursor
-from typing import Dict
-import psycopg2
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List, Dict
-from psycopg2.extras import RealDictCursor
-import google.generativeai as genai
-import uuid
-import time
-import json
-from PIL import Image
 import os
 import re
+import time
+import uuid
+from datetime import datetime
+from typing import Dict, List, Optional
+
+import google.generativeai as genai
 import pandas as pd
-import io
 import psycopg2
+from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
+from psycopg2.extras import RealDictCursor
+from pydantic import BaseModel
 from config import settings
 from historiesapi import histories
 from historiesapi.histories import router as history_router
 from imageapi.media import router as media_router
 
-
 def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
+# ================================================================================================
 
-# ========================================
+# ================================================================================================
 # API ENDPOINTS
-# ========================================
+# ================================================================================================
 
 @router.post("/import/products")
 async def import_products(file: UploadFile = File(...)):

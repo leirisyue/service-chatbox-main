@@ -14,9 +14,9 @@ def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
+# ================================================================================================
 
 def rerank_with_feedback(items: list, feedback_scores: Dict, 
                          id_key: str = "headcode", boost_weight: float = 0.5):  # ← ✅ TĂNG từ 0.3 → 0.5
@@ -71,8 +71,6 @@ def rerank_with_feedback(items: list, feedback_scores: Dict,
     
     return items  # Không sort ở đây, để search_products() sort sau
 
-
-
 def apply_feedback_to_search(items: list, query: str, search_type: str, 
                              id_key: str = "headcode") -> list:
     """
@@ -122,8 +120,6 @@ def apply_feedback_to_search(items: list, query: str, search_type: str,
     print(f"✅ Feedback Ranking done\n")
     return reranked_items
 
-
-
 def get_ranking_summary(items: list) -> dict:
     """
     Tạo summary về ranking để hiển thị trong UI
@@ -172,6 +168,6 @@ def get_ranking_summary(items: list) -> dict:
         "ranking_changes": changes[:5]  # Top 5 changes
     }
     
-# ========================================
+# ================================================================================================
 # API ENDPOINTS
-# ========================================
+# ================================================================================================

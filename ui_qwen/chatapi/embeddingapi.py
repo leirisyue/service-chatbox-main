@@ -23,10 +23,9 @@ OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
 QWEN_EMBED_MODEL = settings.QWEN_MODEL
 QWEN_TIMEOUT = settings.QWEN_TIMEOUT
     
-# ========================================
+# ================================================================================================
 # FUNCTION DEFINITIONS
-# ========================================
-
+# ================================================================================================
 
 def generate_embedding_qwen(text: str):
     """Tạo vector embedding cho text bằng Qwen3, fallback to Google Gemini"""
@@ -49,9 +48,9 @@ def generate_embedding_qwen(text: str):
     except Exception as e:
         print(f"⚠️ ERROR Qwen embedding: {e}")
         
-# ========================================
+# ================================================================================================
 # API ENDPOINTS
-# ========================================
+# ================================================================================================
 
 @router.post("/generate-embeddings-qwen")
 def generate_product_embeddings_qwen():
