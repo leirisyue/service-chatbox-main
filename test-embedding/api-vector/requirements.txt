@@ -1,0 +1,10 @@
+fastapi 
+uvicorn 
+python-dotenv 
+psycopg2 
+requests
+
+psycopg2-binary 
+tiktoken
+transformers 
+torch
