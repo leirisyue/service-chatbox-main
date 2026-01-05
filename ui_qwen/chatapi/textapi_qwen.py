@@ -44,7 +44,7 @@ from .unit import (BatchProductRequest, ChatMessage, ConsolidatedBOMRequest,
 # Bao gồm: ASCII 0-8, 11-12, 14-31
 ILLEGAL_CHARACTERS_RE = re.compile(r'[\000-\010]|[\013-\014]|[\016-\037]')
 
-So_Cau_goi_y = 3  # Số câu gợi ý mặc định
+So_Cau_Goi_Y = 3  # Số câu gợi ý mặc định
 
 
 def build_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
@@ -110,7 +110,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         User vừa tìm: "{query}"
         Tìm thấy {len(products_info)} sản phẩm.
         Sản phẩm đầu tiên: {products_info[0].get('product_name', '')} ({products_info[0].get('headcode', '')})
-        Tạo {So_Cau_goi_y} gợi ý trong những HÀNH ĐỘNG TIẾP THEO:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những HÀNH ĐỘNG TIẾP THEO:
         - Xem chi tiết/giá sản phẩm cụ thể
         - So sánh hoặc tìm tương tự
         - Hỏi về vật liệu/cấu tạo
@@ -127,7 +127,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         prompt += f"""
         User tìm quá rộng: "{query}"
         Cần thu hẹp phạm vi.
-        Tạo {So_Cau_goi_y} gợi ý trong những câu hỏi GỢI Ý giúp user CỤ THỂ HÓA:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những câu hỏi GỢI Ý giúp user CỤ THỂ HÓA:
         - Về mục đích sử dụng
         - Về phong cách/chất liệu
         - Về kích thước/không gian
@@ -143,7 +143,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         query = context_data.get("query", "")
         prompt += f"""
         User tìm: "{query}" - KHÔNG TÌM THẤY
-        Tạo {So_Cau_goi_y} gợi ý trong những GIẢI PHÁP:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những GIẢI PHÁP:
         - Tìm từ khóa tương tự
         - Xem danh mục liên quan
         - Tư vấn sản phẩm thay thế
@@ -161,7 +161,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         User tìm vật liệu: "{query}"
         Tìm thấy {len(materials_info)} vật liệu.
         Vật liệu đầu: {materials_info[0].get('material_name', '')}
-        Tạo {So_Cau_goi_y} gợi ý trong những HÀNH ĐỘNG:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những HÀNH ĐỘNG:
         - Xem chi tiết vật liệu
         - So sánh giá/tính năng
         - Xem sản phẩm dùng vật liệu này
@@ -178,7 +178,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         prompt += f"""
         User đang xem định mức vật liệu của:
         {product_name} ({headcode})
-        Tạo {So_Cau_goi_y} gợi ý trong những việc TIẾP THEO:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những việc TIẾP THEO:
         - Xem giá/chi phí
         - So sánh với sản phẩm khác
         - Tìm vật liệu thay thế
@@ -195,7 +195,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         prompt += f"""
         User đang xem chi phí của:
         {product_name} ({headcode})
-        Tạo {So_Cau_goi_y} gợi ý trong những việc sau:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những việc sau:
         - Xem chi tiết vật liệu
         - So sánh giá với SP khác
         - Tối ưu chi phí
@@ -211,7 +211,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         prompt += f"""
         User đang xem chi phí của:
         {product_name} ({headcode})
-        Tạo {So_Cau_goi_y} gợi ý trong những việc sau:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những việc sau:
         - tên gọi của những sản phẩm tương tự
         - vật liệu phổ biến dùng cho sản phẩm này
         - tìm sản phẩm thay thế
@@ -226,7 +226,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         prompt += f"""
         User vừa xem định mức {product_count} sản phẩm.
         Sản phẩm đầu: {first_product}
-        Tạo {So_Cau_goi_y} gợi ý trong những việc sau:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những việc sau:
         - Xem báo cáo chi phí
         - Xuất Excel
         - Phân tích chi tiết
@@ -241,7 +241,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         first_headcode = context_data.get("first_headcode", "")
         prompt += f"""
         User vừa xem chi phí {product_count} sản phẩm.
-        Tạo {So_Cau_goi_y} gợi ý trong những việc sau:
+        Tạo {So_Cau_Goi_Y} gợi ý trong những việc sau:
         - Xem định mức chi tiết
         - Xuất báo cáo Excel
         - Phân tích vật liệu
