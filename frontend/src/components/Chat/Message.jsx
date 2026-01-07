@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm";
 import { schemaMarkdown } from '../../utils/mardownhtml';
 
 function Message({ message, onSendMessage, typing }) {
+  // console.log("🚀 ~ Message ~ message:", message);
   const isUser = message.role === 'user';
 
   const [displayedText, setDisplayedText] = useState(message.content || "");
@@ -124,6 +125,7 @@ function Message({ message, onSendMessage, typing }) {
       role: 'bot',
       content: botData?.response || 'Xin lỗi, tôi không hiểu.',
       data: botData,
+      suggested_prompts_message: botData?.suggested_prompts_message || [],
       timestamp: Date.now(),
     };
 
@@ -215,6 +217,7 @@ function Message({ message, onSendMessage, typing }) {
     </div>
   );
 
+
   return (
     <div className={`message ${isUser ? 'user-message' : 'bot-message'}`}>
       <div className="message-avatar">
@@ -228,70 +231,10 @@ function Message({ message, onSendMessage, typing }) {
           </div>
           {renderContent()}
           <div ref={bottomRef} />
-        </div>
 
-        {/* PRODUCTS – giao diện mới với feedback & debug */}
-        {!isUser && typingDone && message.data?.products?.length > 0 && (
-          <>
-            <ProductListWithFeedback
-              products={message.data.products}
-              onMaterialClick={handleMaterialClick}
-              onPriceClick={handlePriceClick}
-              selectedProducts={selectedProducts}
-              onToggleSelected={handleToggleSelected}
-              feedbackSelected={feedbackSelected}
-              onToggleFeedback={handleToggleFeedback}
-            />
-            <div className="batch-actions">
-              <hr />
-              {selectedProducts.length > 0 ? (
-                <>
-                  <div className="batch-actions-row">
-                    <button
-                      className="batch-btn primary"
-                      onClick={() => handleBatchOperation('detail')}
-                    >
-                      📋 Chi tiết SP
-                    </button>
-                    <button
-                      className="batch-btn primary"
-                      onClick={() => handleBatchOperation('materials')}
-                    >
-                      🧱 Định mức VL
-                    </button>
-                    <button
-                      className="batch-btn primary"
-                      onClick={() => handleBatchOperation('cost')}
-                    >
-                      💰 Chi phí
-                    </button>
-                  </div>
-                  <div className="batch-actions-row">
-                    <button
-                      className="batch-btn secondary"
-                      onClick={handleReject}
-                    >
-                      🔄 Xem cái khác
-                    </button>
-                    <button
-                      className="batch-btn secondary"
-                      onClick={handleExportBOM}
-                    >
-                      📊 Xuất BOM
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="batch-hint">
-                  💡 Tích chọn sản phẩm để xem chi tiết, định mức, hoặc xuất báo cáo
-                </div>
-              )}
-            </div>
-          </>
-        )}
 
-        {/* MATERIALS */}
-        {/* {!isUser && typingDone && message.data?.materials?.length > 0 && (
+          {/* MATERIALS */}
+          {/* {!isUser && typingDone && message.data?.materials?.length > 0 && (
           <div className="materials-section fade-in">
             <h3>
               📦 Kết quả tìm kiếm vật liệu ({message.data.materials.length})
@@ -312,7 +255,83 @@ function Message({ message, onSendMessage, typing }) {
             </Grid>
           </div>
         )} */}
+
+          {/* PRODUCTS – giao diện mới với feedback & debug */}
+          {!isUser && typingDone && message.data?.products?.length > 0 && (
+            <>
+              <ProductListWithFeedback
+                products={message.data.products}
+                onMaterialClick={handleMaterialClick}
+                onPriceClick={handlePriceClick}
+                selectedProducts={selectedProducts}
+                onToggleSelected={handleToggleSelected}
+                feedbackSelected={feedbackSelected}
+                onToggleFeedback={handleToggleFeedback}
+              />
+              <div className="batch-actions">
+                <hr />
+                {selectedProducts.length > 0 ? (
+                  <>
+                    <div className="batch-actions-row">
+                      <button
+                        className="batch-btn primary"
+                        onClick={() => handleBatchOperation('detail')}
+                      >
+                        📋 Chi tiết SP
+                      </button>
+                      <button
+                        className="batch-btn primary"
+                        onClick={() => handleBatchOperation('materials')}
+                      >
+                        🧱 Định mức VL
+                      </button>
+                      <button
+                        className="batch-btn primary"
+                        onClick={() => handleBatchOperation('cost')}
+                      >
+                        💰 Chi phí
+                      </button>
+                    </div>
+                    <div className="batch-actions-row">
+                      {/* <button
+                        className="batch-btn secondary"
+                        onClick={handleReject}
+                      >
+                        🔄 Xem cái khác
+                      </button> */}
+                      <button
+                        className="batch-btn secondary"
+                        onClick={handleExportBOM}
+                      >
+                        📊 Xuất BOM
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="batch-hint">
+                    💡 Tích chọn sản phẩm để xem chi tiết, định mức, hoặc xuất báo cáo
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+                    {/* <div>{message?.data?.suggested_prompts_mess || ''}</div> */}
+          {!!message?.data?.suggested_prompts_mess ?? <div className="welcome-md">
+            <b>💡 Gợi ý cho bạn:</b>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm, remarkBreaks]}
+              rehypePlugins={[
+                rehypeRaw,
+                [rehypeSanitize, schemaMarkdown],
+              ]}
+            >
+              {message.data.suggested_prompts_mess}
+            </ReactMarkdown>
+            "Trên đây là gợi ý dành riêng cho bạn. Bạn có thể hỏi thêm bất cứ điều gì khác nhé! Tôi sẵn sàng hỗ trợ."
+          </div>}
+        </div>
       </div>
+
     </div>
   );
 }

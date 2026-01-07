@@ -5,8 +5,8 @@ function ProductCard({ product, onMaterialClick, onPriceClick }) {
   return (
     <div className="product-card" style={{ position: 'relative' }}>
       <div className="product-header">
-        <h4>{product.product_name?.slice(0, 50)}</h4>
-        <span className="product-code">🏷️ {product.headcode}</span>
+        <h4 style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={product.product_name}>{product.product_name?.slice(0, 50)}</h4>
+        <span className="product-code" title={product.headcode}>🏷️ {product.headcode}</span>
       </div>
 
       <div className="product-details">

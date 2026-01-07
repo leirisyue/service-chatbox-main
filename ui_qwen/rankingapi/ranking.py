@@ -72,7 +72,7 @@ def rerank_with_feedback(items: list, feedback_scores: Dict,
     return items  # Không sort ở đây, để search_products() sort sau
 
 def apply_feedback_to_search(items: list, query: str, search_type: str, 
-                             id_key: str = "headcode") -> list:
+                                id_key: str = "headcode") -> list:
     """
     🎯 V5.6 - Lưu original_rank TRƯỚC khi rerank
     """

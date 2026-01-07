@@ -36,7 +36,7 @@ function ChatContainer({ isLoading, onSendMessage }) {
         )}
         <div ref={messagesEndRef} />
       </div>
-    </div>
+    </div>  
   );
 }
 

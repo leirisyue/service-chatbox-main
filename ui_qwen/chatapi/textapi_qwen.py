@@ -82,7 +82,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     
     prompt = f"""
         Bạn là chuyên viên tư vấn nội thất cao cấp của AA Corporation.
-        Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh.
+        Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh, dạng câu HỎI.
 
         NGỮ CẢNH: {context_type}.
         cách xưng hô: tôi và bạn.
@@ -152,7 +152,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         - Cụ thể, có hướng giải quyết
         - Không dùng emoji
         """
-            
+
     elif context_type == "search_material_found":
         materials_info = context_data.get("materials", [])
         query = context_data.get("query", "")
@@ -170,7 +170,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         - Hành động rõ ràng
         - Không dùng emoji
         """
-            
+
     elif context_type == "product_materials":
         product_name = context_data.get("product_name", "")
         headcode = context_data.get("headcode", "")
@@ -218,7 +218,22 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         - Liên quan đến chi phí/giá
         - Không dùng emoji
         """
-    
+
+    elif context_type == "calculate_product_cost":
+        product_name = context_data.get("product_name", "")
+        headcode = context_data.get("headcode", "")
+        prompt += f"""
+        User đang xem chi phí của:
+        {product_name} ({headcode})
+        Tạo {So_Cau_Goi_Y} gợi ý trong những việc sau:
+        - tên gọi của những sản phẩm tương tự
+        - vật liệu phổ biến dùng cho sản phẩm này
+        - tìm sản phẩm thay thế
+        YÊU CẦU:
+        - Liên quan đến chi phí/giá
+        - Không dùng emoji
+        """
+
     elif context_type == "batch_materials":
         product_count = context_data.get("product_count", 0)
         first_product = context_data.get("first_product", "")
@@ -264,7 +279,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     [
         "Gợi ý 1 - tự nhiên, không emoji",
         "Gợi ý 2 - tự nhiên, không emoji",
-        "Gợi ý 3 - tự nhiên, không emoji"
+        "Gợi ý 3 - tự nhiên, không emoji",
     ]
     """
     try:
@@ -817,7 +832,7 @@ def get_product_materials(headcode: str):
     response = f"📊 **ĐỊNH MỨC VẬT LIỆU: {prod['product_name']}**\n"
     response += f"🏷️ Mã: `{headcode}`\n"
     response += f"📦 Tổng số loại vật liệu: **{len(materials_with_price)}**\n\n"
-    response += "---\n\n"
+    # response += "---\n\n"
 
     # Bảng Markdown tóm tắt vật liệu (tối đa 10 dòng)
     headers = [
@@ -835,7 +850,6 @@ def get_product_materials(headcode: str):
         group_full = mat["material_group"] or ""
         if mat.get("material_subgroup"):
             group_full += f" - {mat['material_subgroup']}"
-
         rows.append([
             idx,
             mat["material_name"],
@@ -860,7 +874,8 @@ def get_product_materials(headcode: str):
         None
     )
     if first_image_url:
-        response += f"---\n\n🖼️ **Xem ảnh vật liệu:** [Google Drive Link]({first_image_url})\n"
+        response += "\n\n"
+        response += f"🖼️ **Xem ảnh vật liệu:** [Google Drive Link]({first_image_url}) _ "
         response += f"_(Click để xem ảnh chi tiết)_"
     
     latest_price_summary = materials_with_price[0]['price'] if materials_with_price else 0
@@ -874,8 +889,8 @@ def get_product_materials(headcode: str):
         },
     )
     suggested_prompts_mess = format_suggested_prompts(suggested_prompts)
-    response += "\n\n" + "---" + "\n\n"
-    response += suggested_prompts_mess
+    # response += "\n\n" + "---" + "\n\n"
+    # response += suggested_prompts_mess
     return {
         "response": response,
         "materials": materials_with_price,
@@ -883,6 +898,7 @@ def get_product_materials(headcode: str):
         "product_name": prod['product_name'],
         "latest_price": latest_price_summary,
         "price_history": price_history,
+        "suggested_prompts_mess":suggested_prompts_mess,
     }
 
 def calculate_product_cost(headcode: str):
@@ -956,13 +972,13 @@ def calculate_product_cost(headcode: str):
             'image_url': mat['image_url'],
             'id_sap': mat['id_sap']
         })
-    
+
     # ✅ RESPONSE ĐƠN GIẢN - CHỈ CHI PHÍ VẬT LIỆU
-    response = f"**BÁO GIÁ NGUYÊN VẬT LIỆU**\n"
-    response += f"📦 **Sản phẩm:** {prod['product_name']}\n"
-    response += f"🏷️ **Mã:** `{headcode}`\n"
-    response += f"📂 **Danh mục:** {prod['category'] or 'N/A'}\n"
-    response += f"---\n"
+    response = f"""💰 **BÁO GIÁ NGUYÊN VẬT LIỆU**\n\n"""
+    response += f"""📦 **Sản phẩm:** {prod['product_name']}\n\n"""
+    response += f"""🏷️ **Mã:** `{headcode}`\n\n"""
+    response += f"""📂 **Danh mục:** {prod['category'] or 'N/A'}\n\n"""
+    response += f"\n\n---\n\n"
     response += f"**CHI TIẾT NGUYÊN VẬT LIỆU ({material_count} loại):**\n"
 
     # Bảng Markdown cho tối đa 15 vật liệu đầu tiên
@@ -985,22 +1001,38 @@ def calculate_product_cost(headcode: str):
             f"{mat['unit_price']:,.0f}",
             f"{mat['total_cost']:,.0f}",
         ])
-
     response += build_markdown_table(headers, rows) + "\n\n"
     
     if len(materials_detail) > 15:
         response += f"*...và {len(materials_detail)-15} vật liệu khác*\n\n"
-    
+
     response += f"---\n\n"
     response += f"✅ **TỔNG CHI PHÍ NGUYÊN VẬT LIỆU: {material_cost:,.0f} VNĐ**\n\n"
     response += f"📋 **Lưu ý:** Giá được tính từ lịch sử mua hàng gần nhất.\n"
-    response += f"💡 **Muốn xem chi tiết định mức?** Hỏi: _\"Phân tích vật liệu {headcode}\"_"
+    # response += f"💡 Phân tích vật liệu {headcode}\"_"
+    
+        # Gợi ý câu hỏi tiếp theo
+    suggested_prompts = generate_suggested_prompts(
+        "calculate_product_cost",
+        {
+            "product_name": prod['product_name'],
+            "headcode": headcode,
+        },
+    )
+    suggested_prompts_mess = format_suggested_prompts(suggested_prompts)
+    # response += "\n\n" + "---" + "\n\n"
+    # response += suggested_prompts_mess
     
     return {
         "response": response,
         "material_cost": material_cost,
         "material_count": material_count,
-        "materials": materials_detail
+        "materials": materials_detail,
+        "suggested_prompts_mess":suggested_prompts_mess,
+        "suggested_prompts":[
+            "Phân tích vật liệu {headcode}"
+        ]
+        
     }
 
 def search_materials(params: Dict):
@@ -1381,11 +1413,11 @@ def chat(msg: ChatMessage):
                 if intent_data.get("is_broad_query"):
                     follow_up = intent_data.get("follow_up_question", "Bạn muốn tìm loại cụ thể nào?")
                     response_text = (
-                        f"🎯 **TÌM KIẾM MỞ RỘNG**\n"
+                        f"🎯 **KẾT QUẢ TÌM KIẾM**\n"
                         f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n"
                         f"💡 **{follow_up}**\n"
-                        f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:\n"
-                        f"{suggested_prompts_mess}"
+                        # f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:\n"
+                        # f"{suggested_prompts_mess}"
                     )
                 else:
                     response_text = (
@@ -1397,7 +1429,6 @@ def chat(msg: ChatMessage):
                         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} sản phẩm** được ưu tiên dựa trên lịch sử tìm kiếm."
                     
                     response_text += "\n**Bảng tóm tắt các sản phẩm:**\n"
-
                     headers = [
                         "STT",
                         "Tên sản phẩm",
@@ -1407,7 +1438,6 @@ def chat(msg: ChatMessage):
                         "Vật liệu chính",
                     ]
                     rows = []
-
                     for idx, prod_item in enumerate(products, 1):
                         rows.append([
                             idx,
@@ -1417,7 +1447,6 @@ def chat(msg: ChatMessage):
                             prod_item.get("sub_category", ""),
                             prod_item.get("material_primary", ""),
                         ])
-
                     response_text += (
                         "\n📦 **DANH SÁCH SẢN PHẨM ĐỀ XUẤT**\n" +
                         build_markdown_table(headers, rows) +
@@ -1450,9 +1479,9 @@ def chat(msg: ChatMessage):
                     "products": products,
                     "suggested_prompts": suggested_prompts,
                     "ranking_summary": ranking_summary,  
-                    "can_provide_feedback": True 
+                    "can_provide_feedback": True ,
+                    "suggested_prompts_mess":suggested_prompts_mess
                 }
-            
         elif intent == "search_product_by_material":
             material_query = params.get("material_name") or params.get("material_primary") or params.get("keywords_vector")
             
@@ -1486,19 +1515,20 @@ def chat(msg: ChatMessage):
                     result_response = {
                         "response": f"🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
                                     f"Tôi tìm thấy vật liệu **{', '.join(matched_mats)}** trong hệ thống.\n\n"
-                                    f"**Tuy nhiên, hiện chưa có sản phẩm nào sử dụng vật liệu này.**\n\n"
-                                    f"💡 **Gợi ý cho bạn:**\n"
+                                    f"**Tuy nhiên, hiện chưa có sản phẩm nào sử dụng vật liệu này.**\n\n",
+                                    # f"💡 **Gợi ý cho bạn:**\n"
                                     # f"• Tìm sản phẩm với vật liệu tương tự\n"
                                     # f"• Liên hệ bộ phận thiết kế để đặt hàng riêng\n"
                                     # f"• Xem vật liệu thay thế có tính năng tương đồng",
-                                    f"{suggested_prompts_mess}",
+                                    # f"{suggested_prompts_mess}",
                         "materials": matched_mats,
                         "suggested_prompts": [
                             "Tìm vật liệu thay thế phù hợp",
                             "Tư vấn sản phẩm custom theo yêu cầu",
                             "Xem danh mục vật liệu có sẵn"
                         ],
-                        "materials": []
+                        "materials": [],
+                        "suggested_prompts_mess":suggested_prompts_mess
                     }
                 else:
                     explanation = search_result.get("explanation", "")
@@ -1524,9 +1554,9 @@ def chat(msg: ChatMessage):
                             "So sánh 3 mẫu phổ biến nhất",
                             "Xem báo giá chi tiết",
                             "Tư vấn phối màu phù hợp"
-                        ]
+                        ],
+                        "suggested_prompts_mess":suggested_prompts_mess
                     }
-        
         elif intent == "search_material_for_product":
             # 1. Lấy query từ params hoặc context
             product_query = params.get("category") or params.get("usage_context") or params.get("keywords_vector")
@@ -1713,18 +1743,27 @@ def chat(msg: ChatMessage):
                     {"query": user_message, "materials": materials}
                 )
                 suggested_prompts_mess = format_suggested_prompts(tmp)
-                response_text += (
-                        f"**Nếu các vật liệu trên chưa đúng ý, tôi có thể:**\n"
-                        f"{suggested_prompts_mess}"
-                    )
+                # response_text += (
+                #         f"**Nếu các vật liệu trên chưa đúng ý, tôi có thể:**\n"
+                #         f"{suggested_prompts_mess}"
+                #     )
                 
                 result_response = {
                     "response": response_text,
                     "materials": materials,
-                    "suggested_prompts": suggested_prompts,
+                    "suggested_prompts": [
+                        "Vật liệu chịu nhiệt",
+                        "Gỗ công nghiệp cao cấp",
+                        "Đá tự nhiên trang trí",
+                        "Vải bọc chống thấm"
+                    ],
                     "ranking_summary": ranking_summary,  
                     "can_provide_feedback": True,
-                    "show_comparison": True   
+                    "show_comparison": True,
+                    "suggested_prompts_mess":(
+                        f"**Nếu các vật liệu trên chưa đúng ý, tôi có thể:**\n"
+                        f"{suggested_prompts_mess}"
+                    )
                 }      
         
         elif intent == "query_material_detail":
@@ -2032,8 +2071,8 @@ def batch_product_operations(request: BatchProductRequest):
                 response += f"### 📦 {prod_data['name']} (`{prod_data['headcode']}`)\n"
                 response += f"**Danh mục:** {prod_data['category']}\n\n"
                 response += f"**Chi phí nguyên vật liệu:** {prod_data['material_cost']:,.0f} VNĐ\n"
-                response += f"   • {len(prod_data['materials_detail'])} loại vật liệu\n\n"
-                response += "---\n\n"
+                response += f"   • {len(prod_data['materials_detail'])} loại vật liệu"
+                response += "\n\n---\n\n"
                 
                 grand_total += prod_data['material_cost']
             

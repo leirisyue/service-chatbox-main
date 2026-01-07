@@ -1639,7 +1639,10 @@ def calculate_product_cost(headcode: str):
         "response": response,
         "material_cost": material_cost,
         "material_count": material_count,
-        "materials": materials_detail
+        "materials": materials_detail,
+        "suggested_prompts":[
+            "Phân tích vật liệu {headcode}"
+        ]
     }
 
 # ========================================

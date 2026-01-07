@@ -42,7 +42,7 @@ function ProductListWithFeedback({
 
       <div className="">
         <Grid container spacing={2}>
-          {products.slice(0, 9).map((product, pidx) => {
+          {products.map((product, pidx) => {
             const headcode = product.headcode || 'N/A';
             const productName = (product.product_name || 'N/A').slice(0, 50);
             const originalRank =
