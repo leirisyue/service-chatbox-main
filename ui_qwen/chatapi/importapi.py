@@ -33,7 +33,7 @@ router = APIRouter()
 # API ENDPOINTS
 # ================================================================================================
 
-@router.post("/import/products")
+@router.post("/import/products", tags=["Importapi"])
 async def import_products(file: UploadFile = File(...)):
     """
     [V4.1] Import products - KHÔNG auto classify ngay
@@ -141,7 +141,7 @@ async def import_products(file: UploadFile = File(...)):
     except Exception as e:
         return {"message": f"❌ Lỗi: {str(e)}"}
 
-@router.post("/import/materials")
+@router.post("/import/materials", tags=["Importapi"])
 async def import_materials(file: UploadFile = File(...)):
     """
     [V4.1] Import materials - KHÔNG auto classify ngay
@@ -248,7 +248,7 @@ async def import_materials(file: UploadFile = File(...)):
     except Exception as e:
         return {"message": f"❌ Lỗi: {str(e)}"}
 
-@router.post("/import/product-materials")
+@router.post("/import/product-materials", tags=["Importapi"])
 async def import_product_materials(file: UploadFile = File(...)):
     """
     [V4.5] Import định mức - Tự động tạo vật liệu thiếu (Placeholder)

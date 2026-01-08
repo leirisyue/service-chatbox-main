@@ -898,7 +898,7 @@ def get_product_materials(headcode: str):
             f"{mat['total_cost']:,.2f}",
         ])
 
-    # response += build_markdown_table(headers, rows) + "\n\n"
+    response += build_markdown_table(headers, rows) + "\n\n"
     
     if len(materials_with_price) > 15:
         response += f"\n*...và {len(materials_with_price)-15} vật liệu khác.*\n"
@@ -1047,7 +1047,7 @@ def calculate_product_cost(headcode: str):
             f"{mat['unit_price']:,.0f}",
             f"{mat['total_cost']:,.0f}",
         ])
-    # response += build_markdown_table(headers, rows) + "\n\n"
+    response += build_markdown_table(headers, rows) + "\n\n"
     
     if len(materials_detail) > 15:
         response += f"*...và {len(materials_detail)-15} vật liệu khác*\n\n"
@@ -1405,7 +1405,7 @@ def list_material_groups():
 # API ENDPOINTS
 # ================================================================================================
 
-@router.post("/chat", tags=["Chat qwen"])
+@router.post("/chat", tags=["Chat qwen backup"])
 def chat(msg: ChatMessage):
     """Main chat logic"""
     try:
@@ -1511,11 +1511,11 @@ def chat(msg: ChatMessage):
                             prod_item.get("sub_category", ""),
                             prod_item.get("material_primary", ""),
                         ])
-                    # response_text += (
-                    #     "\n📦 **DANH SÁCH SẢN PHẨM ĐỀ XUẤT**\n" +
-                    #     build_markdown_table(headers, rows) +
-                    #     "\n"
-                    # )
+                    response_text += (
+                        "\n📦 **DANH SÁCH SẢN PHẨM ĐỀ XUẤT**\n" +
+                        build_markdown_table(headers, rows) +
+                        "\n"
+                    )
                     
                     suggested_prompts = [
                         f"💰 Phân tích chi phí {products[0]['headcode']}",
@@ -1792,11 +1792,11 @@ def chat(msg: ChatMessage):
                         feedback
                     ])
 
-                # response_text += (
-                #     "\n📦 **DANH SÁCH VẬT LIỆU ƯU TIÊN**\n" +
-                #     build_markdown_table(headers, rows) +
-                #     "\n"
-                # )
+                response_text += (
+                    "\n📦 **DANH SÁCH VẬT LIỆU ƯU TIÊN**\n" +
+                    build_markdown_table(headers, rows) +
+                    "\n"
+                )
                 
                 # Thêm phần link hình ảnh riêng (ngoài bảng)
                 materials_with_images = [m for m in materials[:3] if m.get('image_url')]
@@ -1905,7 +1905,7 @@ def chat(msg: ChatMessage):
             "success": False
         }
     
-@router.post("/batch/products", tags=["Chat qwen"])
+@router.post("/batch/products", tags=["Chat qwen backup"])
 def batch_product_operations(request: BatchProductRequest):
     """
     🔥 Xử lý batch operations cho nhiều sản phẩm
@@ -2053,7 +2053,7 @@ def batch_product_operations(request: BatchProductRequest):
                         f"{mat['total']:,.0f}"
                     ])
 
-                # response += build_markdown_table(headers, rows) + "\n\n"
+                response += build_markdown_table(headers, rows) + "\n\n"
                 
                 if len(prod_data['materials']) > 15:
                     response += f"*...và {len(prod_data['materials'])-15} vật liệu khác*\n\n"
@@ -2206,7 +2206,7 @@ def batch_product_operations(request: BatchProductRequest):
 # MODULE 1: CONSOLIDATED BOM REPORT
 # ================================================================================================
 
-@router.post("/report/consolidated", tags=["Chat qwen"])
+@router.post("/report/consolidated", tags=["Chat qwen backup"])
 def create_consolidated_report(request: ConsolidatedBOMRequest):
     """
     📊 API Endpoint tạo báo cáo tổng hợp định mức vật tư
@@ -2260,7 +2260,7 @@ def create_consolidated_report(request: ConsolidatedBOMRequest):
             "success": False
         }
 
-@router.post("/track/view", tags=["Chat qwen"])
+@router.post("/track/view", tags=["Chat qwen backup"])
 def track_product_view(request: TrackingRequest):
     """
     👁️ Track khi user XEM CHI TIẾT sản phẩm (Positive Signal)
@@ -2317,7 +2317,7 @@ def track_product_view(request: TrackingRequest):
             "success": False
         }
 
-@router.post("/track/reject", tags=["Chat qwen"])
+@router.post("/track/reject", tags=["Chat qwen backup"])
 def track_product_reject(request: TrackingRequest):
     """
     ERROR: Track khi user BỎ QUA/REJECT sản phẩm (Negative Signal)

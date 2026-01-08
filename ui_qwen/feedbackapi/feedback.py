@@ -173,7 +173,7 @@ def save_user_feedback(session_id: str, query: str, selected_items: list, reject
 # API ENDPOINTS
 # ================================================================================================
 
-@router.post("/feedback")
+@router.post("/feedback", tags=["Feedback"])
 def submit_feedback(feedback: FeedbackRequest):
     """
     📝 Endpoint nhận feedback từ user về kết quả tìm kiếm

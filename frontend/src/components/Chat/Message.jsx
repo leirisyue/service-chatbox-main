@@ -259,6 +259,12 @@ function Message({ message, onSendMessage, typing }) {
           <div style={{ paddingBottom: '15px' }}>
             {formatTimestamp(message?.timestamp)}
           </div>
+          {/* Hiển thị ảnh nếu có */}
+          {message.imageUrl && (
+            <div className="message-image">
+              <img src={message.imageUrl} alt="Uploaded" width={300}/>
+            </div>
+          )}
           {renderContent()}
           <div ref={bottomRef} />
 
@@ -302,7 +308,6 @@ function Message({ message, onSendMessage, typing }) {
                     </TableBody>
                   </Table>
                 </TableContainer>
-
               </TabPanel>
               <TabPanel value="2">
                 {!isUser && typingDone && message.data?.products?.length > 0 && (
@@ -438,7 +443,7 @@ function Message({ message, onSendMessage, typing }) {
             </>
           )}
           {/* <div>{message?.data?.suggested_prompts_mess || ''}</div> */}
-          {!isUser && 
+          {!isUser && message.data?.success &&
             <>
               <div>💡 <b>Gợi ý cho bạn:</b></div>
               <ReactMarkdown

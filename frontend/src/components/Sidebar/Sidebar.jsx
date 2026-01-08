@@ -242,7 +242,6 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
                 )} */}
               </div>
             ))}
-
           </div>
         )}
       </div>

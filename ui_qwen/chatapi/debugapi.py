@@ -251,7 +251,7 @@ def get_session_chat_history(email: str, session_id: str):
 # API ENDPOINTS
 # ================================================================================================
 
-@router.get("/debug/products")
+@router.get("/debug/products", tags=["Debugapi"])
 def debug_products():
     """Debug info vá»  products"""
     conn = get_db()
@@ -275,7 +275,7 @@ def debug_products():
         "by_category": [dict(c) for c in by_category]
     }
 
-@router.get("/debug/materials")
+@router.get("/debug/materials", tags=["Debugapi"])
 def debug_materials():
     """Debug info vá»  materials"""
     conn = get_db()
@@ -299,7 +299,7 @@ def debug_materials():
         "by_group": [dict(g) for g in by_group]
     }
 
-@router.get("/debug/chat-history")
+@router.get("/debug/chat-history", tags=["Debugapi"])
 def debug_chat_history():
     """Xem lá»‹ch sá»­ chat gáº§n Ä‘Ã¢y"""
     conn = get_db()

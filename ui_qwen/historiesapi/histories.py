@@ -259,7 +259,9 @@ def get_session_chat_history(email: str, session_id: str):
 # API ENDPOINTS
 # ================================================================================================
 
-@router.get("/chat_histories/session_id/{session_id}")
+# ============ CHAT HISTORY APIs ============
+
+@router.get("/chat_histories/session_id/{session_id}", tags=["Chat History"])
 def get_session_history(session_id: str):
     try:
         conn = get_db()
@@ -319,7 +321,7 @@ def get_session_history(session_id: str):
         print(f"Error in get_session_history: {error_detail}")
         return {"Error": str(e), "detail": error_detail}
 
-@router.get("/chat_histories/email/{email}")
+@router.get("/chat_histories/email/{email}", tags=["Chat History"])
 def get_all_sessions_by_email(email: str):
     """
     Lấy danh sách tất cả sessions của một user, grouped by session_id
@@ -378,7 +380,7 @@ def get_all_sessions_by_email(email: str):
         print(f"Error retrieving sessions: {error_detail}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/chat_histories/{email}/{session_id}")
+@router.get("/chat_histories/{email}/{session_id}", tags=["Chat History"])
 def get_chat_history_by_session(email: str, session_id: str):
     """
     Lấy toàn bộ lịch sử chat của user theo session
@@ -406,7 +408,9 @@ def get_chat_history_by_session(email: str, session_id: str):
         print(f"Error in endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/chat_histories/session_id/{session_id}/list")
+# ============ MESSAGES APIs ============
+
+@router.get("/chat_histories/session_id/{session_id}/list", tags=["Chat History"])
 def get_sessionId_messages_list(session_id: str):
     """
     Phiên bản nâng cao: Xử lý timestamp chính xác hơn
@@ -498,7 +502,7 @@ def get_sessionId_messages_list(session_id: str):
         print(f"Error in get_sessionId_messages_list: {error_detail}")
         return {"Error": str(e), "detail": error_detail}
 
-@router.get("/history/session_id/{session_id}/messages")
+@router.get("/history/session_id/{session_id}/messages", tags=["Chat History"])
 def get_sessionId_messages(session_id: str):
     """
     Phiên bản nâng cao với logic xác định welcome message thông minh hơn
@@ -678,3 +682,111 @@ def get_sessionId_messages(session_id: str):
         print(f"Error in get_sessionId_messages: {error_detail}")
         return {"Error": str(e), "detail": error_detail}
 
+# ============ SESSION MANAGEMENT APIs ============
+
+@router.put("/chat_histories/session/{session_id}/rename", tags=["Chat History"])
+def rename_session(session_id: str, request: Request):
+    """
+    API để thay đổi session_name của một session
+    Body: {"session_name": "New Session Name"}
+    """
+    try:
+        # Lấy dữ liệu từ request body
+        import asyncio
+        body = asyncio.run(request.json())
+        new_session_name = body.get("session_name")
+        
+        if not new_session_name:
+            raise HTTPException(status_code=400, detail="session_name is required")
+        
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # Kiểm tra session có tồn tại không
+        check_sql = """
+            SELECT COUNT(*) FROM chat_histories 
+            WHERE session_id = %s AND isDeleted = false
+        """
+        cur.execute(check_sql, (session_id,))
+        count = cur.fetchone()[0]
+        
+        if count == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Cập nhật session_name cho tất cả records của session này
+        update_sql = """
+            UPDATE chat_histories 
+            SET session_name = %s, updated_at = NOW()
+            WHERE session_id = %s AND isDeleted = false
+        """
+        cur.execute(update_sql, (new_session_name, session_id))
+        updated_count = cur.rowcount
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": f"Session name updated successfully",
+            "session_id": session_id,
+            "new_session_name": new_session_name,
+            "updated_records": updated_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error renaming session: {error_detail}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/chat_histories/session/{session_id}", tags=["Chat History"])
+def delete_session(session_id: str):
+    """
+    API để xóa session (soft delete)
+    Đánh dấu isDeleted = true cho tất cả records của session
+    """
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        
+        # Kiểm tra session có tồn tại không
+        check_sql = """
+            SELECT COUNT(*) FROM chat_histories 
+            WHERE session_id = %s AND isDeleted = false
+        """
+        cur.execute(check_sql, (session_id,))
+        count = cur.fetchone()[0]
+        
+        if count == 0:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Soft delete: Đánh dấu isDeleted = true
+        delete_sql = """
+            UPDATE chat_histories 
+            SET isDeleted = true, updated_at = NOW()
+            WHERE session_id = %s AND isDeleted = false
+        """
+        cur.execute(delete_sql, (session_id,))
+        deleted_count = cur.rowcount
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "message": f"Session deleted successfully",
+            "session_id": session_id,
+            "deleted_records": deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        error_detail = traceback.format_exc()
+        print(f"Error deleting session: {error_detail}")
+        raise HTTPException(status_code=500, detail=str(e))

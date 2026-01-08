@@ -64,7 +64,7 @@
 }
 
 .message-image img {
-  width: 100%;
+  width: 300px;
   height: auto;
   display: block;
   border-radius: 8px;

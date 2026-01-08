@@ -52,7 +52,7 @@ def generate_embedding_qwen(text: str):
 # API ENDPOINTS
 # ================================================================================================
 
-@router.post("/generate-embeddings-qwen")
+@router.post("/generate-embeddings-qwen", tags=["Embeddingapi"])
 def generate_product_embeddings_qwen():
     """Tạo embeddings cho products bằng Qwen3 và lưu vào bảng qwen"""
     conn = get_db()
@@ -112,7 +112,7 @@ def generate_product_embeddings_qwen():
         "errors": errors[:5] if errors else []
     }
 
-@router.post("/generate-material-embeddings-qwen")
+@router.post("/generate-material-embeddings-qwen", tags=["Embeddingapi"])
 def generate_material_embeddings_qwen():
     """Tạo embeddings cho materials bằng Qwen3 và lưu vào bảng qwen"""
     conn = get_db()

@@ -157,7 +157,7 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
 # ================================================================================================
 # API ENDPOINTS
 # ================================================================================================
-@router.post("/search-image")
+@router.post("/search-image", tags=["Classifyapi"])
 async def search_by_image(
     file: UploadFile = File(...),
     session_id: str = Form(default=str(uuid.uuid4()))
@@ -265,7 +265,7 @@ async def search_by_image(
             except:
                 pass
 
-@router.post("/classify-products")
+@router.post("/classify-products", tags=["Classifyapi"])
 def classify_pending_products():
     """
     🤖 Phân loại HÀNG LOẠT các sản phẩm chưa phân loại
@@ -377,7 +377,7 @@ def classify_pending_products():
             "remaining": 0
         }
 
-@router.post("/classify-materials")
+@router.post("/classify-materials", tags=["Classifyapi"])
 def classify_pending_materials():
     """
     🤖 Phân loại HÀNG LOẠT các vật liệu chưa phân loại

@@ -845,4 +845,3 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
     buffer.seek(0)
     
     return buffer
-

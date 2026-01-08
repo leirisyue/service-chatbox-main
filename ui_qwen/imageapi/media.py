@@ -29,7 +29,7 @@ def convert_drive_url(url: str) -> str:
 # ================================================================================================
 # POST: tạo media từ image_url
 # ================================================================================================
-@router.post("/media")
+@router.post("/media", tags=["Media"])
 def create_media(url:str, request: Request):
     # image_url = payload.get("image_url")
     image_url = url
@@ -71,7 +71,7 @@ def create_media(url:str, request: Request):
 # GET: trả ảnh từ cache
 # ================================================================================================
 
-@router.get("/media/{media_id}")
+@router.get("/media/{media_id}", tags=["Media"])
 def get_media(media_id: str):
     clean_id = media_id.split(".")[0]
 
