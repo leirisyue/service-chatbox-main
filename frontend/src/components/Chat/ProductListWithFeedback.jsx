@@ -15,7 +15,7 @@ function ProductListWithFeedback({
   const [feedbackMode, setFeedbackMode] = useState(false);
 
   return (
-    <div className="products-section fade-in">
+    <div className="">
       <div className="products-header-row">
         <h3>
           📦 Kết quả tìm kiếm sản phẩm ({products.length})

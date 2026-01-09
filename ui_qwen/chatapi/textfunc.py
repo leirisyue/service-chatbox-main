@@ -1,27 +1,19 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Form
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import Optional, List, Dict
-from psycopg2.extras import RealDictCursor
-import google.generativeai as genai
-import uuid
-import time
 import json
-from PIL import Image
-import os
-import re
-import pandas as pd
-import io
-import psycopg2
-from config import settings
-from .embeddingapi import generate_embedding_qwen
-from openpyxl import Workbook
-from openpyxl.styles import Font, PatternFill, Alignment
-
-import re  # <--- Thêm cái này
+import time
 from io import BytesIO
-from typing import List
+from typing import Dict, List
+
+import google.generativeai as genai
 import numpy as np
+import psycopg2
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font, PatternFill
+from psycopg2.extras import RealDictCursor
+
+from config import settings
+
+from .embeddingapi import generate_embedding_qwen
+
 
 def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)

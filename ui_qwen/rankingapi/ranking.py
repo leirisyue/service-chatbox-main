@@ -1,13 +1,9 @@
 
-import json
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict
 
 import psycopg2
 from config import settings
-from fastapi import APIRouter, HTTPException, Request
-from psycopg2.extras import RealDictCursor
-from chatapi.unit import FeedbackRequest
+from fastapi import APIRouter
 from feedbackapi.feedback import get_feedback_boost_for_query
 
 def get_db():

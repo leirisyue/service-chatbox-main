@@ -1,12 +1,12 @@
 
 import json
-from typing import Dict, List, Optional
+from typing import Dict
 
 import psycopg2
 from config import settings
 from fastapi import APIRouter, HTTPException, Request
 from psycopg2.extras import RealDictCursor
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 import json
 
 def get_db():

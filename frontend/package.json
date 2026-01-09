@@ -18,7 +18,8 @@
     "rehype-sanitize": "^6.0.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
-    "uuid": "^9.0.0"
+    "uuid": "^9.0.0",
+    "vietnamese-number": "^1.0.1"
   },
   "scripts": {
     "start": "react-scripts start",

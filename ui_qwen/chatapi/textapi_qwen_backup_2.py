@@ -1,26 +1,14 @@
 
-import io
 import json
-import os
-import re  # <--- Thêm cái này
-import time
-import uuid
+import re  
 from datetime import datetime
-from io import BytesIO
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import google.generativeai as genai
-import pandas as pd
 import psycopg2
-from fastapi import APIRouter, FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils.dataframe import dataframe_to_rows
-from PIL import Image
 from psycopg2.extras import RealDictCursor
-from pydantic import BaseModel
 
 from config import settings
 from feedbackapi.feedback import get_feedback_boost_for_query
@@ -2276,7 +2264,7 @@ def batch_product_operations(request: BatchProductRequest):
             "response": f"ERROR: {str(e)}",
             "success": False
         }
-    
+
 # ================================================================================================
 # MODULE 1: CONSOLIDATED BOM REPORT
 # ================================================================================================

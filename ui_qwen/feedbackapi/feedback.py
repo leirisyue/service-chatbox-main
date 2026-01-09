@@ -1,11 +1,10 @@
 
 import json
-from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict
 
 import psycopg2
 from config import settings
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter
 from psycopg2.extras import RealDictCursor
 from chatapi.unit import FeedbackRequest
 from chatapi.embeddingapi import generate_embedding_qwen

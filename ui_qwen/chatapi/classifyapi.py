@@ -3,7 +3,7 @@ import json
 import os
 import time
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import google.generativeai as genai
 import psycopg2

@@ -3267,8 +3267,6 @@ async def search_by_image(
             ]
         )
 
-
-
         if not products:
             return {
                 "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm nội thất')}**.\n\n"
