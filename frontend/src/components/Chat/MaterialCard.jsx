@@ -30,8 +30,12 @@ function MaterialCard({ material, onDetailClick }) {
         <h4 title={material.material_name} className="ellipsis" >
           {material.material_name}
         </h4>
-        <p className="material-code" title={`Mã SAP: ${material.id_sap}`}>🏷️ Mã SAP: <strong>{material.id_sap}</strong></p>
-        <p className="material-group" title={`Nhóm: ${material.material_group || ''}`}>📂 Nhóm: {material.material_group || ''}</p>
+        <p className="material-code" title={`Mã SAP: ${material.id_sap}`}>
+          🏷️ Mã SAP: <strong>{material.id_sap}</strong>
+        </p>
+        <p className="material-group" title={`Nhóm: ${material.material_group || ''}`}>
+          📂 Nhóm: {material.material_group || ''}
+        </p>
         {(!!material.price || !!material.total_cost) ?
           <div className="price-badge" title={`Giá: ${material.total_cost?.toLocaleString('vi-VN') || material.price?.toLocaleString('vi-VN')} VNĐ`}>
             💰 {material.total_cost?.toLocaleString('vi-VN') || material.price?.toLocaleString('vi-VN')} VNĐ {material.unit ? "/" + material.unit : ''}

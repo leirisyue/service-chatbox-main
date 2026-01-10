@@ -309,7 +309,6 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
           Mở Chat Mới
         </Button>
       </div>
-
       <div className="sessions-container">
         {isLoadingSessions ? (
           <div className="loading-sessions">

@@ -16,7 +16,6 @@ function ImageUpload({ onImageUpload, disabled }) {
     const file = e.target.files[0];
     if (file && !disabled) {
       onImageUpload(file);
-      // Reset input để có thể upload cùng file lại
       e.target.value = '';
     }
   };

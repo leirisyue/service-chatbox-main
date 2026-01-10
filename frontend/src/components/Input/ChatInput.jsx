@@ -16,8 +16,6 @@ function ChatInput({ onSendMessage, onImageUpload, disabled, lastMessage }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Nếu có ảnh, gửi ảnh về backend
     if (selectedImage && !disabled) {
       onImageUpload(selectedImage);
       setSelectedImage(null);
@@ -54,8 +52,6 @@ function ChatInput({ onSendMessage, onImageUpload, disabled, lastMessage }) {
           return;
         }
       }
-
-      console.log("🚀 ~ handleSubmit ~ lastMessage:", lastMessage);
       
       onSendMessage(inputValue);
       setInputValue('');
@@ -65,7 +61,6 @@ function ChatInput({ onSendMessage, onImageUpload, disabled, lastMessage }) {
   const handleImageSelect = (file) => {
     if (file) {
       setSelectedImage(file);
-      // Tạo preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -88,7 +83,6 @@ function ChatInput({ onSendMessage, onImageUpload, disabled, lastMessage }) {
 
   return (
     <div style={{ width: '100%' }}>
-      {/* Hiển thị preview ảnh nếu có */}
       {imagePreview && (
         <div className="image-preview-container">
           <div className="image-preview-wrapper">

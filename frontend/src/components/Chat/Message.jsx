@@ -257,7 +257,6 @@ function Message({ message, onSendMessage, typing }) {
           )}
           {renderContent()}
           <div ref={bottomRef} />
-
           {!isUser && (!!message.data?.materials?.length || !!message.data?.products?.length) &&
             <Box sx={{ width: '100%', typography: 'body1' }}>
               <TabContext value={value}>

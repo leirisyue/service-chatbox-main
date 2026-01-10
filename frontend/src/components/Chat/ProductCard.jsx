@@ -20,7 +20,8 @@ function ProductCard({ product, onMaterialClick, onPriceClick }) {
             width: '100%'
           }} title={`🗂️ Dự án: ${product.project}`}>
             🗂️ Dự án: {product.project}
-          </p>}
+          </p>
+        }
       </div>
       <div className="product-actions" style={{ position: 'absolute', width: '90%', bottom: '15px' }}>
         <button

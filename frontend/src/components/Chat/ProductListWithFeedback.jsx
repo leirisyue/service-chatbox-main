@@ -72,13 +72,11 @@ function ProductListWithFeedback({
                   key={`${headcode}_${pidx}`}
                   className="product-card-extended"
                 >
-                  {/* Card chính: vẫn dùng ProductCard để giữ hành vi cũ */}
                   <ProductCard
                     product={{ ...product, product_name: productName }}
                     onMaterialClick={() => onMaterialClick?.(headcode)}
                     onPriceClick={() => onPriceClick?.(headcode)}
                   />
-                  {/* Badge feedback giống Streamlit */}
                   {hasFeedback && (
                     <div className="product-feedback">
                       <span className="feedback-text">
@@ -94,7 +92,6 @@ function ProductListWithFeedback({
                       )}
                     </div>
                   )}
-                  {/* Panel debug */}
                   {debugMode && (
                     <div className="product-debug-panel">
                       <div>
@@ -107,7 +104,6 @@ function ProductListWithFeedback({
                       <div>Feedback: {feedbackCount} lượt</div>
                     </div>
                   )}
-                  {/* Checkbox chọn / feedback giống Streamlit */}
                   <div className="product-checkbox-group">
                     <label className="product-checkbox">
                       <input
