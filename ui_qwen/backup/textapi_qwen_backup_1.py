@@ -1270,16 +1270,14 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
     response += f"📂 **Nhóm:** {material['material_group']}\n"
                     
     if material.get('material_subgroup'):
-        response += f" - {material['material_subgroup']}"
-        response += f"""
-                💰 **Giá mới nhất:** {latest_price:,.2f} VNĐ/{material['unit']}
-                ---
-                📊 **THỐNG KÊ SỬ DỤNG:**
-                • Được sử dụng trong **{stats['product_count']} sản phẩm**
-                • Xuất hiện ở **{stats['project_count']} dự án**
-                • Tổng số lượng: **{stats.get('total_quantity', 0) or 0} {material['unit']}**
-                ---
-            """
+        response += f" - {material['material_subgroup']}\n"
+        
+    response += f"💰 **Giá mới nhất:** {latest_price:,.2f} VNĐ/{material['unit']}\n"
+    response += f"📊 **THỐNG KÊ SỬ DỤNG:**\n"
+    response += f"• Được sử dụng trong **{stats['product_count']} sản phẩm**\n"
+    response += f"• Xuất hiện ở **{stats['project_count']} dự án**\n"
+    response += f"• Tổng số lượng: **{stats.get('total_quantity', 0) or 0} {material['unit']}**\n"
+    response += "\n---\n\n"
     
     if price_history and len(price_history) > 0:
         response += "📈 **LỊCH SỬ GIÁ:**\n\n"

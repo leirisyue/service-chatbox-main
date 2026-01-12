@@ -26,6 +26,7 @@ import TableRow from '@mui/material/TableRow';
 import { Grid } from '@mui/system';
 import * as React from 'react';
 import MaterialCard from './MaterialCard';
+import { convertGDriveUrl } from '../../utils/gdrive';
 
 function Message({ message, onSendMessage, typing }) {
 
@@ -272,6 +273,7 @@ function Message({ message, onSendMessage, typing }) {
                       <Table sx={{ minWidth: 650 }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
+                            <TableCell></TableCell>
                             <TableCell>Tên vật liệu</TableCell>
                             <TableCell>Mã SAP</TableCell>
                             <TableCell>Nhóm</TableCell>
@@ -283,6 +285,7 @@ function Message({ message, onSendMessage, typing }) {
                         <TableBody>
                           {message.data?.materials?.map((row, index) => (
                             <TableRow key={index}>
+                              <TableCell> <img src={convertGDriveUrl(row.image_url)} alt={row.material_name} width={50} /></TableCell>
                               <TableCell component="th" scope="row">{row.material_name}</TableCell>
                               <TableCell>{row.id_sap}</TableCell>
                               <TableCell>{row.material_subgroup} </TableCell>
@@ -300,6 +303,7 @@ function Message({ message, onSendMessage, typing }) {
                       <Table sx={{ minWidth: 650 }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
+                            <TableCell></TableCell>
                             <TableCell>Tên sản phẩm</TableCell>
                             <TableCell>Mã SAP</TableCell>
                             <TableCell>Nhóm</TableCell>
@@ -311,6 +315,7 @@ function Message({ message, onSendMessage, typing }) {
                         <TableBody>
                           {message.data?.products?.map((row, index) => (
                             <TableRow key={index}>
+                              <TableCell> <img src={convertGDriveUrl(row.image_url)} alt={row.product_name} width={50} /></TableCell>
                               <TableCell component="th" scope="row">{row.product_name}</TableCell>
                               <TableCell>{row.headcode}</TableCell>
                               <TableCell width={160}> {row.sub_category}</TableCell>
