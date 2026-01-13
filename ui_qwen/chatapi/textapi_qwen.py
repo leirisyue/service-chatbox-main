@@ -2024,7 +2024,7 @@ def chat(msg: ChatMessage):
             ),
             "success": False,
             "suggested_prompts": [
-                "Thử lại",
+                # "Thử lại",
                 "Xem danh mục",
                 "Liên hệ hỗ trợ"
             ]

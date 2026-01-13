@@ -285,7 +285,7 @@ function Message({ message, onSendMessage, typing }) {
                         <TableBody>
                           {message.data?.materials?.map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell> <img src={convertGDriveUrl(row.image_url)} alt={row.material_name} width={50} /></TableCell>
+                              <TableCell> {row.image_url ? <img src={convertGDriveUrl(row.image_url)} alt={row.material_name} width={50} /> : ''}</TableCell>
                               <TableCell component="th" scope="row">{row.material_name}</TableCell>
                               <TableCell>{row.id_sap}</TableCell>
                               <TableCell>{row.material_subgroup} </TableCell>
@@ -315,7 +315,7 @@ function Message({ message, onSendMessage, typing }) {
                         <TableBody>
                           {message.data?.products?.map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell> <img src={convertGDriveUrl(row.image_url)} alt={row.product_name} width={50} /></TableCell>
+                              <TableCell> {row.image_url ? <img src={convertGDriveUrl(row.image_url)} alt={row.product_name} width={50} /> : ''}</TableCell>
                               <TableCell component="th" scope="row">{row.product_name}</TableCell>
                               <TableCell>{row.headcode}</TableCell>
                               <TableCell width={160}> {row.sub_category}</TableCell>
