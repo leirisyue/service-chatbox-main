@@ -513,8 +513,8 @@ def search_products(params: Dict, session_id: str = None):
                 # Đếm số từ khóa xuất hiện
                 match_count = 0
                 for keyword in query_keywords:
-                    if len(keyword) < 2:  # Bỏ qua từ quá ngắn
-                        continue
+                    # if len(keyword) < 2:  # Bỏ qua từ quá ngắn
+                    #     continue
                     
                     # Tăng điểm nếu từ khóa xuất hiện trong tên sản phẩm (quan trọng nhất)
                     if keyword in product_name:

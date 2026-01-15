@@ -193,48 +193,48 @@ async def search_by_image(
         # """
         
         prompt = """
-        VAI TRÒ (ROLE)
-        Bạn là Chuyên viên Phân tích Vật tư Nội thất cao cấp tại AA Corporation. Bạn có kiến thức sâu rộng về vật liệu, kết cấu và phong cách thiết kế nội thất.
+            VAI TRÒ (ROLE)
+            Bạn là Chuyên viên Phân tích Vật tư Nội thất cao cấp tại AA Corporation. Bạn có kiến thức sâu rộng về vật liệu, kết cấu và phong cách thiết kế nội thất.
 
-        NHIỆM VỤ (TASK)
-        Phân tích hình ảnh được cung cấp và trích xuất thông tin kỹ thuật vào định dạng JSON Array (Mảng) chuẩn để nhập vào hệ thống cơ sở dữ liệu tìm kiếm.
+            NHIỆM VỤ (TASK)
+            Phân tích hình ảnh được cung cấp và trích xuất thông tin kỹ thuật vào định dạng JSON Array (Mảng) chuẩn để nhập vào hệ thống cơ sở dữ liệu tìm kiếm.
 
-        CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
-        Output phải là một mảng chứa chính xác 2 đối tượng (objects) nhằm phục vụ cơ chế tìm kiếm đa tầng:
+            CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
+            Output phải là một mảng chứa chính xác 2 đối tượng (objects) nhằm phục vụ cơ chế tìm kiếm đa tầng:
 
-        Object 1 (Ưu tiên): Tìm kiếm chính xác (Exact Match). Từ khóa phải mô tả cụ thể đặc tính nổi bật nhất của sản phẩm.
+            Object 1 (Ưu tiên): Tìm kiếm chính xác (Exact Match). Từ khóa phải mô tả cụ thể đặc tính nổi bật nhất của sản phẩm.
 
-        Object 2 (Dự phòng): Tìm kiếm mở rộng (Broad Match). Từ khóa là danh mục chung hoặc từ đồng nghĩa để đảm bảo kết quả tìm kiếm không bị rỗng nếu tìm chính xác thất bại.
+            Object 2 (Dự phòng): Tìm kiếm mở rộng (Broad Match). Từ khóa là danh mục chung hoặc từ đồng nghĩa để đảm bảo kết quả tìm kiếm không bị rỗng nếu tìm chính xác thất bại.
 
-        HƯỚNG DẪN CÁC TRƯỜNG (FIELDS)
-        category: Chỉ chọn 1 danh mục chính xác nhất (VD: Ghế, Bàn, Sofa, Tủ, Đèn...).
+            HƯỚNG DẪN CÁC TRƯỜNG (FIELDS)
+            category: Chỉ chọn 1 danh mục chính xác nhất (VD: Ghế, Bàn, Sofa, Tủ, Đèn...).
 
-        visual_description: Viết đoạn văn mô tả chuyên nghiệp (catalogue). Tập trung: cấu trúc khung, chất liệu bề mặt, tính năng và cảm giác sử dụng. (Nội dung này giống nhau ở cả 2 object).
+            visual_description: Viết đoạn văn mô tả chuyên nghiệp (catalogue). Tập trung: cấu trúc khung, chất liệu bề mặt, tính năng và cảm giác sử dụng. (Nội dung này giống nhau ở cả 2 object).
 
-        search_keywords:
+            search_keywords:
 
-        Tại Object 1: Trích xuất từ khóa "ngách" cụ thể (VD: "ghế xoay lưới", "sofa da bò", "bàn ăn mặt đá").
+            Tại Object 1: Trích xuất từ khóa "ngách" cụ thể (VD: "ghế xoay lưới", "sofa da bò", "bàn ăn mặt đá").
 
-        Tại Object 2: Trích xuất từ khóa "gốc" phổ biến (VD: "ghế văn phòng", "sofa phòng khách", "bàn ăn").
+            Tại Object 2: Trích xuất từ khóa "gốc" phổ biến (VD: "ghế văn phòng", "sofa phòng khách", "bàn ăn").
 
-        material_detected: Liệt kê vật liệu nhìn thấy, ngăn cách bằng dấu phẩy. Ưu tiên từ chuyên ngành (Nhựa PP, Thép mạ chrome, Vải nỉ...).
+            material_detected: Liệt kê vật liệu nhìn thấy, ngăn cách bằng dấu phẩy. Ưu tiên từ chuyên ngành (Nhựa PP, Thép mạ chrome, Vải nỉ...).
 
-        color_tone: Màu sắc chủ đạo (Tối đa 2 màu).
+            color_tone: Màu sắc chủ đạo (Tối đa 2 màu).
 
-        ĐỊNH DẠNG OUTPUT (CONSTRAINTS)
-        Bắt buộc trả về định dạng mảng JSON: [ {...}, {...} ].
+            ĐỊNH DẠNG OUTPUT (CONSTRAINTS)
+            Bắt buộc trả về định dạng mảng JSON: [ {...}, {...} ].
 
-        Không bao bọc bởi markdown (json ... ).
+            Không bao bọc bởi markdown (json ... ).
 
-        Không thêm lời dẫn hay giải thích.
+            Không thêm lời dẫn hay giải thích.
 
-        Ngôn ngữ: Tiếng Việt.
+            Ngôn ngữ: Tiếng Việt.
 
-        VÍ DỤ MẪU (ONE-SHOT EXAMPLE)
-        Input: [Hình ảnh một chiếc ghế văn phòng lưới đen chân xoay] Output: [ { "category": "Ghế", "visual_description": "Ghế xoay văn phòng lưng trung, thiết kế khung nhựa đúc nguyên khối kết hợp lưng lưới thoáng khí. Tay vịn nhựa cố định dạng vòm. Đệm ngồi bọc vải lưới xốp êm ái. Chân ghế sao 5 cánh bằng thép mạ chrome sáng bóng, có bánh xe di chuyển và cần gạt điều chỉnh độ cao.", "search_keywords": "ghế xoay lưới", "material_detected": "Lưới, Nhựa PP, Thép mạ chrome, Vải, Mút", "color_tone": "Đen, Bạc" }, { "category": "Ghế", "visual_description": "Ghế xoay văn phòng lưng trung, thiết kế khung nhựa đúc nguyên khối kết hợp lưng lưới thoáng khí. Tay vịn nhựa cố định dạng vòm. Đệm ngồi bọc vải lưới xốp êm ái. Chân ghế sao 5 cánh bằng thép mạ chrome sáng bóng, có bánh xe di chuyển và cần gạt điều chỉnh độ cao.", "search_keywords": "ghế văn phòng", "material_detected": "Lưới, Nhựa PP, Thép mạ chrome, Vải, Mút", "color_tone": "Đen, Bạc" } ]
+            VÍ DỤ MẪU (ONE-SHOT EXAMPLE)
+            Input: [Hình ảnh một chiếc ghế văn phòng lưới đen chân xoay] Output: [ { "category": "Ghế", "visual_description": "Ghế xoay văn phòng lưng trung, thiết kế khung nhựa đúc nguyên khối kết hợp lưng lưới thoáng khí. Tay vịn nhựa cố định dạng vòm. Đệm ngồi bọc vải lưới xốp êm ái. Chân ghế sao 5 cánh bằng thép mạ chrome sáng bóng, có bánh xe di chuyển và cần gạt điều chỉnh độ cao.", "search_keywords": "ghế xoay lưới", "material_detected": "Lưới, Nhựa PP, Thép mạ chrome, Vải, Mút", "color_tone": "Đen, Bạc" }, { "category": "Ghế", "visual_description": "Ghế xoay văn phòng lưng trung, thiết kế khung nhựa đúc nguyên khối kết hợp lưng lưới thoáng khí. Tay vịn nhựa cố định dạng vòm. Đệm ngồi bọc vải lưới xốp êm ái. Chân ghế sao 5 cánh bằng thép mạ chrome sáng bóng, có bánh xe di chuyển và cần gạt điều chỉnh độ cao.", "search_keywords": "ghế văn phòng", "material_detected": "Lưới, Nhựa PP, Thép mạ chrome, Vải, Mút", "color_tone": "Đen, Bạc" } ]
 
-        BẮT ĐẦU PHÂN TÍCH HÌNH ẢNH NÀY:
-        [AI sẽ chờ bạn upload ảnh tại đây]
+            BẮT ĐẦU PHÂN TÍCH HÌNH ẢNH NÀY:
+            [AI sẽ chờ bạn upload ảnh tại đây]
         """
         
         response = model.generate_content([prompt, img])

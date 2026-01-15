@@ -34,8 +34,6 @@
 
 # So_Cau_Goi_Y = 3  # Số câu gợi ý mặc định
 
-# # ✅ SESSION CACHE để lưu suggested_prompts
-# session_suggested_prompts_cache = {}
 
 # def build_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
 #     """Tạo bảng Markdown từ header + rows để frontend HTML render + CSS đẹp.
@@ -72,10 +70,11 @@
     
 #     prompt = f"""
 #         Bạn là chuyên viên tư vấn nội thất cao cấp của AA Corporation.
-#         Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh, dạng câu HỎI.
-
+#         Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh, dạng câu HỎI, Mỗi câu hỏi gợi ý đều có PHÂN TÍCH, ĐỊNH HƯỚNG câu trả lời cho user RÕ RÀNG.
+        
 #         NGỮ CẢNH: {context_type}.
 #         cách xưng hô: tôi và bạn.
+        
 #         """
 
 #     if context_type == "greeting":
@@ -186,7 +185,7 @@
 #         {product_name} ({headcode})
 #         Tạo {So_Cau_Goi_Y} gợi ý trong những việc sau:
 #         - Xem chi tiết vật liệu
-#         - So sánh giá với SP khác
+#         - So sánh giá với sản phẩm khác
 #         - Tối ưu chi phí
 #         - Xuất báo cáo
 #         YÊU CẦU:
@@ -351,6 +350,9 @@
 #        - **query_material_detail**: Xem chi tiết VẬT LIỆU + sản phẩm sử dụng (VD: "Chi tiết gỗ sồi", "Xem vật liệu này dùng ở đâu")
 #        - **list_material_groups**: Liệt kê nhóm vật liệu (VD: "Các loại gỗ", "Danh sách đá")
 
+#        **LISTING FLOW:**
+#        - **list_products_by_category**: Liệt kê danh sách sản phẩm theo các danh mục khác nhau (VD: "Danh sách sản phẩm", "Xem tất cả sản phẩm", "Liệt kê sản phẩm theo danh mục")
+
 #         ----------------------------------------------------------------
 #        **[NEW] CROSS-TABLE INTENTS (BỔ SUNG – KHÔNG THAY ĐỔI LOGIC CŨ):**
 #         - **search_product_by_material**: Tìm sản phẩm LÀM TỪ vật liệu cụ thể
@@ -365,7 +367,6 @@
 #         - "Tìm gỗ" → search_material
 #         - "Tìm vật liệu ĐỂ LÀM bàn" → search_material_for_product
 #         ----------------------------------------------------------------
-
 #         - **greeting**: Chào hỏi (VD: "Xin chào", "Hello", "Hi")
 #         - **unknown**: Không rõ ý định
     
@@ -406,7 +407,7 @@
 
 #     OUTPUT FORMAT (JSON ONLY - no markdown backticks):
 #     {{
-#         "intent": "search_product|search_product_by_material|search_material_for_product|query_product_materials|calculate_product_cost|search_material|query_material_detail|list_material_groups|greeting|unknown",
+#         "intent": "search_product|search_product_by_material|search_material_for_product|query_product_materials|calculate_product_cost|search_material|query_material_detail|list_material_groups|list_products_by_category|greeting|unknown",
 #         "entity_type": "product|material|unknown",
 #         "params": {{
 #             "category": "String hoặc null",
@@ -426,12 +427,13 @@
 #     }}
 #     """
     
-#     response_text = call_gemini_with_retry(model, prompt)
+#     response_text = call_gemini_with_retry(model, prompt, timeout=15)
 #     if not response_text:
 #         return {
 #             "intent": "error",
-#             "raw": "No response from AI",
-#             "success": False
+#             "raw": "No response from AI - timeout or API error",
+#             "success": False,
+#             "error_message": "Hệ thống đang quá tải. Vui lòng thử lại sau ít phút."
 #         }
     
 #     try:
@@ -472,6 +474,17 @@
 #     # TIER 1: Thử Hybrid trước
 #     try:
 #         result = search_products_hybrid(params)
+        
+#         # Kiểm tra nếu có lỗi timeout hoặc search method cho biết không có kết quả
+#         if result.get("search_method") == "timeout":
+#             print("TIMER: Search timeout - returning empty products list")
+#             return {
+#                 "products": [],
+#                 "search_method": "timeout",
+#                 "response": "Không tìm thấy sản phẩm phù hợp",
+#                 "success": False
+#             }
+        
 #         if result.get("products"):
 #             # Cập nhật total_cost cho các sản phẩm trong hybrid search
 #             for product in result["products"]:
@@ -483,18 +496,70 @@
 #             for product in products:
 #                 product['base_score'] = float(product.get('similarity', 0.5))
             
+#             # ========== STEP 1.5: QUERY MATCHING BOOST ==========
+#             # Tăng base_score nếu query xuất hiện trong các trường của product
+#             query_keywords = params.get("keywords_vector", "").lower().split()
+            
+#             for product in products:
+#                 boost = 0.0
+                
+#                 # Các trường cần kiểm tra
+#                 product_name = (product.get('product_name') or '').lower()
+#                 category = (product.get('category') or '').lower()
+#                 sub_category = (product.get('sub_category') or '').lower()
+#                 material_primary = (product.get('material_primary') or '').lower()
+#                 headcode = (product.get('headcode') or '').lower()
+                
+#                 # Đếm số từ khóa xuất hiện
+#                 match_count = 0
+#                 for keyword in query_keywords:
+#                     # if len(keyword) < 2:  # Bỏ qua từ quá ngắn
+#                     #     continue
+                    
+#                     # Tăng điểm nếu từ khóa xuất hiện trong tên sản phẩm (quan trọng nhất)
+#                     if keyword in product_name:
+#                         boost += 0.15
+#                         match_count += 1
+                    
+#                     # Tăng điểm nếu xuất hiện trong danh mục
+#                     if keyword in category:
+#                         boost += 0.08
+#                         match_count += 1
+                    
+#                     # Tăng điểm nếu xuất hiện trong danh mục phụ
+#                     if keyword in sub_category:
+#                         boost += 0.06
+#                         match_count += 1
+                    
+#                     # Tăng điểm nếu xuất hiện trong vật liệu chính
+#                     if keyword in material_primary:
+#                         boost += 0.05
+#                         match_count += 1
+                    
+#                     # Tăng điểm nếu xuất hiện trong mã sản phẩm
+#                     if keyword in headcode:
+#                         boost += 0.04
+#                         match_count += 1
+                
+#                 # Cập nhật base_score (giới hạn tối đa 1.0)
+#                 if boost > 0:
+#                     product['base_score'] = min(1.0, product['base_score'] + boost)
+#                     product['query_match_count'] = match_count
+#                     product['query_boost'] = boost
+#                     print(f"  INFO: Boosted {product['headcode']}: +{boost:.3f} (matches: {match_count})")
+            
 #             # ========== STEP 2: PERSONALIZATION ==========
 #             # ✅ CHỈ áp dụng nếu có session_id VÀ user có history
 #             has_personalization = False
             
 #             if session_id:
-#                 print(f"\n🎯 Personalization for {session_id[:8]}...")
+#                 print(f"\nINFO: Personalization for {session_id[:8]}...")
                 
 #             if not has_personalization:
 #                 for product in products:
 #                     product['personal_score'] = 0.5
             
-#             print(f"✅ Personalization done\n")
+#             print(f"INFO: Personalization done\n")
             
 #             # ========== STEP 3: FEEDBACK SCORES ==========
 #             print(f"MAIN: Feedback Scoring...")
@@ -558,64 +623,44 @@
 #                 if product.get('feedback_count', 0) > 0:
 #                     product['has_feedback'] = True
             
-#             print(f"✅ Final Ranking complete\n")
+#             print(f"INFO: Final Ranking complete\n")
             
 #             result["products"] = products
 #             result["ranking_summary"] = get_ranking_summary(products)
 #             result["can_provide_feedback"] = True
             
 #             return result
+#     except TimeoutError as e:
+#         print(f"TIMER: TIER 1 timeout: {e}")
+#         # Trả về empty result thay vì fallback sang TIER 2
+#         return {
+#             "products": [],
+#             "search_method": "timeout",
+#             "response": "Không tìm thấy sản phẩm phù hợp",
+#             "success": False
+#         }
 #     except Exception as e:
+#         error_str = str(e).lower()
 #         print(f"WARNING: TIER 1 failed: {e}")
-    
-#     # TIER 2 & 3: GIỮ NGUYÊN CODE CŨ (Fallback)
-#     conn = get_db()
-#     cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-#     if params.get("keywords_vector"):
-#         query_text = params["keywords_vector"]
-#     else:
-#         query_parts = []
-#         if params.get("category"): query_parts.append(params["category"])
-#         if params.get("sub_category"): query_parts.append(params["sub_category"])
-#         if params.get("material_primary"): query_parts.append(params["material_primary"])
-#         query_text = " ".join(query_parts) if query_parts else "nội thất"
-
-#     query_vector = generate_embedding_qwen(query_text)
-    
-#     if not query_vector:
-#         conn.close()
-#         return search_products_keyword_only(params)
-    
-#     # TIER 2: Pure Vector
-#     try:
-#         sql = """
-#             SELECT headcode, product_name, category, sub_category, 
-#                     material_primary, project, project_id,
-#                     (description_embedding <=> %s::vector) as distance
-#             FROM products_qwen
-#             WHERE description_embedding IS NOT NULL
-#             ORDER BY distance ASC
-#             LIMIT 10
-#         """
-#         cur.execute(sql, [query_vector])
-#         results = cur.fetchall()
-        
-#         if results:
-#             print(f"SUCCESS: TIER 2: {len(results)} products")
-#             products = format_search_results(results[:8])
-#             conn.close()
+#         # Kiểm tra nếu lỗi liên quan đến timeout
+#         if "timeout" in error_str or "timed out" in error_str or "canceled" in error_str:
 #             return {
-#                 "products": products, 
-#                 "search_method": "vector_no_filter",
-#                 "success": True
+#                 "products": [],
+#                 "search_method": "timeout",
+#                 "response": "Không tìm thấy sản phẩm phù hợp",
+#                 "success": False
 #             }
-#     except Exception as e:
-#         print(f"WARNING: TIER 2 failed: {e}")
     
-#     # TIER 3: Keyword
-#     conn.close()
-#     return search_products_keyword_only(params)
+#     # TIER 2 & 3: KHÔNG CHẠY NẾU TIER 1 TIMEOUT - chỉ chạy nếu TIER 1 thất bại vì lý do khác
+#     # Nếu đến đây nghĩa là TIER 1 không trả về kết quả nhưng không phải timeout
+#     # Vậy ta cũng nên trả về empty luôn thay vì tốn thêm thời gian
+#     print("WARNING: TIER 1 returned no products, returning empty instead of fallback")
+#     return {
+#         "products": [],
+#         "search_method": "no_results",
+#         "response": "Không tìm thấy sản phẩm phù hợp",
+#         "success": False
+#     }
 
 # def search_products_by_material(material_query: str, params: Dict):
 #     """
@@ -645,13 +690,13 @@
     
 #     try:
 #         # Tìm top materials phù hợp
-#         cur.execute("""
+#         cur.execute(f"""
 #             SELECT 
 #                 id_sap, 
 #                 material_name,
 #                 material_group,
 #                 (description_embedding <=> %s::vector) as distance
-#             FROM materials_qwen
+#             FROM {settings.MATERIALS_TABLE}
 #             WHERE description_embedding IS NOT NULL
 #             ORDER BY distance ASC
 #             LIMIT 5
@@ -746,8 +791,50 @@
         
 #         print(f"SUCCESS: Found {len(products_list)} products using these materials")
         
+#         # Add base_score for consistency and apply query matching boost
+#         query_keywords = material_query.lower().split()
+        
+#         for product in products_list:
+#             # Set initial base_score based on relevance_score
+#             product['base_score'] = min(1.0, 0.5 + (product['relevance_score'] * 0.1))
+            
+#             # Apply query matching boost
+#             boost = 0.0
+#             product_name = (product.get('product_name') or '').lower()
+#             category = (product.get('category') or '').lower()
+#             sub_category = (product.get('sub_category') or '').lower()
+#             material_primary = (product.get('material_primary') or '').lower()
+            
+#             match_count = 0
+#             for keyword in query_keywords:
+#                 if len(keyword) < 2:
+#                     continue
+                
+#                 if keyword in product_name:
+#                     boost += 0.15
+#                     match_count += 1
+#                 if keyword in category:
+#                     boost += 0.08
+#                     match_count += 1
+#                 if keyword in sub_category:
+#                     boost += 0.06
+#                     match_count += 1
+#                 if keyword in material_primary:
+#                     boost += 0.05
+#                     match_count += 1
+            
+#             if boost > 0:
+#                 product['base_score'] = min(1.0, product['base_score'] + boost)
+#                 product['query_match_count'] = match_count
+#                 product['query_boost'] = boost
+        
+#         # Split products based on base_score
+#         products_high = [p for p in products_list if p.get('base_score', 0) >= 0.8][:10]
+#         products_bonus = [p for p in products_list if 0.65 < p.get('base_score', 0) < 0.8]
+        
 #         return {
-#             "products": products_list[:10],
+#             "products": products_high,
+#             "productBonuslist": products_bonus,
 #             "search_method": "cross_table_material_to_product",
 #             "matched_materials": material_names,
 #             "explanation": f"Tìm thấy sản phẩm sử dụng: {', '.join(material_names[:3])}",
@@ -1089,6 +1176,18 @@
 #     query_text = " ".join(query_parts) if query_parts else "vật liệu nội thất"
 #     print(f"SEARCH: Searching materials for: {query_text}")
     
+#     # ✅ EXTRACT MAIN KEYWORD - tương tự như product search
+#     # Tách từ khóa chính từ material_name để filter kết quả
+#     main_keyword = None
+#     if params.get("material_name"):
+#         name = params['material_name']
+#         # Lấy từ khóa chính (sau dấu '-' nếu có)
+#         # VD: "GỖ-BEECH" → main_keyword = "BEECH" (để filter chính xác)
+#         if '-' in name:
+#             parts = name.upper().split('-')
+#             if len(parts) >= 2:
+#                 main_keyword = parts[-1].strip()  # Lấy phần sau dấu '-'
+    
 #     query_vector = generate_embedding_qwen(query_text)
     
 #     if query_vector:
@@ -1105,30 +1204,61 @@
 #                     id_sap, material_name, material_group, material_subgroup,
 #                     material_subprice, unit, image_url,
 #                     (description_embedding <=> %s::vector) as distance
-#                 FROM materials_qwen
+#                 FROM {settings.MATERIALS_TABLE}
 #                 WHERE description_embedding IS NOT NULL AND {filter_clause}
 #                 ORDER BY distance ASC
-#                 LIMIT 10
+#                 LIMIT 30
 #             """
 
 #             cur.execute(sql, [query_vector] + filter_params)
 #             results = cur.fetchall()
             
 #             if results:
-#                 print(f"SUCCESS: Vector search: Found {len(results)} materials")
-                
-#                 materials_with_price = []
-#                 for mat in results:
-#                     mat_dict = dict(mat)
-#                     mat_dict['price'] = get_latest_material_price(mat_dict['material_subprice'])
-#                     materials_with_price.append(mat_dict)
-                
-#                 conn.close()
-#                 return {
-#                     "materials": materials_with_price,
-#                     "search_method": "vector",
-#                     "success": True
-#                 }
+#                 # ✅ POST-FILTER: Nếu có main_keyword, chỉ giữ materials có chứa keyword đó
+#                 if main_keyword:
+#                     filtered_results = []
+#                     for mat in results:
+#                         mat_name_upper = mat['material_name'].upper()
+#                         if main_keyword in mat_name_upper:
+#                             filtered_results.append(mat)
+                    
+#                     print(f"POST-FILTER (Vector): Filtered from {len(results)} to {len(filtered_results)} materials with keyword '{main_keyword}'")
+#                     results = filtered_results[:10]
+                    
+#                     if not results:
+#                         print(f"No materials found with keyword '{main_keyword}' after vector search")
+#                         # Continue to keyword search below
+#                         pass
+#                     else:
+#                         print(f"SUCCESS: Vector search: Found {len(results)} materials")
+                        
+#                         materials_with_price = []
+#                         for mat in results:
+#                             mat_dict = dict(mat)
+#                             mat_dict['price'] = get_latest_material_price(mat_dict['material_subprice'])
+#                             materials_with_price.append(mat_dict)
+                        
+#                         conn.close()
+#                         return {
+#                             "materials": materials_with_price,
+#                             "search_method": "vector",
+#                             "success": True
+#                         }
+#                 else:
+#                     print(f"SUCCESS: Vector search: Found {len(results)} materials")
+                    
+#                     materials_with_price = []
+#                     for mat in results[:10]:
+#                         mat_dict = dict(mat)
+#                         mat_dict['price'] = get_latest_material_price(mat_dict['material_subprice'])
+#                         materials_with_price.append(mat_dict)
+                    
+#                     conn.close()
+#                     return {
+#                         "materials": materials_with_price,
+#                         "search_method": "vector",
+#                         "success": True
+#                     }
 #         except Exception as e:
 #             print(f"WARNING: Vector search failed: {e}")
     
@@ -1136,8 +1266,18 @@
 #     conditions = []
 #     values = []
     
+#     # ✅ EXTRACT MAIN KEYWORD - tương tự như product search
+#     # Tách từ khóa chính từ material_name để kiểm tra sau
+#     main_keyword = None
 #     if params.get("material_name"):
 #         name = params['material_name']
+#         # Lấy từ khóa chính (sau dấu '-' nếu có)
+#         # VD: "GỖ-BEECH" → main_keyword = "BEECH" (để filter chính xác)
+#         if '-' in name:
+#             parts = name.upper().split('-')
+#             if len(parts) >= 2:
+#                 main_keyword = parts[-1].strip()  # Lấy phần sau dấu '-'
+        
 #         conditions.append("(material_name ILIKE %s OR material_group ILIKE %s)")
 #         values.extend([f"%{name}%", f"%{name}%"])
     
@@ -1148,9 +1288,9 @@
     
 #     if conditions:
 #         where_clause = " OR ".join(conditions)
-#         sql = f"SELECT * FROM materials_qwen WHERE {where_clause} LIMIT 15"
+#         sql = f"SELECT * FROM {settings.MATERIALS_TABLE} WHERE {where_clause} LIMIT 50"
 #     else:
-#         sql = "SELECT * FROM materials_qwen ORDER BY material_name ASC LIMIT 10"
+#         sql = f"SELECT * FROM {settings.MATERIALS_TABLE} ORDER BY material_name ASC LIMIT 10"
 #         values = []
     
 #     try:
@@ -1165,8 +1305,28 @@
 #                 "success": False
 #             }
         
+#         # ✅ POST-FILTER: Nếu có main_keyword, chỉ giữ lại materials có chứa keyword đó
+#         # VD: Tìm "GỖ-BEECH" → Chỉ giữ materials có "BEECH" trong tên, loại bỏ "GỖ-WHITE"
+#         if main_keyword:
+#             filtered_results = []
+#             for mat in results:
+#                 mat_name_upper = mat['material_name'].upper()
+#                 # Kiểm tra xem main_keyword có trong material_name không
+#                 if main_keyword in mat_name_upper:
+#                     filtered_results.append(mat)
+            
+#             print(f"POST-FILTER: Filtered from {len(results)} to {len(filtered_results)} materials with keyword '{main_keyword}'")
+#             results = filtered_results[:15]  # Giới hạn 15 kết quả
+            
+#             if not results:
+#                 return {
+#                     "response": f"Không tìm thấy vật liệu chứa '{params.get('material_name')}'.",
+#                     "materials": [],
+#                     "success": False
+#                 }
+        
 #         materials_with_price = []
-#         for mat in results:
+#         for mat in results[:15]:  # Limit to 15 results
 #             mat_dict = dict(mat)
 #             mat_dict['price'] = get_latest_material_price(mat.get('material_subprice'))
 #             materials_with_price.append(mat_dict)
@@ -1276,7 +1436,7 @@
 #     response += f"📊 **THỐNG KÊ SỬ DỤNG:**\n"
 #     response += f"• Được sử dụng trong **{stats['product_count']} sản phẩm**\n"
 #     response += f"• Xuất hiện ở **{stats['project_count']} dự án**\n"
-#     response += f"• Tổng số lượng: **{stats.get('total_quantity', 0) or 0} {material['unit']}**\n"
+#     response += f"• Tổng số lượng: **{stats.get('total_quantity', 0) or 0} {material['unit']}**\n"  
 #     response += "\n---\n\n"
     
 #     if price_history and len(price_history) > 0:
@@ -1330,12 +1490,12 @@
 #     conn = get_db()
 #     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-#     sql = """
+#     sql = f"""
 #         SELECT 
 #             material_group,
 #             COUNT(*) as count,
 #             array_agg(DISTINCT material_subprice) as all_prices
-#         FROM materials_qwen
+#         FROM {settings.MATERIALS_TABLE}
 #         WHERE material_group IS NOT NULL
 #         GROUP BY material_group
 #         ORDER BY count DESC
@@ -1386,6 +1546,82 @@
 #         "success": True
 #     }
 
+# def list_products_by_category():
+#     """Liệt kê danh sách sản phẩm theo các danh mục khác nhau"""
+#     conn = get_db()
+#     cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+#     # Lấy danh sách sản phẩm theo category, giới hạn mỗi category 5 sản phẩm
+#     sql = """
+#         WITH ranked_products AS (
+#             SELECT 
+#                 headcode,
+#                 product_name,
+#                 category,
+#                 sub_category,
+#                 material_primary,
+#                 ROW_NUMBER() OVER (PARTITION BY category ORDER BY product_name) as rn
+#             FROM products_qwen
+#             WHERE category IS NOT NULL
+#         )
+#         SELECT 
+#             headcode,
+#             product_name,
+#             category,
+#             sub_category,
+#             material_primary
+#         FROM ranked_products
+#         WHERE rn <= 1
+#         ORDER BY category, product_name
+#     """
+    
+#     cur.execute(sql)
+#     products = cur.fetchall()
+#     conn.close()
+    
+#     if not products:
+#         return {
+#             "response": "Chưa có dữ liệu sản phẩm.",
+#             "success": False
+#         }
+    
+#     # Nhóm sản phẩm theo category
+#     categories = {}
+#     for prod in products:
+#         cat = prod['category']
+#         if cat not in categories:
+#             categories[cat] = []
+        
+#         # Thêm total_cost cho mỗi sản phẩm
+#         prod_dict = dict(prod)
+#         prod_dict['total_cost'] = calculate_product_total_cost(prod['headcode'])
+#         categories[cat].append(prod_dict)
+    
+#     response = f"📦 **DANH SÁCH SẢN PHẨM THEO DANH MỤC ({len(categories)} danh mục):**\n\n"
+    
+#     all_products = []
+#     for idx, (cat_name, prods) in enumerate(sorted(categories.items()), 1):
+#     #     response += f"### {idx}. {cat_name} ({len(prods)} sản phẩm)\n\n"
+        
+#     #     for prod_idx, prod in enumerate(prods, 1):
+#     #         response += f"   {prod_idx}. **{prod['product_name']}** (`{prod['headcode']}`)\n"
+#     #         if prod.get('sub_category'):
+#     #             response += f"      • Danh mục phụ: {prod['sub_category']}\n"
+#     #         if prod.get('material_primary'):
+#     #             response += f"      • Vật liệu chính: {prod['material_primary']}\n"
+        
+#     #     response += "\n"
+#         all_products.extend(prods)
+    
+#     response += "\n💡 **Gợi ý:** Chọn một sản phẩm để xem chi tiết hoặc tính chi phí.\n"
+    
+#     return {
+#         "response": response,
+#         "products": all_products,
+#         "categories": list(categories.keys()),
+#         "success": True
+#     }
+
 # # ================================================================================================
 # # API ENDPOINTS
 # # ================================================================================================
@@ -1396,69 +1632,20 @@
 #     try:
 #         user_message = msg.message
 #         context = msg.context or {}
-#         session_id = msg.session_id
-        
-#         print(f"DEBUG: Received request - session_id: {session_id}, message: {user_message}")
-#         print(f"DEBUG: Current cache keys: {list(session_suggested_prompts_cache.keys())}")
-        
-#         # ✅ XỬ LÝ CHỌN SỐ GỢI Ý (1, 2, 3 hoặc kết hợp 1 và 3, 1,3)
-#         # Kiểm tra xem có phải input dạng số không
-#         pattern = r'^[\d\s,và]+$'
-#         if re.match(pattern, user_message.strip()):
-#             # Extract các số
-#             numbers = re.findall(r'\d+', user_message)
-            
-#             # Lấy suggested_prompts từ context HOẶC cache
-#             suggested_prompts = context.get("suggested_prompts") or session_suggested_prompts_cache.get(session_id, [])
-            
-#             print(f"DEBUG: Checking suggested_prompts for session {session_id}")
-#             print(f"DEBUG: From context: {context.get('suggested_prompts')}")
-#             print(f"DEBUG: From cache: {session_suggested_prompts_cache.get(session_id, [])}")
-#             print(f"DEBUG: Final suggested_prompts: {suggested_prompts}")
-            
-#             if suggested_prompts and numbers:
-#                 selected_prompts = []
-                
-#                 for num in numbers:
-#                     idx = int(num) - 1  # Convert to 0-based index
-#                     if 0 <= idx < len(suggested_prompts):
-#                         selected_prompts.append(suggested_prompts[idx])
-                
-#                 if selected_prompts:
-#                     # Nếu chọn nhiều câu, kết hợp chúng
-#                     if len(selected_prompts) == 1:
-#                         user_message = selected_prompts[0]
-#                     else:
-#                         # Kết hợp các câu gợi ý thành 1 câu hỏi
-#                         user_message = " và ".join(selected_prompts)
-                    
-#                     print(f"INFO: User selected prompt(s) #{numbers}: {user_message}")
-#                     # Xóa suggested_prompts cũ để tránh loop
-#                     context.pop("suggested_prompts", None)
-#                     if session_id in session_suggested_prompts_cache:
-#                         del session_suggested_prompts_cache[session_id]
-#                 else:
-#                     print(f"WARNING: Invalid prompt number(s): {numbers}")
-#                     # Return thông báo lỗi nếu số không hợp lệ
-#                     return {
-#                         "response": f"⚠️ Số bạn chọn không hợp lệ. Vui lòng chọn từ 1 đến {len(suggested_prompts)}.",
-#                         "success": False
-#                     }
-#             else:
-#                 print(f"DEBUG: No suggested_prompts found for session {session_id}")
-#                 # Return thông báo lỗi nếu không có suggested_prompts
-#                 return {
-#                     "response": "⚠️ Không tìm thấy danh sách câu hỏi gợi ý. Vui lòng đặt câu hỏi trực tiếp.",
-#                     "success": False
-#                 }
         
 #         intent_data = get_intent_and_params(user_message, context)
 #         # print(f"\n🤖 Detected intent: {intent_data}")
         
 #         if intent_data.get("intent") == "error":
+#             error_msg = intent_data.get("error_message", "Xin lỗi, hệ thống đang bận. Vui lòng thử lại.")
 #             return {
-#                 "response": "Xin lỗi, hệ thống đang bận. Vui lòng thử lại.",
-#                 "success": False
+#                 "response": error_msg,
+#                 "success": False,
+#                 "suggested_prompts": [
+#                     "🔍 Tìm sản phẩm",
+#                     "🧱 Tìm vật liệu",
+#                     "💬 Trò chuyện với chuyên viên"
+#                 ]
 #             }
         
 #         intent = intent_data["intent"]
@@ -1481,11 +1668,12 @@
 #                         #    "• 📋 **Xem định mức** nguyên vật liệu\n\n"
 #                         f"{suggested_prompts_mess}"
 #                         "Bạn cần tìm gì hôm nay?",
-#                 "suggested_prompts": tmp
+#                 "suggested_prompts": suggested_prompts
 #             }
         
 #         elif intent == "search_product":
 #             search_result = search_products(params, session_id=msg.session_id)
+#             print(f"DEBUG: search_result: {search_result}")
 #             products = search_result.get("products", [])
             
 #             # ✅ search_products đã xử lý HẾT ranking rồi, không cần gọi gì thêm
@@ -1493,20 +1681,40 @@
 #             ranking_summary = search_result.get("ranking_summary", {})
 #             result_count = len(products)
             
-#             if not products:
-#                 tmp = generate_suggested_prompts(
-#                     "search_product_not_found",
-#                     {"query": user_message}
-#                 )
-#                 suggested_prompts_mess = format_suggested_prompts(tmp)
+#             # Kiểm tra nếu search bị timeout hoặc lỗi
+#             if search_result.get("search_method") == "timeout" or (not products and search_result.get("success") == False):
+#                 print(f"⏱️ Search timeout or failed for query: {user_message}")
+#                 result_response = {
+#                     "response": "",
+#                     "products": [],
+#                     "materials": [],
+#                     "success": True,
+#                     "suggested_prompts": []
+#                 }
+#             elif not products:
+#                 try:
+#                     suggested_prompts_mess = generate_suggested_prompts(
+#                         "search_product_not_found",
+#                         {"query": user_message}
+#                     )
+#                 except Exception as e:
+#                     print(f"WARNING: Could not generate suggestions: {e}")
+#                     suggested_prompts_mess = "• Thử với từ khóa khác\n• Tìm theo danh mục sản phẩm\n• Liên hệ tư vấn viên"
+                
 #                 result_response = {
 #                     "response": (
-#                         f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
-#                         # '**Gợi ý cho bạn:**\n'
+#                         f"🔍 **KHÔNG TÌM THẤY SẢN PHẨM PHÙ HỢP**\n\n"
+#                         f"Rất tiếc, tôi không tìm thấy sản phẩm nào khớp với \"{user_message}\".\n\n"
+#                         # f"**💡 Gợi ý cho bạn:**\n"
 #                         # f"{suggested_prompts_mess}"
 #                     ),
-#                     # "suggested_prompts": tmp,
-#                     "suggested_prompts_mess":suggested_prompts_mess,
+#                     "suggested_prompts": [
+#                         "Xem danh mục sản phẩm phổ biến",
+#                         "Tìm theo vật liệu",
+#                         "Liên hệ chuyên viên tư vấn"
+#                     ],
+#                     "success": True,
+#                     "suggested_prompts_mess":suggested_prompts_mess
 #                 }
 #             else:
 #                 response_text = ""
@@ -1563,7 +1771,7 @@
 #                         f"💰 Phân tích chi phí {products[0]['headcode']}",
 #                         f"🧱 Xem cấu tạo vật liệu {products[0]['headcode']}",
 #                         f"🎯 So sánh với sản phẩm tương tự",
-#                         "📞 Kết nối với chuyên viên tư vấn"
+#                         f"📞 Kết nối với chuyên viên tư vấn"
 #                     ]
                     
 #                     tmp = generate_suggested_prompts(
@@ -1586,26 +1794,28 @@
 #                     "suggested_prompts": suggested_prompts,
 #                     "ranking_summary": ranking_summary,  
 #                     "can_provide_feedback": True ,
-#                     "suggested_prompts_mess":suggested_prompts_mess,
+#                     "suggested_prompts_mess": suggested_prompts_mess,
 #                     "success": True
 #                 }
 #         elif intent == "search_product_by_material":
 #             material_query = params.get("material_name") or params.get("material_primary") or params.get("keywords_vector")
             
 #             if not material_query:
-#                 tmp = generate_suggested_prompts(
-#                     "search_product_by_material",
-#                     {"query": user_message}
-#                 )
-#                 suggested_prompts_mess = format_suggested_prompts(tmp)
 #                 result_response = {
-#                     "response": "🎯 **TÌM SẢN PHẨM THEO VẬT LIỆU**\n\n"
+#                     # "response": "🎯 **TÌM SẢN PHẨM THEO VẬT LIỆU**\n\n"
 #                                 # "Để tôi tư vấn sản phẩm phù hợp, vui lòng cho biết:\n"
 #                                 # "• Bạn quan tâm đến vật liệu nào? (gỗ, đá, kim loại...)\n"
 #                                 # "• Sản phẩm dùng cho không gian nào?\n"
 #                                 # "• Ngân sách dự kiến là bao nhiêu?",
-#                                 f"{suggested_prompts_mess}",
-#                     "suggested_prompts": tmp
+#                                 # f"{suggested_prompts_mess}",
+#                     "response": "⚠️ Hiện tại tôi chưa nhận được thông tin về vật liệu bạn muốn tìm kiếm sản phẩm. ",
+#                     "suggested_prompts": [
+#                         "Sản phẩm làm từ gỗ sồi tự nhiên",
+#                         "Nội thất kim loại cho văn phòng",
+#                         "Bàn đá marble cao cấp",
+#                         "Ghế vải bọc chống thấm"
+#                     ],
+#                     "suggested_prompts_mess":suggested_prompts_mess
 #                 }
 #             else:
 #                 search_result = search_products_by_material(material_query, params)
@@ -1619,11 +1829,6 @@
                 
 #                 if not products:
 #                     matched_mats = search_result.get("matched_materials", [])
-#                     tmp = generate_suggested_prompts(
-#                         "search_product_by_material_not_found",
-#                         {"query": user_message, "matched_materials": matched_mats}
-#                     )
-#                     suggested_prompts_mess = format_suggested_prompts(tmp)
 #                     result_response = {
 #                         "response": f"🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
 #                                     f"Tôi tìm thấy vật liệu **{', '.join(matched_mats)}** trong hệ thống.\n\n"
@@ -1634,7 +1839,11 @@
 #                                     # f"• Xem vật liệu thay thế có tính năng tương đồng",
 #                                     # f"{suggested_prompts_mess}",
 #                         "materials": matched_mats,
-#                         "suggested_prompts": tmp,
+#                         "suggested_prompts": [
+#                             "Tìm vật liệu thay thế phù hợp",
+#                             "Tư vấn sản phẩm custom theo yêu cầu",
+#                             "Xem danh mục vật liệu có sẵn"
+#                         ],
 #                         "materials": [],
 #                         "suggested_prompts_mess":suggested_prompts_mess
 #                     }
@@ -1653,17 +1862,16 @@
 #                     )
 #                     response_text += f"📦 Tìm thấy **{len(products)} sản phẩm**:"
                     
-#                     tmp = generate_suggested_prompts(
-#                         "search_product_by_material_found",
-#                         {"query": user_message, "products": products}
-#                     )
-#                     suggested_prompts_mess = format_suggested_prompts(tmp)
 #                     result_response = {
 #                         "response": response_text,
 #                         "products": products,
 #                         "search_method": "cross_table",
 #                         "can_provide_feedback": True,
-#                         "suggested_prompts": tmp,
+#                         "suggested_prompts": [
+#                             "So sánh 3 mẫu phổ biến nhất",
+#                             "Xem báo giá chi tiết",
+#                             "Tư vấn phối màu phù hợp"
+#                         ],
 #                         "suggested_prompts_mess":suggested_prompts_mess,
 #                         "success": True
 #                     }
@@ -1672,14 +1880,13 @@
 #             product_query = params.get("category") or params.get("usage_context") or params.get("keywords_vector")
             
 #             if not product_query:
-#                 tmp = generate_suggested_prompts(
-#                     "search_material_for_product",
-#                     {"query": user_message}
-#                 )
-#                 suggested_prompts_mess = format_suggested_prompts(tmp)
 #                 result_response = {
 #                     "response": "⚠️ Bạn muốn tìm vật liệu để làm sản phẩm gì?",
-#                     "suggested_prompts": tmp
+#                     "suggested_prompts": [
+#                         "🧱 Vật liệu làm bàn ăn",
+#                         "🧱 Nguyên liệu ghế sofa",
+#                         "🧱 Đá làm bàn coffee"
+#                     ]
 #                 }
 #             else:
 #                 # 2. Gọi hàm tìm kiếm
@@ -1721,9 +1928,9 @@
 #                     result_response = {
 #                         "response": response_text,
 #                         "materials": materials,
-#                         "search_method": "cross_table_product_to_material", # Đánh dấu để UI nhận biết
-#                         "ranking_summary": ranking_summary,   # Truyền xuống UI
-#                         "can_provide_feedback": True,          # Bật nút Feedback
+#                         "search_method": "cross_table_product_to_material", 
+#                         "ranking_summary": ranking_summary,
+#                         "can_provide_feedback": True,
 #                         "success": True
 #                     }
                     
@@ -1734,13 +1941,9 @@
 #                 headcode = context["last_search_results"][0]
                 
 #             if not headcode:
-#                 tmp = generate_suggested_prompts(
-#                     "query_product_materials",
-#                     {"query": user_message}
-#                 )
 #                 result_response = {
 #                     "response": "⚠️ Bạn muốn xem vật liệu của sản phẩm nào? Vui lòng cung cấp mã hoặc tìm kiếm sản phẩm trước.",
-#                     "suggested_prompts": tmp
+#                     "suggested_prompts": ["🔍 Tìm ghế sofa", "🔍 Tìm bàn ăn"]
 #                 }
 #             else:
 #                 result_response = get_product_materials(headcode)
@@ -1752,13 +1955,9 @@
 #                 headcode = context["last_search_results"][0]
             
 #             if not headcode:
-#                 tmp = generate_suggested_prompts(
-#                     "calculate_product_cost",
-#                     {"query": user_message}
-#                 )
 #                 result_response = {
 #                     "response": "⚠️ Bạn muốn xem chi phí sản phẩm nào? Vui lòng cung cấp mã hoặc tìm kiếm sản phẩm trước.",
-#                     "suggested_prompts": tmp
+#                     "suggested_prompts": ["🔍 Tìm ghế sofa", "🔍 Tìm bàn ăn"]
 #                 }
 #             else:
 #                 result_response = calculate_product_cost(headcode)
@@ -1779,17 +1978,32 @@
 #             ranking_summary = get_ranking_summary(materials)
                         
 #             if not materials:
-#                 tmp = generate_suggested_prompts(
-#                     "search_material_not_found",
-#                     {"query": user_message}
-#                 )
-#                 suggested_prompts_mess = format_suggested_prompts(tmp)
+#                 try:
+#                     tmp = generate_suggested_prompts(
+#                         "search_material_not_found",
+#                         {"query": user_message}
+#                     )
+#                     suggested_prompts_mess = format_suggested_prompts(tmp)
+#                 except Exception as e:
+#                     print(f"WARNING: Could not generate suggestions: {e}")
+#                     suggested_prompts_mess = "• Thử với từ khóa khác\n• Xem danh mục vật liệu\n• Liên hệ tư vấn viên"
+                
 #                 result_response = {
-#                     "response": f'🔍 Đã tìm thấy sản phẩm: **"{search_result.get("response", "Không tìm thấy vật liệu phù hợp.")}"**.\n\n'
-#                     "**Đề xuất:**\n"
-#                             f"{suggested_prompts_mess}",
-#                     "suggested_prompts": tmp,
-#                     "materials": []
+#                     "response": (
+#                         f"🔍 **KHÔNG TÌM THẤY VẬT LIỆU PHÙ HỢP**\n\n"
+#                         f"Rất tiếc, tôi không tìm thấy vật liệu nào khớp với \"{user_message}\".\n\n"
+#                         # f"**💡 Đề xuất:**\n"
+#                         # f"{suggested_prompts_mess}"
+#                     ),
+#                     "suggested_prompts": [
+#                         "Vật liệu chịu nhiệt",
+#                         "Gỗ công nghiệp cao cấp",
+#                         "Đá tự nhiên trang trí",
+#                         "Vải bọc chống thấm"
+#                     ],
+#                     "materials": [],
+#                     "suggested_prompts_mess":suggested_prompts_mess,
+#                     "success": True
 #                 }
 #             else:
 #                 response_text = ""
@@ -1803,7 +2017,6 @@
 #                         f"*Dưới đây là các vật liệu đang được sử dụng phổ biến:*"
 #                     )
 #                 else:
-#                     # response_text = f"✅ Đã tìm thấy **{len(materials)} nguyên vật liệu** đúng yêu cầu."
 #                     response_text = (
 #                         f"✅ **TƯ VẤN VẬT LIỆU CHUYÊN SÂU**\n"
 #                         f"Dựa trên nhu cầu của bạn, **{len(materials)} vật liệu** dưới đây đang được sử dụng phổ biến và phù hợp nhất.\n\n"
@@ -1811,17 +2024,6 @@
 #                     # 🆕 Hiển thị ranking info
 #                     if ranking_summary['ranking_applied']:
 #                         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên."
-
-#                 response_text += "\n**Bảng tóm tắt các vật liệu:**\n"
-#                 headers = [
-#                     "STT",
-#                     "Tên vật liệu",
-#                     "Mã SAP",
-#                     "Nhóm",
-#                     "Giá (VNĐ/ĐV)",
-#                     "Phản hồi"
-#                 ]
-#                 rows = []
 
 #                 for idx, mat in enumerate(materials, 1):
 #                     price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
@@ -1863,14 +2065,15 @@
 #                 #         f"{suggested_prompts_mess}"
 #                 #     )
                 
-#                 tmp_final = generate_suggested_prompts(
-#                     "search_material_found",
-#                     {"query": user_message, "materials": materials}
-#                 )
 #                 result_response = {
 #                     "response": response_text,
 #                     "materials": materials,
-#                     "suggested_prompts": tmp_final,
+#                     "suggested_prompts": [
+#                         "Vật liệu chịu nhiệt",
+#                         "Gỗ công nghiệp cao cấp",
+#                         "Đá tự nhiên trang trí",
+#                         "Vải bọc chống thấm"
+#                     ],
 #                     "ranking_summary": ranking_summary,  
 #                     "can_provide_feedback": True,
 #                     "show_comparison": True,
@@ -1890,13 +2093,9 @@
 #                 id_sap = first_mat.get("id_sap")
             
 #             if not id_sap and not material_name:
-#                 tmp = generate_suggested_prompts(
-#                     "query_material_detail",
-#                     {"query": user_message}
-#                 )
 #                 result_response = {
 #                     "response": "⚠️ Bạn muốn xem chi tiết vật liệu nào? Vui lòng cung cấp mã SAP hoặc tên vật liệu.",
-#                     "suggested_prompts": tmp
+#                     "suggested_prompts": ["🧱 Tìm gỗ sồi", "📋 Danh sách nhóm vật liệu"]
 #                 }
 #             else:
 #                 result_response = get_material_detail(id_sap=id_sap, material_name=material_name)
@@ -1905,42 +2104,53 @@
 #         elif intent == "list_material_groups":
 #             result_response = list_material_groups()
         
+#         elif intent == "list_products_by_category":
+#             result_response = list_products_by_category()
+#             if result_response.get("success"):
+#                 products = result_response.get("products", [])
+#                 try:
+#                     tmp = generate_suggested_prompts(
+#                         "list_products_by_category",
+#                         {"product_count": len(products), "categories": result_response.get("categories", [])}
+#                     )
+#                     suggested_prompts_mess = format_suggested_prompts(tmp)
+#                     result_response["suggested_prompts_mess"] = suggested_prompts_mess
+#                 except Exception as e:
+#                     print(f"WARNING: Could not generate suggestions: {e}")
+#                     result_response["suggested_prompts"] = [
+#                         "Tìm sản phẩm cụ thể",
+#                         "Xem bảng giá",
+#                         "Tư vấn thiết kế"
+#                     ]
+        
 #         # UNKNOWN
 #         else:
-#             tmp = generate_suggested_prompts(
-#                 "unknown",
-#                 {"query": user_message}
-#             )
-#             suggested_prompts_mess = format_suggested_prompts(tmp)
 #             result_response = {
 #                 "response": "Tôi chưa hiểu rõ ý bạn. Hãy thử hỏi về sản phẩm hoặc vật liệu nhé!\n\n"
 #                         "**Ví dụ:**\n"
 #                         "• \"Tìm bàn ăn tròn\"\n"
 #                         "• \"Tìm gỗ sồi\"\n"
 #                         "• \"Tính chi phí sản phẩm B001\"\n"
-#                         "• \"Xem vật liệu của ghế G002\"\n\n"
-#                         f"{suggested_prompts_mess}",
-#                 "suggested_prompts": tmp
+#                         "• \"Xem vật liệu của ghế G002\"",
+#                 "suggested_prompts": [
+#                     "🔍 Tìm sản phẩm",
+#                     "🧱 Tìm vật liệu",
+#                     "📋 Danh sách nhóm vật liệu"
+#                 ]
 #             }
         
-#         # Lấy thông tin mở rộng từ kết quả tìm kiếm
-#         expanded = None
-#         keywords = []
+#         # # Lấy thông tin mở rộng từ kết quả tìm kiếm
+#         # expanded = None
+#         # keywords = []
         
-#         if intent == "search_product" and result_response.get("data"):
-#             expanded = result_response["data"].get("expanded_query")
-#             # Lấy keywords từ params
-#             if params.get("keywords_vector"):
-#                 keywords = extract_product_keywords(params["keywords_vector"])
+#         # if intent == "search_product" and result_response.get("data"):
+#         #     expanded = result_response["data"].get("expanded_query")
+#         #     # Lấy keywords từ params
+#         #     if params.get("keywords_vector"):
+#         #         keywords = extract_product_keywords(params["keywords_vector"])
                 
 #         # print(f"SUCCESS => Final response: {result_response.get('materials', '')}, count: {result_count}")
 #         listProducts = listProducts or result_response.get("products", []) or result_response.get("materials", [])
-        
-#         # ✅ LƯU SUGGESTED_PROMPTS VÀO CACHE
-#         if result_response and result_response.get("suggested_prompts"):
-#             session_suggested_prompts_cache[msg.session_id] = result_response["suggested_prompts"]
-#             print(f"INFO: Cached {len(result_response['suggested_prompts'])} prompts for session {msg.session_id}")
-        
 #         # Save chat history
 #         histories.save_chat_to_histories(
 #             email="test@gmail.com",
@@ -1955,15 +2165,63 @@
             
 #         return result_response
     
+#     except TimeoutError as e:
+#         print(f"Timeout Error: {e}")
+#         return {
+#             "response": (
+#                 "⏱️ **YÊU CẦU MẤT QUÁ LÂU**\n\n"
+#                 "Xin lỗi, hệ thống không thể xử lý yêu cầu của bạn trong thời gian cho phép.\n\n"
+#                 "**💡 Vui lòng thử:**\n"
+#                 "• Đơn giản hóa yêu cầu tìm kiếm\n"
+#                 "• Thử lại sau ít phút\n"
+#                 "• Liên hệ trực tiếp với chuyên viên tư vấn"
+#             ),
+#             "success": False,
+#             "suggested_prompts": [
+#                 "🔍 Tìm sản phẩm đơn giản",
+#                 "🧱 Xem danh mục vật liệu",
+#                 "💬 Liên hệ tư vấn viên"
+#             ]
+#         }
 #     except Exception as e:
 #         print(f"Server Error: {e}")
 #         import traceback
 #         traceback.print_exc()
+        
+#         # Check if it's a timeout-related error
+#         error_str = str(e).lower()
+#         if "timeout" in error_str or "timed out" in error_str:
+#             return {
+#                 "response": (
+#                     "⏱️ **KHÔNG TÌM THẤY KẾT QUẢ PHÙ HỢP**\n\n"
+#                     "Hệ thống không tìm thấy danh sách phù hợp với yêu cầu của bạn.\n\n"
+#                     "**💡 Gợi ý:**\n"
+#                     "• Thử từ khóa tìm kiếm khác\n"
+#                     "• Xem các danh mục sản phẩm có sẵn\n"
+#                     "• Liên hệ chuyên viên để được tư vấn chi tiết"
+#                 ),
+#                 "success": False,
+#                 "suggested_prompts": [
+#                     "Xem danh mục sản phẩm",
+#                     "Tìm theo vật liệu",
+#                     "Liên hệ tư vấn viên"
+#                 ]
+#             }
+        
 #         return {
-#             "response": f"WARNING: Lỗi hệ thống: {str(e)}",
-#             "success": False
+#             "response": (
+#                 "⚠️ **LỖI HỆ THỐNG**\n\n"
+#                 "Xin lỗi, đã có lỗi xảy ra khi xử lý yêu cầu của bạn.\n\n"
+#                 "Vui lòng thử lại sau ít phút hoặc liên hệ với bộ phận hỗ trợ."
+#             ),
+#             "success": False,
+#             "suggested_prompts": [
+#                 # "Thử lại",
+#                 "Xem danh mục",
+#                 "Liên hệ hỗ trợ"
+#             ]
 #         }
-    
+
 # @router.post("/batch/products", tags=["Chat qwen"])
 # def batch_product_operations(request: BatchProductRequest):
 #     """
