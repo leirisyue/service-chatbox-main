@@ -690,13 +690,13 @@ def search_products_by_material(material_query: str, params: Dict):
     
     try:
         # Tìm top materials phù hợp
-        cur.execute("""
+        cur.execute(f"""
             SELECT 
                 id_sap, 
                 material_name,
                 material_group,
                 (description_embedding <=> %s::vector) as distance
-            FROM materials_qwen
+            FROM {settings.MATERIALS_TABLE}
             WHERE description_embedding IS NOT NULL
             ORDER BY distance ASC
             LIMIT 5
@@ -1204,7 +1204,7 @@ def search_materials(params: Dict):
                     id_sap, material_name, material_group, material_subgroup,
                     material_subprice, unit, image_url,
                     (description_embedding <=> %s::vector) as distance
-                FROM materials_qwen
+                FROM {settings.MATERIALS_TABLE}
                 WHERE description_embedding IS NOT NULL AND {filter_clause}
                 ORDER BY distance ASC
                 LIMIT 30
@@ -1288,9 +1288,9 @@ def search_materials(params: Dict):
     
     if conditions:
         where_clause = " OR ".join(conditions)
-        sql = f"SELECT * FROM materials_qwen WHERE {where_clause} LIMIT 50"
+        sql = f"SELECT * FROM {settings.MATERIALS_TABLE} WHERE {where_clause} LIMIT 50"
     else:
-        sql = "SELECT * FROM materials_qwen ORDER BY material_name ASC LIMIT 10"
+        sql = f"SELECT * FROM {settings.MATERIALS_TABLE} ORDER BY material_name ASC LIMIT 10"
         values = []
     
     try:
@@ -1490,12 +1490,12 @@ def list_material_groups():
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    sql = """
+    sql = f"""
         SELECT 
             material_group,
             COUNT(*) as count,
             array_agg(DISTINCT material_subprice) as all_prices
-        FROM materials_qwen
+        FROM {settings.MATERIALS_TABLE}
         WHERE material_group IS NOT NULL
         GROUP BY material_group
         ORDER BY count DESC

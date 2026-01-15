@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     DB_HOST: str = "localhost"
     DB_PORT: str = "5432"
     
+    # Table names
+    MATERIALS_TABLE: str = "materials_qwen"
+    
     # Qwen Embedding settings
     QWEN_HOST: str = "192.168.4.102"
     QWEN_PORT: int = 11434

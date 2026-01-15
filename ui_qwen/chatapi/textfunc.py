@@ -236,7 +236,7 @@ def search_materials_for_product(product_query: str, params: Dict):
                 COUNT(DISTINCT pm.product_headcode) as usage_count,
                 SUM(pm.quantity) as total_quantity,
                 array_agg(DISTINCT p.product_name) as used_in_products
-            FROM materials_qwen m
+            FROM {settings.MATERIALS_TABLE} m
             INNER JOIN product_materials pm ON m.id_sap = pm.material_id_sap
             INNER JOIN products_qwen p ON pm.product_headcode = p.headcode
             WHERE p.headcode = ANY(%s)

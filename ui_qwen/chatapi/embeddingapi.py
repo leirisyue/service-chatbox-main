@@ -119,10 +119,10 @@ def generate_material_embeddings_qwen():
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     # Lấy materials chưa có trong bảng qwen
-    cur.execute("""
+    cur.execute(f"""
         SELECT m.id_sap, m.material_name, m.material_group, m.material_subgroup
-        FROM materials_qwen m
-        LEFT JOIN qwen q ON q.table_name = 'materials_qwen' AND q.record_id = m.id_sap
+        FROM {settings.MATERIALS_TABLE} m
+        LEFT JOIN qwen q ON q.table_name = '{settings.MATERIALS_TABLE}' AND q.record_id = m.id_sap
         WHERE q.record_id IS NULL
         LIMIT 100
     """)
@@ -146,8 +146,8 @@ def generate_material_embeddings_qwen():
             
             if name_emb and desc_emb:
                 # Insert vào bảng qwen
-                cur.execute("""
-                    INSERT INTO materials_qwen (table_name, record_id, name_embedding, description_embedding, created_at, updated_at)
+                cur.execute(f"""
+                    INSERT INTO {settings.MATERIALS_TABLE} (table_name, record_id, name_embedding, description_embedding, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, NOW(), NOW())
                     ON CONFLICT (table_name, record_id) 
                     DO UPDATE SET 

@@ -3390,20 +3390,20 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
         materials_text += f"{i}. ID: {mat['id_sap']}, Tên: {mat['name']}\n"
     
     prompt = f"""
-Phân loại {len(materials_batch)} nguyên vật liệu nội thất:
+        Phân loại {len(materials_batch)} nguyên vật liệu nội thất:
 
-{materials_text}
+        {materials_text}
 
-Xác định:
-1. material_group: Gỗ, Da, Vải, Đá, Kim loại, Kính, Nhựa, Sơn, Keo, Phụ kiện, Khác
-2. material_subgroup: Nhóm con cụ thể (VD: "Gỗ tự nhiên", "Da thật", "Vải cao cấp")
+        Xác định:
+        1. material_group: Gỗ, Da, Vải, Đá, Kim loại, Kính, Nhựa, Sơn, Keo, Phụ kiện, Khác
+        2. material_subgroup: Nhóm con cụ thể (VD: "Gỗ tự nhiên", "Da thật", "Vải cao cấp")
 
-OUTPUT JSON ARRAY ONLY:
-[
-  {{"id_sap": "M001", "material_group": "...", "material_subgroup": "..."}},
-  {{"id_sap": "M002", "material_group": "...", "material_subgroup": "..."}}
-]
-"""
+        OUTPUT JSON ARRAY ONLY:
+        [
+        {{"id_sap": "M001", "material_group": "...", "material_subgroup": "..."}},
+        {{"id_sap": "M002", "material_group": "...", "material_subgroup": "..."}}
+        ]
+    """
     
     # Gọi Gemini với retry
     response_text = call_gemini_with_retry(model, prompt, max_retries=3)

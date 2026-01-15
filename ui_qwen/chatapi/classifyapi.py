@@ -176,23 +176,70 @@ async def search_by_image(
         img = Image.open(file_path)
         model = genai.GenerativeModel("gemini-2.5-flash")
         
+        # prompt = """
+        # Đóng vai chuyên viên tư vấn vật tư AA corporation (Nội thất cao cấp).
+        # Phân tích ảnh nội thất này để trích xuất thông tin tìm kiếm Database.
+        
+        # OUTPUT JSON ONLY (no markdown, no backticks):
+        # {
+        #     "category": "Loại SP (Bàn, Ghế, Sofa, Tủ, Giường, Đèn, Kệ...)",
+        #     "visual_description": "Mô tả chi tiết cho khách hàng hiểu sản phẩm",
+        #     "search_keywords": "CHỈ 1-2 TỪ KHÓA ĐƠN GIẢN NHẤT (VD: bàn làm việc, ghế sofa, tủ gỗ, giường ngủ)",
+        #     "material_detected": "Vật liệu chính (Gỗ, Da, Vải, Đá, Kim loại...)",
+        #     "color_tone": "Màu chủ đạo"
+        # }
+        
+        # LƯU Ý: search_keywords PHẢI CỰC KỲ NGẮN GỌN, CHỈ TÊN LOẠI SẢN PHẨM. VD: "bàn làm việc" KHÔNG PHẢI "bàn làm việc gỗ hiện đại màu nâu"
+        # """
+        
         prompt = """
-        Đóng vai chuyên viên tư vấn vật tư AA corporation (Nội thất cao cấp).
-        Phân tích ảnh nội thất này để trích xuất thông tin tìm kiếm Database.
-        
-        OUTPUT JSON ONLY (no markdown, no backticks):
-        {
-            "category": "Loại SP (Bàn, Ghế, Sofa, Tủ, Giường, Đèn, Kệ...)",
-            "visual_description": "Mô tả chi tiết cho khách hàng hiểu sản phẩm",
-            "search_keywords": "CHỈ 1-2 TỪ KHÓA ĐƠN GIẢN NHẤT (VD: bàn làm việc, ghế sofa, tủ gỗ, giường ngủ)",
-            "material_detected": "Vật liệu chính (Gỗ, Da, Vải, Đá, Kim loại...)",
-            "color_tone": "Màu chủ đạo"
-        }
-        
-        LƯU Ý: search_keywords PHẢI CỰC KỲ NGẮN GỌN, CHỈ TÊN LOẠI SẢN PHẨM. VD: "bàn làm việc" KHÔNG PHẢI "bàn làm việc gỗ hiện đại màu nâu"
+        VAI TRÒ (ROLE)
+        Bạn là Chuyên viên Phân tích Vật tư Nội thất cao cấp tại AA Corporation. Bạn có kiến thức sâu rộng về vật liệu, kết cấu và phong cách thiết kế nội thất.
+
+        NHIỆM VỤ (TASK)
+        Phân tích hình ảnh được cung cấp và trích xuất thông tin kỹ thuật vào định dạng JSON Array (Mảng) chuẩn để nhập vào hệ thống cơ sở dữ liệu tìm kiếm.
+
+        CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
+        Output phải là một mảng chứa chính xác 2 đối tượng (objects) nhằm phục vụ cơ chế tìm kiếm đa tầng:
+
+        Object 1 (Ưu tiên): Tìm kiếm chính xác (Exact Match). Từ khóa phải mô tả cụ thể đặc tính nổi bật nhất của sản phẩm.
+
+        Object 2 (Dự phòng): Tìm kiếm mở rộng (Broad Match). Từ khóa là danh mục chung hoặc từ đồng nghĩa để đảm bảo kết quả tìm kiếm không bị rỗng nếu tìm chính xác thất bại.
+
+        HƯỚNG DẪN CÁC TRƯỜNG (FIELDS)
+        category: Chỉ chọn 1 danh mục chính xác nhất (VD: Ghế, Bàn, Sofa, Tủ, Đèn...).
+
+        visual_description: Viết đoạn văn mô tả chuyên nghiệp (catalogue). Tập trung: cấu trúc khung, chất liệu bề mặt, tính năng và cảm giác sử dụng. (Nội dung này giống nhau ở cả 2 object).
+
+        search_keywords:
+
+        Tại Object 1: Trích xuất từ khóa "ngách" cụ thể (VD: "ghế xoay lưới", "sofa da bò", "bàn ăn mặt đá").
+
+        Tại Object 2: Trích xuất từ khóa "gốc" phổ biến (VD: "ghế văn phòng", "sofa phòng khách", "bàn ăn").
+
+        material_detected: Liệt kê vật liệu nhìn thấy, ngăn cách bằng dấu phẩy. Ưu tiên từ chuyên ngành (Nhựa PP, Thép mạ chrome, Vải nỉ...).
+
+        color_tone: Màu sắc chủ đạo (Tối đa 2 màu).
+
+        ĐỊNH DẠNG OUTPUT (CONSTRAINTS)
+        Bắt buộc trả về định dạng mảng JSON: [ {...}, {...} ].
+
+        Không bao bọc bởi markdown (json ... ).
+
+        Không thêm lời dẫn hay giải thích.
+
+        Ngôn ngữ: Tiếng Việt.
+
+        VÍ DỤ MẪU (ONE-SHOT EXAMPLE)
+        Input: [Hình ảnh một chiếc ghế văn phòng lưới đen chân xoay] Output: [ { "category": "Ghế", "visual_description": "Ghế xoay văn phòng lưng trung, thiết kế khung nhựa đúc nguyên khối kết hợp lưng lưới thoáng khí. Tay vịn nhựa cố định dạng vòm. Đệm ngồi bọc vải lưới xốp êm ái. Chân ghế sao 5 cánh bằng thép mạ chrome sáng bóng, có bánh xe di chuyển và cần gạt điều chỉnh độ cao.", "search_keywords": "ghế xoay lưới", "material_detected": "Lưới, Nhựa PP, Thép mạ chrome, Vải, Mút", "color_tone": "Đen, Bạc" }, { "category": "Ghế", "visual_description": "Ghế xoay văn phòng lưng trung, thiết kế khung nhựa đúc nguyên khối kết hợp lưng lưới thoáng khí. Tay vịn nhựa cố định dạng vòm. Đệm ngồi bọc vải lưới xốp êm ái. Chân ghế sao 5 cánh bằng thép mạ chrome sáng bóng, có bánh xe di chuyển và cần gạt điều chỉnh độ cao.", "search_keywords": "ghế văn phòng", "material_detected": "Lưới, Nhựa PP, Thép mạ chrome, Vải, Mút", "color_tone": "Đen, Bạc" } ]
+
+        BẮT ĐẦU PHÂN TÍCH HÌNH ẢNH NÀY:
+        [AI sẽ chờ bạn upload ảnh tại đây]
         """
         
         response = model.generate_content([prompt, img])
+        
+        # print("response Image analysis response:", response)
         
         if not response.text:
             return {
@@ -219,8 +266,8 @@ async def search_by_image(
             }
         
         # Lấy search_keywords và rút gọn nếu quá dài
-        search_keywords = ai_result.get("search_keywords", "").strip()
-        category = ai_result.get("category", "")
+        search_keywords = ai_result[0].get("search_keywords", "").strip()
+        category = ai_result[0].get("category", "")
         
         # Nếu search_keywords quá dài (>50 ký tự) hoặc rỗng, dùng category
         if not search_keywords or len(search_keywords) > 50:
@@ -235,7 +282,7 @@ async def search_by_image(
         params = {
             "category": category,
             "keywords_vector": search_text,  # Từ khóa CỰC KỲ đơn giản
-            "material_primary": ai_result.get("material_detected")
+            "material_primary": ai_result[0].get("material_detected")
         }
         
         search_result = search_products(params, session_id=session_id)
@@ -243,7 +290,7 @@ async def search_by_image(
         
         # ========== IMAGE MATCHING VALIDATION ==========
         # Kiểm tra sản phẩm có khớp với ai_interpretation không
-        ai_interpretation = ai_result.get("visual_description", "").lower()
+        ai_interpretation = ai_result[0].get("visual_description", "").lower()
         
         for product in products:
             product_name = (product.get('product_name') or '').lower()
@@ -265,7 +312,7 @@ async def search_by_image(
                 product['image_mismatch'] = False
         
         # Phân loại sản phẩm theo base_score
-        products_main = [p for p in products if p.get('base_score', 0) >= 0.6]
+        products_main = [p for p in products if p.get('base_score', 0) >= 0.7]
         products_low_confidence = [p for p in products if p.get('base_score', 0) < 0.6]
         
         print(f"INFO: Image search - Main products: {len(products_main)}, Low confidence: {len(products_low_confidence)}")
@@ -274,27 +321,27 @@ async def search_by_image(
             email="test@gmail.com",
             session_id=session_id,
             question="[IMAGE_UPLOAD]",
-            answer=f"Phân tích ảnh: {ai_result.get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products_main)} sản phẩm (High confidence)"
+            answer=f"Phân tích ảnh: {ai_result[0].get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products_main)} sản phẩm (High confidence)"
         )
 
-        # Nếu không có sản phẩm nào đạt base_score >= 0.6
+        # Nếu không có sản phẩm nào đạt base_score >= 0.7
         if not products_main:
             return {
-                "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm nội thất')}**.\n\n"
-                        f"⚠️ Không tìm thấy sản phẩm phù hợp với độ tin cậy cao.\n\n"
+                "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm nội thất')}**.\n\n"
+                        f"⚠️ Không tìm thấy sản phẩm phù hợp với yêu cầu.\n\n"
                         f"💡 **Gợi ý**: Bạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm",
                 "products": None,
                 "productLowConfidence": products_low_confidence[:5] if products_low_confidence else [],
-                "ai_interpretation": ai_result.get("visual_description", ""),
+                "ai_interpretation": ai_result[0].get("visual_description", ""),
                 "search_method": "image_vector"
             }
         
         return {
-            "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result.get('visual_description', 'sản phẩm')}**.\n\n"
+            "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm')}**.\n\n"
                        f"✅ Đã tìm thấy **{len(products_main)} sản phẩm** phù hợp:",
             "products": products_main,
             "productLowConfidence": products_low_confidence[:5] if products_low_confidence else [],
-            "ai_interpretation": ai_result.get("visual_description", ""),
+            "ai_interpretation": ai_result[0].get("visual_description", ""),
             "search_method": "image_vector",
             "confidence_summary": {
                 "high_confidence": len(products_main),
@@ -440,9 +487,9 @@ def classify_pending_materials():
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        cur.execute("""
+        cur.execute(f"""
             SELECT id_sap, material_name, material_group
-            FROM materials_qwen 
+            FROM {settings.MATERIALS_TABLE} 
             WHERE material_subgroup = 'Chưa phân loại'
             LIMIT 100
         """)
@@ -506,8 +553,8 @@ def classify_pending_materials():
         
         conn = get_db()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT COUNT(*) FROM materials_qwen 
+        cur.execute(f"""
+            SELECT COUNT(*) FROM {settings.MATERIALS_TABLE} 
             WHERE material_subgroup = 'Chưa phân loại'
         """)
         remaining = cur.fetchone()[0]
