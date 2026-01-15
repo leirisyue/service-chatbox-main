@@ -28,7 +28,6 @@ QWEN_TIMEOUT = settings.QWEN_TIMEOUT
 # ================================================================================================
 
 def generate_embedding_qwen(text: str):
-    """Tạo vector embedding cho text bằng Qwen3, fallback to Google Gemini"""
     try:
         url = f"{OLLAMA_HOST}/api/embeddings"
         payload = {
@@ -39,10 +38,10 @@ def generate_embedding_qwen(text: str):
         resp.raise_for_status()
         data = resp.json()
         
-        # Lấy embedding từ response
+        # Get embedding from response
         emb = data.get("embedding") or data.get("data", [{}])[0].get("embedding")
         if emb is None:
-            raise ValueError(f"Qwen API response không có 'embedding': {data}")
+            raise ValueError(f"Qwen API response has no 'embedding': {data}")
         
         return emb
     except Exception as e:
@@ -54,11 +53,10 @@ def generate_embedding_qwen(text: str):
 
 @router.post("/generate-embeddings-qwen", tags=["Embeddingapi"])
 def generate_product_embeddings_qwen():
-    """Tạo embeddings cho products bằng Qwen3 và lưu vào bảng qwen"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Lấy products chưa có trong bảng qwen
+    # Get products not yet in qwen table
     cur.execute("""
         SELECT p.headcode, p.product_name, p.category, p.sub_category, p.material_primary
         FROM products_qwen p
@@ -71,7 +69,7 @@ def generate_product_embeddings_qwen():
     
     if not products:
         conn.close()
-        return {"message": "✅ Tất cả products_qwen đã có embeddings trong bảng qwen"}
+        return {"message": "✅ All products_qwen already have embeddings in qwen table"}
     
     success = 0
     errors = []
@@ -85,7 +83,7 @@ def generate_product_embeddings_qwen():
             desc_emb = generate_embedding_qwen(desc_text)
             
             if name_emb and desc_emb:
-                # Insert vào bảng qwen
+                # Insert into qwen table
                 cur.execute("""
                     INSERT INTO products_qwen (table_name, record_id, name_embedding, description_embedding, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, NOW(), NOW())
@@ -114,11 +112,10 @@ def generate_product_embeddings_qwen():
 
 @router.post("/generate-material-embeddings-qwen", tags=["Embeddingapi"])
 def generate_material_embeddings_qwen():
-    """Tạo embeddings cho materials bằng Qwen3 và lưu vào bảng qwen"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Lấy materials chưa có trong bảng qwen
+    # Get materials not in qwen table
     cur.execute(f"""
         SELECT m.id_sap, m.material_name, m.material_group, m.material_subgroup
         FROM {settings.MATERIALS_TABLE} m
@@ -145,7 +142,7 @@ def generate_material_embeddings_qwen():
             desc_emb = generate_embedding_qwen(desc_text)
             
             if name_emb and desc_emb:
-                # Insert vào bảng qwen
+                # Insert into qwen table
                 cur.execute(f"""
                     INSERT INTO {settings.MATERIALS_TABLE} (table_name, record_id, name_embedding, description_embedding, created_at, updated_at)
                     VALUES (%s, %s, %s, %s, NOW(), NOW())

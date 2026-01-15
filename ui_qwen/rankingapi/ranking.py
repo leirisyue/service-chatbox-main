@@ -15,19 +15,19 @@ router = APIRouter()
 # ================================================================================================
 
 def rerank_with_feedback(items: list, feedback_scores: Dict, 
-                         id_key: str = "headcode", boost_weight: float = 0.5):  # ← ✅ TĂNG từ 0.3 → 0.5
+                         id_key: str = "headcode", boost_weight: float = 0.5):  # ← ✅ INCREASED from 0.3 → 0.5
     """
-    🎯 V5.6 - Boost weight tăng lên 0.5 để feedback có tác động mạnh hơn
+    🎯 V5.6 - Boost weight increased to 0.5 for stronger feedback impact
     """
     if not feedback_scores:
-        print("⚠️ Không có feedback scores để rerank")
+        print("⚠️ No feedback scores to rerank")
         return items
     
     max_feedback = max(feedback_scores.values()) if feedback_scores else 1
     
     print(f"\n{'='*60}")
     print(f"🎯 RERANKING: {len(items)} items | Boost weight: {boost_weight}")
-    print(f"📊 Feedback history: {len(feedback_scores)} items có điểm")
+    print(f"📊 Feedback history: {len(feedback_scores)} items have scores")
     print(f"{'='*60}\n")
     
     boosted_items = []
@@ -40,10 +40,10 @@ def rerank_with_feedback(items: list, feedback_scores: Dict,
         # Normalize feedback score 0-1
         feedback_boost = (feedback_count / max_feedback) if max_feedback > 0 else 0
         
-        # ✅ QUAN TRỌNG: Dùng 'similarity' (đã được set = personalized_score)
+        # ✅ IMPORTANT: Use 'similarity' (already set = personalized_score)
         current_score = item.get('similarity', item.get('relevance_score', 0.5))
         
-        # ✅ Công thức mới: Boost weight cao hơn (0.5 thay vì 0.3)
+        # ✅ New formula: Higher boost weight (0.5 instead of 0.3)
         new_score = (1 - boost_weight) * current_score + boost_weight * feedback_boost
         
         item['final_score'] = float(new_score)
@@ -56,26 +56,26 @@ def rerank_with_feedback(items: list, feedback_scores: Dict,
             print(f"✅ BOOSTED: {item_id[:20]:20} | "
                   f"Original: {current_score:.3f} → "
                   f"Final: {new_score:.3f} | "
-                  f"Feedback: {feedback_count:.2f} lần")
+                  f"Feedback: {feedback_count:.2f} times")
         else:
             unchanged_items.append(item)
     
-    print(f"\n📈 Kết quả:")
-    print(f"   - {len(boosted_items)} items được boost")
-    print(f"   - {len(unchanged_items)} items không đổi")
+    print(f"\n📈 Results:")
+    print(f"   - {len(boosted_items)} items boosted")
+    print(f"   - {len(unchanged_items)} items unchanged")
     print(f"{'='*60}\n")
     
-    return items  # Không sort ở đây, để search_products() sort sau
+    return items  # Don't sort here, let search_products() sort later
 
 def apply_feedback_to_search(items: list, query: str, search_type: str, 
                                 id_key: str = "headcode") -> list:
     """
-    🎯 V5.6 - Lưu original_rank TRƯỚC khi rerank
+    🎯 V5.6 - Save original_rank BEFORE reranking
     """
     if not items:
         return items
     
-    # ✅ LƯU ORIGINAL RANK (dựa trên personalized_score)
+    # ✅ SAVE ORIGINAL RANK (based on personalized_score)
     for idx, item in enumerate(items):
         item['original_rank'] = idx + 1
     
@@ -87,7 +87,7 @@ def apply_feedback_to_search(items: list, query: str, search_type: str,
     )
     
     if not feedback_scores:
-        print("ℹ️ Không có feedback history phù hợp")
+        print("ℹ️ No relevant feedback history")
         for item in items:
             item['has_feedback'] = False
             item['feedback_count'] = 0

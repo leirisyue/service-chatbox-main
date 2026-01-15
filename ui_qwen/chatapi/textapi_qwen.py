@@ -27,25 +27,25 @@ from .textfunc import (calculate_product_total_cost, call_gemini_with_retry,
 from .unit import (BatchProductRequest, ChatMessage, ConsolidatedBOMRequest,
                     TrackingRequest)
 
-# --- TỰ ĐỊNH NGHĨA REGEX ĐỂ LỌC KÝ TỰ LỖI ---
-# Regex này lọc các ký tự ASCII điều khiển (Control chars) không hợp lệ trong file Excel (XML)
-# Bao gồm: ASCII 0-8, 11-12, 14-31
+# Custom regex to filter illegal characters
+# Filters ASCII control chars that are invalid in Excel files (XML)
+# Includes: ASCII 0-8, 11-12, 14-31
 ILLEGAL_CHARACTERS_RE = re.compile(r'[\000-\010]|[\013-\014]|[\016-\037]')
 
-So_Cau_Goi_Y = 3  # Số câu gợi ý mặc định
+So_Cau_Goi_Y = 3  # Default number of suggested prompts
 
 
 def build_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
-    """Tạo bảng Markdown từ header + rows để frontend HTML render + CSS đẹp.
+    """Create Markdown table from headers + rows for frontend HTML render + CSS styling.
 
-    Mỗi ô đã được format sẵn (ví dụ: số có dấu phẩy) trước khi truyền vào.
+    Each cell is already formatted (e.g., numbers with commas) before passing in.
     """
     if not headers:
         return ""
 
-    # Dòng header
+    # Header row
     header_row = "| " + " | ".join(str(h) for h in headers) + " |"
-    # Dòng căn lề cơ bản, frontend có thể dùng CSS để chỉnh tiếp
+    # Basic alignment row, frontend can further adjust with CSS
     separator_row = "| " + " | ".join("---" for _ in headers) + " |"
 
     body_rows = [
@@ -291,7 +291,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         return _get_fallback_prompts(context_type)
 
 def _get_fallback_prompts(context_type: str) -> List[str]:
-    """Fallback prompts nếu genai thất bại"""
+    """Fallback prompts if genai fails"""
     fallbacks = {
         "greeting": [
             "Tìm bàn làm việc hiện đại",
@@ -320,7 +320,7 @@ def _get_fallback_prompts(context_type: str) -> List[str]:
     ])
 
 def get_intent_and_params(user_message: str, context: Dict) -> Dict:
-    """AI Router với khả năng Reasoning & Soft Clarification"""
+    """AI Router with Reasoning & Soft Clarification capability"""
     model = genai.GenerativeModel("gemini-2.5-flash")
     
     context_info = ""
@@ -471,22 +471,22 @@ def get_intent_and_params(user_message: str, context: Dict) -> Dict:
 def search_products(params: Dict, session_id: str = None):
     """Multi-tier: HYBRID -> Vector -> Keyword"""
     
-    # TIER 1: Thử Hybrid trước
+    # TIER 1: Try Hybrid first
     try:
         result = search_products_hybrid(params)
         
-        # Kiểm tra nếu có lỗi timeout hoặc search method cho biết không có kết quả
+        # Check if there's a timeout error or search method indicates no results
         if result.get("search_method") == "timeout":
             print("TIMER: Search timeout - returning empty products list")
             return {
                 "products": [],
                 "search_method": "timeout",
-                "response": "Không tìm thấy sản phẩm phù hợp",
+                "response": "No matching products found",
                 "success": False
             }
         
         if result.get("products"):
-            # Cập nhật total_cost cho các sản phẩm trong hybrid search
+            # Update total_cost for products in hybrid search
             for product in result["products"]:
                 product["total_cost"] = calculate_product_total_cost(product["headcode"])
                 
@@ -497,51 +497,49 @@ def search_products(params: Dict, session_id: str = None):
                 product['base_score'] = float(product.get('similarity', 0.5))
             
             # ========== STEP 1.5: QUERY MATCHING BOOST ==========
-            # Tăng base_score nếu query xuất hiện trong các trường của product
+            # Boost base_score if query appears in product fields
             query_keywords = params.get("keywords_vector", "").lower().split()
             
             for product in products:
                 boost = 0.0
                 
-                # Các trường cần kiểm tra
+                # Fields to check
                 product_name = (product.get('product_name') or '').lower()
                 category = (product.get('category') or '').lower()
                 sub_category = (product.get('sub_category') or '').lower()
                 material_primary = (product.get('material_primary') or '').lower()
                 headcode = (product.get('headcode') or '').lower()
                 
-                # Đếm số từ khóa xuất hiện
+                # Count keyword matches
                 match_count = 0
                 for keyword in query_keywords:
-                    # if len(keyword) < 2:  # Bỏ qua từ quá ngắn
-                    #     continue
                     
-                    # Tăng điểm nếu từ khóa xuất hiện trong tên sản phẩm (quan trọng nhất)
+                    # Boost if keyword appears in product name (most important)
                     if keyword in product_name:
                         boost += 0.15
                         match_count += 1
                     
-                    # Tăng điểm nếu xuất hiện trong danh mục
+                    # Boost if appears in category
                     if keyword in category:
                         boost += 0.08
                         match_count += 1
                     
-                    # Tăng điểm nếu xuất hiện trong danh mục phụ
+                    # Boost if appears in subcategory
                     if keyword in sub_category:
                         boost += 0.06
                         match_count += 1
                     
-                    # Tăng điểm nếu xuất hiện trong vật liệu chính
+                    # Boost if appears in primary material
                     if keyword in material_primary:
                         boost += 0.05
                         match_count += 1
                     
-                    # Tăng điểm nếu xuất hiện trong mã sản phẩm
+                    # Boost if appears in product code
                     if keyword in headcode:
                         boost += 0.04
                         match_count += 1
                 
-                # Cập nhật base_score (giới hạn tối đa 1.0)
+                # Update base_score (max limit 1.0)
                 if boost > 0:
                     product['base_score'] = min(1.0, product['base_score'] + boost)
                     product['query_match_count'] = match_count
@@ -549,7 +547,7 @@ def search_products(params: Dict, session_id: str = None):
                     print(f"  INFO: Boosted {product['headcode']}: +{boost:.3f} (matches: {match_count})")
             
             # ========== STEP 2: PERSONALIZATION ==========
-            # ✅ CHỈ áp dụng nếu có session_id VÀ user có history
+            # ✅ Only apply if session_id exists AND user has history
             has_personalization = False
             
             if session_id:
@@ -582,16 +580,15 @@ def search_products(params: Dict, session_id: str = None):
             print(f"SUCCESS: Feedback Scoring done\n")
             
             # ========== STEP 4: WEIGHTED SUM ==========
-            # print(f"MAIN: Final Ranking (Weighted Sum)...")
             
             # ✅ ADAPTIVE WEIGHTS
             if has_personalization:
-                # User có history → ưu tiên personalization
+                # User has history → prioritize personalization
                 W_BASE = 0.3
                 W_PERSONAL = 0.5
                 W_FEEDBACK = 0.2
             else:
-                # User mới → ưu tiên base + social proof
+                # New user → prioritize base + social proof
                 W_BASE = 0.6
                 W_PERSONAL = 0.0  
                 W_FEEDBACK = 0.4
@@ -601,7 +598,7 @@ def search_products(params: Dict, session_id: str = None):
                 personal = product.get('personal_score', 0.5)
                 feedback = product.get('feedback_score', 0.0)
                 
-                # ✅ Chỉ tính personal nếu has_personalization
+                # ✅ Only calculate personal if has_personalization
                 if has_personalization:
                     final_score = (W_BASE * base) + (W_PERSONAL * personal) + (W_FEEDBACK * feedback)
                 else:
@@ -609,10 +606,6 @@ def search_products(params: Dict, session_id: str = None):
                 
                 product['final_score'] = float(final_score)
                 product['original_rank'] = idx + 1
-                
-                # print(f"  {product['headcode']}: "
-                #         f"base={base:.3f} | pers={personal:.3f} | fb={feedback:.3f} "
-                #         f"→ final={final_score:.3f}")
             
             # ========== STEP 5: SORT FINAL ==========
             products.sort(key=lambda x: x.get('final_score', 0), reverse=True)
@@ -632,52 +625,52 @@ def search_products(params: Dict, session_id: str = None):
             return result
     except TimeoutError as e:
         print(f"TIMER: TIER 1 timeout: {e}")
-        # Trả về empty result thay vì fallback sang TIER 2
+        # Return empty result instead of fallback to TIER 2
         return {
             "products": [],
             "search_method": "timeout",
-            "response": "Không tìm thấy sản phẩm phù hợp",
+            "response": "No matching products found",
             "success": False
         }
     except Exception as e:
         error_str = str(e).lower()
         print(f"WARNING: TIER 1 failed: {e}")
-        # Kiểm tra nếu lỗi liên quan đến timeout
+        # Check if error is related to timeout
         if "timeout" in error_str or "timed out" in error_str or "canceled" in error_str:
             return {
                 "products": [],
                 "search_method": "timeout",
-                "response": "Không tìm thấy sản phẩm phù hợp",
+                "response": "No matching products found",
                 "success": False
             }
     
-    # TIER 2 & 3: KHÔNG CHẠY NẾU TIER 1 TIMEOUT - chỉ chạy nếu TIER 1 thất bại vì lý do khác
-    # Nếu đến đây nghĩa là TIER 1 không trả về kết quả nhưng không phải timeout
-    # Vậy ta cũng nên trả về empty luôn thay vì tốn thêm thời gian
+    # TIER 2 & 3: DO NOT RUN IF TIER 1 TIMEOUT - only run if TIER 1 failed for other reasons
+    # If we reach here, TIER 1 returned no results but not due to timeout
+    # So we should return empty instead of spending more time
     print("WARNING: TIER 1 returned no products, returning empty instead of fallback")
     return {
         "products": [],
         "search_method": "no_results",
-        "response": "Không tìm thấy sản phẩm phù hợp",
+        "response": "No matching products found",
         "success": False
     }
 
 def search_products_by_material(material_query: str, params: Dict):
     """
-    🔍 TÌM SẢN PHẨM ĐƯỢC LÀM TỪ VẬT LIỆU CỤ THỂ
-    Ví dụ: "Tìm bàn làm từ đá marble", "Tủ gỗ teak"
+    🔍 FIND PRODUCTS MADE FROM SPECIFIC MATERIALS
+    Example: "Find tables made from marble", "Teak wood cabinets"
     
     Logic: 
-    1. Tìm materials phù hợp với query (vector search)
-    2. JOIN product_materials để lấy products sử dụng material đó
-    3. Rank products theo độ phù hợp
+    1. Find materials matching query (vector search)
+    2. JOIN product_materials to get products using those materials
+    3. Rank products by relevance
     """
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
     print(f"INFO: Cross-table search: Products made from '{material_query}'")
     
-    # Bước 1: Tìm vật liệu phù hợp
+    # Step 1: Find matching materials
     material_vector = generate_embedding_qwen(material_query)
     
     if not material_vector:
@@ -689,7 +682,7 @@ def search_products_by_material(material_query: str, params: Dict):
         }
     
     try:
-        # Tìm top materials phù hợp
+        # Find top matching materials
         cur.execute(f"""
             SELECT 
                 id_sap, 
@@ -717,8 +710,8 @@ def search_products_by_material(material_query: str, params: Dict):
         
         print(f"SUCCESS: Found {len(material_ids)} matching materials: {material_names[:3]}")
         
-        # Bước 2: Tìm products sử dụng materials này
-        # Kết hợp filter category nếu có
+        # Step 2: Find products using these materials
+        # Combine category filter if available
         category_filter = ""
         filter_params = []
         
@@ -760,7 +753,7 @@ def search_products_by_material(material_query: str, params: Dict):
                 "success": False
             }
         
-        # Group products (vì 1 product có thể dùng nhiều materials)
+        # Group products (because 1 product can use multiple materials)
         products_dict = {}
         for row in results:
             headcode = row['headcode']
@@ -896,7 +889,7 @@ def get_product_materials(headcode: str):
     
     conn.close()
     
-    # Lấy lịch sử giá (nếu cần) từ vật liệu đầu tiên có dữ liệu
+    # Get price history (if needed) from first material with data
     price_history = []
     try:
         first_with_price = next(
@@ -946,18 +939,17 @@ def get_product_materials(headcode: str):
     
     response = f"📊 **ĐỊNH MỨC VẬT LIỆU: {prod['product_name']}**\n"
     response += f"🏷️ Mã: `{headcode}`\n"
-    response += f"📦 Tổng số loại vật liệu: **{len(materials_with_price)}**\n\n"
-    # response += "---\n\n"
+    response += f"📦 Total materials: **{len(materials_with_price)}**\n\n"
 
-    # Bảng Markdown tóm tắt vật liệu (tối đa 10 dòng)
+    # Markdown table summary for materials (max 10 rows)
     headers = [
-        "STT",
-        "Tên vật liệu",
-        "Mã SAP",
-        "Nhóm",
-        "Số lượng",
-        "Đơn giá mới nhất (VNĐ)",
-        "Thành tiền (VNĐ)"
+        "No.",
+        "Material name",
+        "SAP code",
+        "Group",
+        "Quantity",
+        "Latest unit price (VND)",
+        "Total (VND)"
     ]
     rows = []
 
@@ -975,27 +967,23 @@ def get_product_materials(headcode: str):
             f"{mat['total_cost']:,.2f}",
         ])
 
-    # response += build_markdown_table(headers, rows) + "\n\n"
     
-    if len(materials_with_price) > 15:
-        response += f"\n*...và {len(materials_with_price)-15} vật liệu khác.*\n"
+    response += f"\n---\n\n💰 **TOTAL MATERIAL COST: {total:,.2f} VND**"
+    response += f"\n\n⚠️ **Note:** Prices calculated from latest purchase history. Actual prices may vary."
     
-    response += f"\n---\n\n💰 **TỔNG CHI PHÍ NGUYÊN VẬT LIỆU: {total:,.2f} VNĐ**"
-    response += f"\n\n⚠️ **Lưu ý:** Giá được tính từ lịch sử mua hàng gần nhất. Giá thực tế có thể thay đổi."
-    
-    # Thêm link ảnh (nếu có ít nhất một vật liệu có image_url)
+    # Add image link (if at least one material has image_url)
     first_image_url = next(
         (m['image_url'] for m in materials_with_price if m.get('image_url')),
         None
     )
     if first_image_url:
         response += "\n\n"
-        response += f"🖼️ **Xem ảnh vật liệu:** [Google Drive Link]({first_image_url}) _ "
-        response += f"_(Click để xem ảnh chi tiết)_"
+        response += f"🖼️ **View material images:** [Google Drive Link]({first_image_url}) _ "
+        response += f"_(Click to view detailed images)_"
     
     latest_price_summary = materials_with_price[0]['price'] if materials_with_price else 0
 
-    # Gợi ý câu hỏi tiếp theo
+    # Generate suggested follow-up questions
     suggested_prompts = generate_suggested_prompts(
         "get_product_materials",
         {
@@ -1004,8 +992,6 @@ def get_product_materials(headcode: str):
         },
     )
     suggested_prompts_mess = format_suggested_prompts(suggested_prompts)
-    # response += "\n\n" + "---" + "\n\n"
-    # response += suggested_prompts_mess
     return {
         "response": response,
         "materials": materials_with_price,
@@ -1018,7 +1004,7 @@ def get_product_materials(headcode: str):
     }
 
 def calculate_product_cost(headcode: str):
-    """Tính CHI PHÍ NGUYÊN VẬT LIỆU sản phẩm (Đơn giản hóa V4.7)"""
+    """Calculate MATERIAL COST for product (Simplified V4.7)"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
@@ -1074,7 +1060,7 @@ def calculate_product_cost(headcode: str):
             "success": False
         }
     
-    # ✅ Tính TỔNG CHI PHÍ VẬT LIỆU
+    # ✅ Calculate TOTAL MATERIAL COST
     material_cost = 0.0
     material_count = len(materials)
     materials_detail = []
@@ -1096,7 +1082,7 @@ def calculate_product_cost(headcode: str):
             'id_sap': mat['id_sap']
         })
 
-    # ✅ RESPONSE ĐƠN GIẢN - CHỈ CHI PHÍ VẬT LIỆU
+    # ✅ SIMPLE RESPONSE - MATERIAL COST ONLY
     response = f"""💰 **BÁO GIÁ NGUYÊN VẬT LIỆU**\n\n"""
     response += f"""📦 **Sản phẩm:** {prod['product_name']}\n\n"""
     response += f"""🏷️ **Mã:** `{headcode}`\n\n"""
@@ -1104,7 +1090,7 @@ def calculate_product_cost(headcode: str):
     response += f"\n\n---\n\n"
     response += f"**CHI TIẾT NGUYÊN VẬT LIỆU ({material_count} loại):**\n"
 
-    # Bảng Markdown cho tối đa 15 vật liệu đầu tiên
+    # Markdown table for first 15 materials max
     headers = [
         "STT",
         "Tên vật liệu",
@@ -1124,7 +1110,6 @@ def calculate_product_cost(headcode: str):
             f"{mat['unit_price']:,.0f}",
             f"{mat['total_cost']:,.0f}",
         ])
-    # response += build_markdown_table(headers, rows) + "\n\n"
     
     if len(materials_detail) > 15:
         response += f"*...và {len(materials_detail)-15} vật liệu khác*\n\n"
@@ -1132,9 +1117,7 @@ def calculate_product_cost(headcode: str):
     response += f"---\n\n"
     response += f"✅ **TỔNG CHI PHÍ NGUYÊN VẬT LIỆU: {material_cost:,.0f} VNĐ**\n\n"
     response += f"📋 **Lưu ý:** Giá được tính từ lịch sử mua hàng gần nhất.\n"
-    # response += f"💡 Phân tích vật liệu {headcode}\"_"
     
-        # Gợi ý câu hỏi tiếp theo
     suggested_prompts = generate_suggested_prompts(
         "calculate_product_cost",
         {
@@ -1143,8 +1126,6 @@ def calculate_product_cost(headcode: str):
         },
     )
     suggested_prompts_mess = format_suggested_prompts(suggested_prompts)
-    # response += "\n\n" + "---" + "\n\n"
-    # response += suggested_prompts_mess
     
     return {
         "response": response,
@@ -1176,17 +1157,17 @@ def search_materials(params: Dict):
     query_text = " ".join(query_parts) if query_parts else "vật liệu nội thất"
     print(f"SEARCH: Searching materials for: {query_text}")
     
-    # ✅ EXTRACT MAIN KEYWORD - tương tự như product search
-    # Tách từ khóa chính từ material_name để filter kết quả
+    # ✅ EXTRACT MAIN KEYWORD - similar to product search
+    # Extract main keyword from material_name to filter results
     main_keyword = None
     if params.get("material_name"):
         name = params['material_name']
-        # Lấy từ khóa chính (sau dấu '-' nếu có)
-        # VD: "GỖ-BEECH" → main_keyword = "BEECH" (để filter chính xác)
+        # Get main keyword (after '-' if present)
+        # Example: "GỖ-BEECH" → main_keyword = "BEECH" (for exact filtering)
         if '-' in name:
             parts = name.upper().split('-')
             if len(parts) >= 2:
-                main_keyword = parts[-1].strip()  # Lấy phần sau dấu '-'
+                main_keyword = parts[-1].strip()  # Get part after '-'
     
     query_vector = generate_embedding_qwen(query_text)
     
@@ -1214,7 +1195,7 @@ def search_materials(params: Dict):
             results = cur.fetchall()
             
             if results:
-                # ✅ POST-FILTER: Nếu có main_keyword, chỉ giữ materials có chứa keyword đó
+                # ✅ POST-FILTER: If main_keyword exists, only keep materials containing that keyword
                 if main_keyword:
                     filtered_results = []
                     for mat in results:
@@ -1266,17 +1247,17 @@ def search_materials(params: Dict):
     conditions = []
     values = []
     
-    # ✅ EXTRACT MAIN KEYWORD - tương tự như product search
-    # Tách từ khóa chính từ material_name để kiểm tra sau
+    # ✅ EXTRACT MAIN KEYWORD - similar to product search
+    # Extract main keyword from material_name for checking later
     main_keyword = None
     if params.get("material_name"):
         name = params['material_name']
-        # Lấy từ khóa chính (sau dấu '-' nếu có)
-        # VD: "GỖ-BEECH" → main_keyword = "BEECH" (để filter chính xác)
+        # Get main keyword (after '-' if present)
+        # Example: "GỖ-BEECH" → main_keyword = "BEECH" (for exact filtering)
         if '-' in name:
             parts = name.upper().split('-')
             if len(parts) >= 2:
-                main_keyword = parts[-1].strip()  # Lấy phần sau dấu '-'
+                main_keyword = parts[-1].strip()  # Get part after '-'
         
         conditions.append("(material_name ILIKE %s OR material_group ILIKE %s)")
         values.extend([f"%{name}%", f"%{name}%"])
@@ -1305,18 +1286,18 @@ def search_materials(params: Dict):
                 "success": False
             }
         
-        # ✅ POST-FILTER: Nếu có main_keyword, chỉ giữ lại materials có chứa keyword đó
-        # VD: Tìm "GỖ-BEECH" → Chỉ giữ materials có "BEECH" trong tên, loại bỏ "GỖ-WHITE"
+        # ✅ POST-FILTER: If main_keyword exists, only keep materials containing that keyword
+        # Example: Search "GỖ-BEECH" → Only keep materials with "BEECH" in name, remove "GỖ-WHITE"
         if main_keyword:
             filtered_results = []
             for mat in results:
                 mat_name_upper = mat['material_name'].upper()
-                # Kiểm tra xem main_keyword có trong material_name không
+                # Check if main_keyword is in material_name
                 if main_keyword in mat_name_upper:
                     filtered_results.append(mat)
             
             print(f"POST-FILTER: Filtered from {len(results)} to {len(filtered_results)} materials with keyword '{main_keyword}'")
-            results = filtered_results[:15]  # Giới hạn 15 kết quả
+            results = filtered_results[:15]  # Limit to 15 results
             
             if not results:
                 return {
@@ -1473,9 +1454,9 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
     return {
         "response": response,
         # "material_detail": dict(material),
-        "materials": [{  # ✅ Đổi thành list giống search_materials
+        "materials": [{  # ✅ Change to list like search_materials
             **dict(material),
-            'price': latest_price  # ✅ Thêm key 'price'
+            'price': latest_price  # ✅ Add 'price' key
         }],
         "latest_price": latest_price,
         "price_history": price_history,
@@ -1551,7 +1532,7 @@ def list_products_by_category():
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # Lấy danh sách sản phẩm theo category, giới hạn mỗi category 5 sản phẩm
+    # Get list of products by category, limit 5 products per category
     sql = """
         WITH ranked_products AS (
             SELECT 
@@ -1585,14 +1566,14 @@ def list_products_by_category():
             "success": False
         }
     
-    # Nhóm sản phẩm theo category
+    # Group products by category
     categories = {}
     for prod in products:
         cat = prod['category']
         if cat not in categories:
             categories[cat] = []
         
-        # Thêm total_cost cho mỗi sản phẩm
+        # Add total_cost for each product
         prod_dict = dict(prod)
         prod_dict['total_cost'] = calculate_product_total_cost(prod['headcode'])
         categories[cat].append(prod_dict)
@@ -1681,7 +1662,7 @@ def chat(msg: ChatMessage):
             ranking_summary = search_result.get("ranking_summary", {})
             result_count = len(products)
             
-            # Kiểm tra nếu search bị timeout hoặc lỗi
+            # Check if search timed out or errored
             if search_result.get("search_method") == "timeout" or (not products and search_result.get("success") == False):
                 print(f"⏱️ Search timeout or failed for query: {user_message}")
                 result_response = {
@@ -1738,7 +1719,7 @@ def chat(msg: ChatMessage):
                         f"✅ **KẾT QUẢ TÌM KIẾM CHUYÊN SÂU**\n"
                         f"Tôi đã chọn lọc **{len(products)}** phù hợp nhất với yêu cầu của bạn.\n\n"
                     )
-                    # ✅ THÊM: Hiển thị thông tin ranking nếu có
+                    # ✅ NEW: Display ranking info if available
                     if ranking_summary['ranking_applied']:
                         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} sản phẩm** được ưu tiên dựa trên lịch sử tìm kiếm."
                     
@@ -1876,7 +1857,7 @@ def chat(msg: ChatMessage):
                         "success": True
                     }
         elif intent == "search_material_for_product":
-            # 1. Lấy query từ params hoặc context
+            # 1. Get query from params or context
             product_query = params.get("category") or params.get("usage_context") or params.get("keywords_vector")
             
             if not product_query:
@@ -1889,17 +1870,17 @@ def chat(msg: ChatMessage):
                     ]
                 }
             else:
-                # 2. Gọi hàm tìm kiếm
+                # 2. Call search function
                 search_result = search_materials_for_product(product_query, params)
                 materials = search_result.get("materials", [])
                 
-                # 3. [MỚI] Áp dụng Feedback Ranking (Giống Intent 3)
-                # Dùng query gốc của user để tìm feedback tương tự
+                # 3. [NEW] Apply Feedback Ranking (Same as Intent 3)
+                # Use user's original query to find similar feedback
                 feedback_scores = get_feedback_boost_for_query(user_message, "material")
                 if feedback_scores:
                     materials = rerank_with_feedback(materials, feedback_scores, "id_sap")
                 
-                # 4. [MỚI] Lấy thông tin Ranking Summary để hiển thị UI
+                # 4. [NEW] Get Ranking Summary for UI display
                 ranking_summary = get_ranking_summary(materials)
                 
                 result_count = len(materials)
@@ -1914,7 +1895,7 @@ def chat(msg: ChatMessage):
                     
                     response_text = f"✅ {explanation}\n\n"
                     
-                    # Hiển thị thông báo nếu có Ranking
+                    # Display notification if Ranking available
                     if ranking_summary['ranking_applied']:
                          response_text += f"⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên dựa trên lịch sử.\n\n"
                     response_text += f"🧱 Tìm thấy **{len(materials)} vật liệu** thường dùng:\n\n"
@@ -1966,7 +1947,7 @@ def chat(msg: ChatMessage):
             search_result = search_materials(params)
             materials = search_result.get("materials", [])
             
-            # 🆕 ÁP DỤNG FEEDBACK RANKING
+            # 🆕 APPLY FEEDBACK RANKING
             materials = apply_feedback_to_search(
                 materials,
                 user_message,
@@ -1974,7 +1955,7 @@ def chat(msg: ChatMessage):
                 id_key="id_sap"
             )
             
-            # 🆕 Lấy ranking summary
+            # 🆕 Get ranking summary
             ranking_summary = get_ranking_summary(materials)
                         
             if not materials:

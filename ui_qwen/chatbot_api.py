@@ -30,9 +30,9 @@ def root():
         "status": "Running",
         "features": [
             "✅ Queue-based batch classification",
-            "✅ Import trước, classify sau",
+            "✅ Import first, classify later",
             "✅ Batch size 8-10 items/call",
-            "✅ Tiết kiệm quota Gemini",
+            "✅ Save Gemini quota",
             "✅ NULL safety 100%",
             "✅ Chat history with time blocks (0-12h, 12-24h)"
         ],

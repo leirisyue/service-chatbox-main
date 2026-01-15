@@ -31,10 +31,7 @@ def convert_drive_url(url: str) -> str:
 # ================================================================================================
 @router.post("/media", tags=["Media"])
 def create_media(url:str, request: Request):
-    # image_url = payload.get("image_url")
     image_url = url
-    # if not image_url:
-    #     raise HTTPDException(status_code=400, detail="image_url is required")
 
     # Convert Google Drive link
     direct_url = convert_drive_url(image_url)
@@ -47,7 +44,7 @@ def create_media(url:str, request: Request):
 
     content_type = r.headers.get("Content-Type", "")
 
-    # Nếu vẫn trả HTML → sai link hoặc chưa public
+    # If still returning HTML → wrong link or not public
     if "text/html" in content_type:
         raise HTTPException(
             status_code=400,

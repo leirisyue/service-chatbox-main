@@ -16,25 +16,24 @@ router = APIRouter()
 # FUNCTION DEFINITIONS
 # ================================================================================================
 
-# FUNC cũ để lưu lịch sử chat
+# Old function to save chat history
 def save_chat_to_history(session_id: str, user_message: str, bot_response: str, 
                     intent: str, params: Dict, result_count: int,
                     search_type: str = "text",
                     expanded_query: str = None,
                     extracted_keywords: list = None,
                     email: str = None):
-    """Lưu lịch sử chat vào bảng chat_histories - V4.7 FIX with UPSERT"""
     try:
         conn = get_db()
         cur = conn.cursor()
         
-        # Lấy thời gian hiện tại
+        # Get current time
         now = datetime.now()
         chat_date = now.date()
         # time_block: 1 = 0-12h, 2 = 12-24h
         time_block = 1 if now.hour < 12 else 2
         
-        # Tạo history JSON entry
+        # Create history JSON entry
         history_entry = {
             "user_message": user_message,
             "bot_response": bot_response,
@@ -110,7 +109,7 @@ def save_chat_to_history(session_id: str, user_message: str, bot_response: str,
         return message_id
         
     except Exception as e:
-        print(f"Lỗi save chat history: {e}")
+        print(f"Error saving chat history: {e}")
         import traceback
         traceback.print_exc()
         return None
@@ -121,7 +120,7 @@ def get_time_block(hour: int) -> int:
     """
     return 1 if hour < 12 else 2
 
-# FUNC mới để lưu lịch sử chat theo block thời gian
+# New function to save chat history by time block
 def save_chat_to_histories(email: str, session_id: str, question: str, answer: str):
     """
     Save or update chat history based on date and time block
@@ -253,7 +252,6 @@ def get_session_chat_history(email: str, session_id: str):
 
 @router.get("/debug/products", tags=["Debugapi"])
 def debug_products():
-    """Debug info vá»  products"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
@@ -277,7 +275,6 @@ def debug_products():
 
 @router.get("/debug/materials", tags=["Debugapi"])
 def debug_materials():
-    """Debug info vá»  materials"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
@@ -301,7 +298,6 @@ def debug_materials():
 
 @router.get("/debug/chat-history", tags=["Debugapi"])
 def debug_chat_history():
-    """Xem lá»‹ch sá»­ chat gáº§n Ä‘Ã¢y"""
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     

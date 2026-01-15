@@ -23,15 +23,11 @@ router = APIRouter()
 
 @router.post("/import/products", tags=["Importapi"])
 async def import_products(file: UploadFile = File(...)):
-    """
-    [V4.1] Import products - KHÔNG auto classify ngay
-    Chỉ import vào DB, classify sau qua endpoint riêng
-    """
     try:
         contents = await file.read()
         df = pd.read_csv(io.BytesIO(contents))
         
-        # Chuẩn hóa tên cột
+        # Normalize column names
         df.columns = df.columns.str.strip().str.lower()
         
         required = ['headcode', 'id_sap', 'product_name']
@@ -39,7 +35,7 @@ async def import_products(file: UploadFile = File(...)):
         
         if missing:
             return {
-                "message": f"❌ Thiếu các cột bắt buộc: {', '.join(missing)}",
+                "message": f"❌ Missing required columns: {', '.join(missing)}",
                 "required_columns": required,
                 "your_columns": list(df.columns)
             }
@@ -60,10 +56,10 @@ async def import_products(file: UploadFile = File(...)):
                     errors.append(f"Row {idx+2}: Missing required fields")
                     continue
                 
-                # LẤY TRỰC TIẾP từ CSV (nếu có), KHÔNG gọi AI
-                category = str(row.get('category', 'Chưa phân loại')).strip() if pd.notna(row.get('category')) else 'Chưa phân loại'
-                sub_category = str(row.get('sub_category', 'Chưa phân loại')).strip() if pd.notna(row.get('sub_category')) else 'Chưa phân loại'
-                material_primary = str(row.get('material_primary', 'Chưa xác định')).strip() if pd.notna(row.get('material_primary')) else 'Chưa xác định'
+                # GET DIRECTLY from CSV (if exists), DO NOT call AI
+                category = str(row.get('category', 'Uncategorized')).strip() if pd.notna(row.get('category')) else 'Uncategorized'
+                sub_category = str(row.get('sub_category', 'Uncategorized')).strip() if pd.notna(row.get('sub_category')) else 'Uncategorized'
+                material_primary = str(row.get('material_primary', 'Undetermined')).strip() if pd.notna(row.get('material_primary')) else 'Undetermined'
                 
                 unit = str(row.get('unit', '')).strip() if pd.notna(row.get('unit')) else None
                 project = str(row.get('project', '')).strip() if pd.notna(row.get('project')) else None
@@ -101,7 +97,7 @@ async def import_products(file: UploadFile = File(...)):
         conn.commit()
         conn.close()
         
-        # Đếm số sản phẩm cần classify
+        # Count products needing classification
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
@@ -247,7 +243,7 @@ async def import_product_materials(file: UploadFile = File(...)):
         contents = await file.read()
         df = pd.read_csv(io.BytesIO(contents))
         
-        # Chuẩn hóa tên cột
+        # Normalize column names
         df.columns = df.columns.str.strip().str.lower()
         
         required = ['product_headcode']
@@ -265,17 +261,17 @@ async def import_product_materials(file: UploadFile = File(...)):
         
         imported = 0
         skipped = 0
-        auto_created_materials = 0 # Đếm số vật liệu được tạo tự động
+        auto_created_materials = 0 # Count auto-created materials
         errors = []
         
-        # Pre-load dữ liệu để check nhanh
+        # Pre-load data for fast checking
         cur.execute("SELECT headcode FROM products_qwen")
         existing_products = {row[0] for row in cur.fetchall()}
         
         cur.execute(f"SELECT id_sap FROM {settings.MATERIALS_TABLE}")
         existing_materials = {row[0] for row in cur.fetchall()}
 
-        # Hàm làm sạch ID
+        # Function to clean ID
         def clean_id(val):
             if pd.isna(val) or val == '':
                 return ""
@@ -289,7 +285,7 @@ async def import_product_materials(file: UploadFile = File(...)):
             cur.execute(f"SAVEPOINT {savepoint_name}")
             
             try:
-                # 1. Xử lý Product (Vẫn bắt buộc phải có trước)
+                # 1. Process Product (Still required to exist first)
                 product_headcode = clean_id(row.get('product_headcode'))
                 
                 if not product_headcode or product_headcode.lower() == 'nan':
@@ -297,10 +293,10 @@ async def import_product_materials(file: UploadFile = File(...)):
                     continue 
 
                 if product_headcode not in existing_products:
-                    # Tùy chọn: Có thể muốn tự tạo Product luôn, nhưng thường Product cần kiểm soát chặt hơn
+                    # Optional: Can auto-create Product, but usually Product needs stricter control
                     raise ValueError(f"Product '{product_headcode}' chưa có trong hệ thống")
 
-                # 2. Xử lý Material (Tự động tạo nếu thiếu)
+                # 2. Process Material (Auto-create if missing)
                 material_id_sap = clean_id(row.get('material_id_sap'))
                 
                 if not material_id_sap or material_id_sap.lower() == 'nan':
@@ -308,9 +304,9 @@ async def import_product_materials(file: UploadFile = File(...)):
                     cur.execute(f"RELEASE SAVEPOINT {savepoint_name}")
                     continue 
 
-                # --- LOGIC MỚI: TỰ ĐỘNG TẠO VẬT LIỆU NẾU THIẾU ---
+                # --- NEW LOGIC: AUTO-CREATE MATERIAL IF MISSING ---
                 if material_id_sap not in existing_materials:
-                    # Tạo vật liệu tạm
+                    # Create temporary material
                     temp_name = f"Vật liệu mới {material_id_sap}"
                     
                     cur.execute("""
@@ -319,12 +315,12 @@ async def import_product_materials(file: UploadFile = File(...)):
                         ON CONFLICT (id_sap) DO NOTHING
                     """, (material_id_sap, temp_name, "Auto-Created", "Chờ cập nhật"))
                     
-                    # Cập nhật vào set để các dòng sau không insert lại
+                    # Update set so subsequent rows don't insert again
                     existing_materials.add(material_id_sap)
                     auto_created_materials += 1
                 # --------------------------------------------------
 
-                # 3. Insert vào bảng định mức
+                # 3. Insert into BOM table
                 quantity = float(row['quantity']) if pd.notna(row.get('quantity')) else 0
                 unit = str(row.get('unit', '')).strip() if pd.notna(row.get('unit')) else None
                 

@@ -20,28 +20,28 @@ router = APIRouter()
 def get_feedback_boost_for_query(query: str, search_type: str, similarity_threshold: float = 0.7) -> Dict:
     """
     V5.0 - Vector-based feedback matching
-    Tìm feedback từ các query TƯƠNG TỰ (không cần trùng 100%)
+    Find feedback from SIMILAR queries (doesn't need to match 100%)
     
     Args:
-        query: Câu hỏi hiện tại
-        search_type: "product" hoặc "material"
-        similarity_threshold: Ngưỡng độ tương tự (0.7 = 70%)
+        query: Current question
+        search_type: "product" or "material"
+        similarity_threshold: Similarity threshold (0.7 = 70%)
     
     Returns:
         Dict[item_id, feedback_score]
     """
     try:
-        # 1. Tạo embedding cho query hiện tại
+        # 1. Generate embedding for current query
         query_vector = generate_embedding_qwen(query)
         
         if not query_vector:
-            print("ERROR: Không tạo được embedding cho query")
+            print("ERROR: Cannot generate embedding for query")
             return {}
         
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # 2. Tìm các feedback có query_embedding tương tự (cosine similarity)
+        # 2. Find feedbacks with similar query_embedding (cosine similarity)
         cur.execute("""
             SELECT 
                 query,
@@ -59,27 +59,27 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
         conn.close()
         
         if not similar_feedbacks:
-            print(f"INFO: Không có feedback tương tự (threshold={similarity_threshold})")
+            print(f"INFO: No similar feedback found (threshold={similarity_threshold})")
             return {}
         
-        # 3. Tính điểm cho từng item (weighted by similarity)
+        # 3. Calculate score for each item (weighted by similarity)
         item_scores = {}
         
         print(f"\n{'='*60}")
-        print(f"INFO: FEEDBACK BOOST: Tìm thấy {len(similar_feedbacks)} query tương tự")
+        print(f"INFO: FEEDBACK BOOST: Found {len(similar_feedbacks)} similar queries")
         print(f"{'='*60}\n")
         
         for fb in similar_feedbacks:
             sim = fb['similarity']
             
             try:
-                # FIX: Kiểm tra type trước khi parse
+                # FIX: Check type before parsing
                 selected_items = fb['selected_items']
                 
-                # Nếu là string JSON → parse
+                # If string JSON → parse
                 if isinstance(selected_items, str):
                     selected = json.loads(selected_items)
-                # Nếu đã là list → dùng luôn
+                # If already list → use directly
                 elif isinstance(selected_items, list):
                     selected = selected_items
                 else:
@@ -90,7 +90,7 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
                 print(f"→ Selected: {selected[:3]}")
                 
                 for item_id in selected:
-                    # Điểm = similarity * 1 (có thể thay bằng decay theo thời gian)
+                    # Score = similarity * 1 (can be replaced with time decay)
                     item_scores[item_id] = item_scores.get(item_id, 0) + sim
                     
             except Exception as e:

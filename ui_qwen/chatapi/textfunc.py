@@ -24,7 +24,7 @@ def format_suggested_prompts(prompts: list[str]) -> str:
     return "\n".join([f"• {p}" for p in prompts])
 
 def extract_product_keywords(query: str) -> list:
-    """Trích xuất từ khóa quan trọng, bao gồm cụm từ"""
+    """Extract important keywords, including phrases"""
     materials = ["gỗ teak", "gỗ sồi", "gỗ walnut", "đá marble", "đá granite", 
                     "da thật", "da bò", "vải linen", "kim loại", "teak", "oak", 
                     "walnut", "marble", "granite", "leather"]
@@ -65,7 +65,7 @@ def extract_product_keywords(query: str) -> list:
     return keywords
 
 def auto_classify_product(product_name: str, id_sap: str = "") -> Dict:
-    """Tự động phân loại sản phẩm bằng AI"""
+    """Automatically classify product using AI"""
     model = genai.GenerativeModel("gemini-2.5-flash")
     
     prompt = f"""
@@ -185,7 +185,7 @@ def search_materials_for_product(product_query: str, params: Dict):
     
     print(f"INFO: Cross-table search: Materials for '{product_query}'")
     
-    # Bước 1: Tìm products phù hợp
+    # Step 1: Find matching products
     product_vector = generate_embedding_qwen(product_query)
     
     if not product_vector:
@@ -216,7 +216,7 @@ def search_materials_for_product(product_query: str, params: Dict):
         
         print(f"SUCCESS: Found {len(product_headcodes)} matching products: {product_names[:3]}")
         
-        # Bước 2: Lấy materials được dùng trong products này
+        # Step 2: Get materials used in these products
         material_filter = ""
         filter_params = []
         
@@ -289,7 +289,7 @@ def get_adaptive_threshold(query: str) -> float:
     words = query.split()
     
     if len(words) >= 8:
-        return 0.75  # Query dài → dễ dãi hơn
+        return 0.75  # Long query → more lenient
     elif len(words) >= 5:
         return 0.82
     else:
@@ -380,7 +380,7 @@ def calculate_product_total_cost(headcode: str) -> float:
     for mat in materials:
         quantity = float(mat['quantity']) if mat['quantity'] else 0.0
         latest_price = get_latest_material_price(mat['material_subprice'])
-        material_cost += quantity * latest_price  # Sửa lỗi: cộng dồn material_cost
+        material_cost += quantity * latest_price  # Fixed bug: accumulate material_cost
 
     labor_cost = material_cost * 0.20
     overhead_cost = material_cost * 0.15
@@ -396,7 +396,7 @@ def search_products_hybrid(params: Dict):
     def timeout_handler(signum, frame):
         raise TimeoutError("Search timeout")
     
-    # Set timeout cho toàn bộ search operation (20 giây)
+    # Set timeout for entire search operation (20 seconds)
     if hasattr(signal, 'SIGALRM'):
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(20)
@@ -404,7 +404,7 @@ def search_products_hybrid(params: Dict):
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # 1. Chuẩn bị query
+    # 1. Prepare query
     if params.get("keywords_vector"):
         base = params["keywords_vector"]
     else:
@@ -461,13 +461,13 @@ def search_products_hybrid(params: Dict):
     
     # print(f"\n🔍 Query: {base}")
     
-    # 2. AI Expansion với timeout ngắn hơn
+    # 2. AI Expansion with shorter timeout
     expanded = expand_search_query(base, params)
     
     # 3. Extract keywords
     keywords = extract_product_keywords(expanded)
     
-    # 4. Tách từ trong query gốc
+    # 4. Split words in original query
     original_words = [w.strip().lower() for w in base.split() if len(w.strip()) > 1]
     
     # 5. XÁC ĐỊNH TỪ CHÍNH (loại sản phẩm) - PHẢI KHỚP CHÍNH XÁC
@@ -482,11 +482,11 @@ def search_products_hybrid(params: Dict):
             main_word = word
             break
     
-    # Nếu không tìm thấy từ chính trong danh sách, lấy từ đầu tiên làm từ chính
+    # If main word not found in list, take first word as main word
     if not main_word and original_words:
         main_word = original_words[0]
     
-    # Các từ còn lại là từ phụ
+    # Remaining words are secondary words
     secondary_words = [w for w in original_words if w != main_word]
     
     print(f"🔍 Main word (REQUIRED): '{main_word}' | Secondary: {secondary_words}")
@@ -499,7 +499,7 @@ def search_products_hybrid(params: Dict):
             signal.alarm(0)
         return {"products": [], "search_method": "failed", "error": "no_vector"}
     
-    # 7. BƯỚC 1: Tìm trong DATABASE với TỪ CHÍNH (keyword search)
+    # 7. STEP 1: Search DATABASE with MAIN WORD (keyword search)
     try:
         if not main_word:
             print("⚠️ No main word detected, returning empty")
@@ -508,7 +508,7 @@ def search_products_hybrid(params: Dict):
                 signal.alarm(0)
             return {"products": [], "search_method": "no_main_word"}
         
-        # BƯỚC 1: Query database với từ CHÍNH - CHỈ TÌM TRONG PRODUCT_NAME
+        # STEP 1: Query database with MAIN word - SEARCH IN PRODUCT_NAME ONLY
         print(f"STEP 1: Query DB with main word: '{main_word}'")
         
         sql_step1 = """
@@ -561,41 +561,41 @@ def search_products_hybrid(params: Dict):
             "error": str(e)
         }
     finally:
-        # Luôn cancel alarm
+        # Always cancel alarm
         if hasattr(signal, 'SIGALRM'):
             try:
                 signal.alarm(0)
             except:
                 pass
     
-    # Continue với logic cũ nếu có candidates
+    # Continue with old logic if there are candidates
     try:
         
         print(f"SUCCESS: Found {len(candidates)} candidates with '{main_word}'")
         
-        # BƯỚC 2: Tính vector similarity cho từ PHỤ
-        # Tăng ngưỡng để loại bỏ sản phẩm không liên quan
+        # STEP 2: Calculate vector similarity for SECONDARY words
+        # Increase threshold to filter out irrelevant products
         SIMILARITY_THRESHOLD = 0.35  
-        MIN_SECONDARY_MATCH_RATIO = 0.5  # Tối thiểu 50% từ phụ phải khớp
+        MIN_SECONDARY_MATCH_RATIO = 0.5  # Minimum 50% secondary words must match
         
-        # Tạo vector cho query PHỤ (không bao gồm từ chính)
+        # Create vector for SECONDARY query (excluding main word)
         if secondary_words:
             secondary_query = " ".join(secondary_words)
             secondary_vector = generate_embedding_qwen(secondary_query)
         else:
-            # Nếu không có từ phụ, dùng toàn bộ query
+            # If no secondary words, use entire query
             secondary_vector = vector
-            # Không cần filter nếu chỉ có 1 từ
+            # No need to filter if only 1 word
             MIN_SECONDARY_MATCH_RATIO = 0
         
-        # Tính similarity cho từng candidate
+        # Calculate similarity for each candidate
         scored_products = []
         for candidate in candidates:
             product_name = candidate["product_name"].lower()
             
-            # Tính vector similarity
+            # Calculate vector similarity
             if candidate["description_embedding"] and secondary_vector:
-                # Convert embedding từ string hoặc list sang numpy array
+                # Convert embedding from string or list to numpy array
                 candidate_emb = candidate["description_embedding"]
                 if isinstance(candidate_emb, str):
                     candidate_emb = json.loads(candidate_emb)
@@ -612,14 +612,14 @@ def search_products_hybrid(params: Dict):
             else:
                 similarity = 0.0
             
-            # Đếm số từ phụ khớp chính xác
+            # Count exact secondary word matches
             secondary_match_count = sum(1 for word in secondary_words if word in product_name)
             secondary_match_ratio = secondary_match_count / len(secondary_words) if secondary_words else 1.0
             
-            # Tính final score - ƯU TIÊN exact match HƠN
+            # Calculate final score - PRIORITIZE exact match MORE
             final_score = (secondary_match_ratio * 0.6) + (similarity * 0.4)
             
-            # Thêm vào list scored_products
+            # Add to scored_products list
             scored_products.append({
                 "headcode": candidate["headcode"],
                 "product_name": candidate["product_name"],
@@ -634,27 +634,27 @@ def search_products_hybrid(params: Dict):
                 "final_score": round(final_score, 3)
             })
         
-        # Lọc theo ĐIỀU KIỆN CHẶT:
-        # 1. Similarity >= ngưỡng
-        # 2. Nếu có từ phụ: phải khớp tối thiểu 50% từ phụ HOẶC similarity rất cao (>0.6)
+        # Filter by STRICT CONDITIONS:
+        # 1. Similarity >= threshold
+        # 2. If secondary words exist: must match minimum 50% OR very high similarity (>0.6)
         filtered_products = []
         for p in scored_products:
-            # Điều kiện 1: Similarity đạt ngưỡng cơ bản
+            # Condition 1: Similarity meets basic threshold
             if p["similarity"] < SIMILARITY_THRESHOLD:
                 continue
             
-            # Điều kiện 2: Nếu có từ phụ, phải khớp đủ từ hoặc similarity rất cao
+            # Condition 2: If secondary words exist, must match enough words or very high similarity
             if secondary_words:
                 if p["secondary_match_ratio"] >= MIN_SECONDARY_MATCH_RATIO or p["similarity"] >= 0.6:
                     filtered_products.append(p)
             else:
-                # Không có từ phụ thì chỉ cần similarity
+                # No secondary words, only need similarity
                 filtered_products.append(p)
         
         # Sort theo final_score
         filtered_products.sort(key=lambda x: x["final_score"], reverse=True)
         
-        # Giới hạn 10 sản phẩm
+        # Limit to 10 products
         filtered_products = filtered_products[:10]
         
         if filtered_products:
@@ -714,7 +714,7 @@ def expand_search_query(user_query: str, params: Dict) -> str:
     try:
         response = call_gemini_with_retry(model, prompt, max_retries=2)
         if response:
-            # Đảm bảo từ khóa gốc có trong expanded query
+            # Ensure original keyword is in expanded query
             expanded = response.strip()
             if user_query.lower() not in expanded.lower():
                 expanded = f"{user_query} {expanded}"
@@ -814,7 +814,7 @@ def calculate_personalized_score(
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Lấy 10 interactions gần nhất
+        # Get 10 most recent interactions
         cur.execute("""
             SELECT product_vector, weight
             FROM user_preferences
@@ -827,7 +827,7 @@ def calculate_personalized_score(
         conn.close()
         
         if not history:
-            return 0.5  # Neutral score khi chưa có history
+            return 0.5  # Neutral score when no history
         
         # Convert candidate sang numpy
         if isinstance(candidate_vector, str):
@@ -864,7 +864,7 @@ def calculate_personalized_score(
                     
                 similarity = np.dot(candidate_np, hist_vector) / norm_product
                 
-                # Phân loại theo weight
+                # Classify by weight
                 if record['weight'] > 0:
                     positive_scores.append(similarity)
                 else:
@@ -873,7 +873,7 @@ def calculate_personalized_score(
             except Exception:
                 continue
         
-        # Fallback nếu không có scores hợp lệ
+        # Fallback if no valid scores
         if not positive_scores and not negative_scores:
             return 0.5
         
@@ -884,7 +884,7 @@ def calculate_personalized_score(
         # Formula: Positive boost - Negative penalty
         personal_score = positive_affinity - (negative_penalty * 0.5)
         
-        # Clip về [0, 1]
+        # Clip to [0, 1]
         personal_score = float(np.clip(personal_score, 0.0, 1.0))
         
         return personal_score
@@ -906,7 +906,7 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
-    # 1. LẤY THÔNG TIN SẢN PHẨM
+    # 1. GET PRODUCT INFORMATION
     cur.execute("""
         SELECT headcode, product_name, category, sub_category, project
         FROM products_qwen 
@@ -945,14 +945,14 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
     if not detail_records:
         raise ValueError("Các sản phẩm này chưa có định mức vật tư")
     
-    # 3. AGGREGATION - GỘP VẬT TƯ
+    # 3. AGGREGATION - GROUP MATERIALS
     material_summary = {}
     
     for record in detail_records:
         id_sap = record['id_sap']
         quantity = float(record['quantity']) if record['quantity'] else 0.0
         
-        # Parse giá mới nhất
+        # Parse latest price
         latest_price = get_latest_material_price(record['material_subprice'])
         
         if id_sap not in material_summary:
@@ -968,20 +968,20 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
                 'used_in_products': []
             }
         
-        # Cộng dồn số lượng
+        # Accumulate quantity
         material_summary[id_sap]['total_quantity'] += quantity
         material_summary[id_sap]['used_in_products'].append(
             f"{record['product_name']} ({quantity} {record['pm_unit']})"
         )
     
-    # Tính thành tiền
+    # Calculate total amount
     for mat_id, mat_data in material_summary.items():
         mat_data['total_cost'] = mat_data['total_quantity'] * mat_data['unit_price']
     
-    # 4. TẠO EXCEL FILE
+    # 4. CREATE EXCEL FILE
     wb = Workbook()
     
-    # --- SHEET 1: OVERVIEW (Danh sách SP đã chọn) ---
+    # --- SHEET 1: OVERVIEW (Selected products list) ---
     ws_overview = wb.active
     ws_overview.title = "Overview"
     
@@ -1012,7 +1012,7 @@ def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
         max_length = max(len(str(cell.value or "")) for cell in col)
         ws_overview.column_dimensions[col[0].column_letter].width = min(max_length + 2, 50)
     
-    # --- SHEET 2: MATERIAL SUMMARY (Tổng hợp vật tư) ---
+    # --- SHEET 2: MATERIAL SUMMARY (Material aggregation) ---
     ws_summary = wb.create_sheet("Material Summary")
     
     summary_headers = [

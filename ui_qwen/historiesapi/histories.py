@@ -17,25 +17,25 @@ router = APIRouter()
 # FUNCTION DEFINITIONS
 # ================================================================================================
 
-# FUNC cũ để lưu lịch sử chat
+# Old function to save chat history
 def save_chat_to_history(session_id: str, user_message: str, bot_response: str, 
                     intent: str, params: Dict, result_count: int,
                     search_type: str = "text",
                     expanded_query: str = None,
                     extracted_keywords: list = None,
                     email: str = None):
-    """Lưu lịch sử chat vào bảng chat_histories - V4.7 FIX with UPSERT"""
+    """Save chat history to chat_histories table - V4.7 FIX with UPSERT"""
     try:
         conn = get_db()
         cur = conn.cursor()
         
-        # Lấy thời gian hiện tại
+        # Get current time
         now = datetime.now()
         chat_date = now.date()
         # time_block: 1 = 0-12h, 2 = 12-24h
         time_block = 1 if now.hour < 12 else 2
         
-        # Tạo history JSON entry
+        # Create history JSON entry
         history_entry = {
             "user_message": user_message,
             "bot_response": bot_response,

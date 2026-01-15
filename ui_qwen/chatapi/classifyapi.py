@@ -25,15 +25,10 @@ router = APIRouter()
 # ================================================================================================
     
 def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
-    """
-    Phân loại HÀNG LOẠT vật liệu
-    Input: [{'name': 'GỖ SỒI', 'id_sap': 'M001'}, ...]
-    Output: [{'id_sap': 'M001', 'material_group': 'Gỗ', ...}, ...]
-    """
     if not materials_batch:
         return []
     
-    # [FIX] Đổi sang model gemini-1.5-flash để ổn định hơn và tránh lỗi Rate Limit
+    # [FIX] Switch to gemini-1.5-flash model for better stability and to avoid Rate Limit errors
     model = genai.GenerativeModel("gemini-2.5-flash")
     
     materials_text = ""
@@ -53,14 +48,14 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
                 ]
             """
     
-    # Gọi Gemini với retry
+    # Call Gemini with retry
     response_text = call_gemini_with_retry(model, prompt, max_retries=3)
     
-    # Tạo kết quả mặc định (Fallback) để trả về nếu AI lỗi
+    # Create default results (Fallback) to return if AI fails
     default_results = [{
         'id_sap': m['id_sap'],
-        'material_group': 'Chưa phân loại',
-        'material_subgroup': 'Chưa phân loại'
+        'material_group': 'Not classified',
+        'material_subgroup': 'Not classified'
     } for m in materials_batch]
 
     if not response_text:
@@ -68,7 +63,7 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     
     try:
         clean = response_text.strip()
-        # Xử lý làm sạch markdown JSON
+        # Clean markdown JSON
         if "```json" in clean:
             clean = clean.split("```json")[1].split("```")[0].strip()
         elif "```" in clean:
@@ -76,7 +71,7 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
         
         results = json.loads(clean)
         
-        # Kiểm tra số lượng kết quả trả về có khớp input không
+        # Check if number of results matches input
         if len(results) != len(materials_batch):
             print(f"WARNING: Batch materials mismatch: expected {len(materials_batch)}, got {len(results)}")
             return default_results
@@ -88,21 +83,16 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
         return default_results
 
 def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
-    """
-    Phân loại HÀNG LOẠT sản phẩm - 1 API call cho nhiều sản phẩm
-    Input: [{'name': 'BÀN GỖ', 'id_sap': 'SP001'}, ...]
-    Output: [{'id_sap': 'SP001', 'category': 'Bàn', ...}, ...]
-    """
     if not products_batch:
         return []
     
-    # [FIX] Đổi sang model ổn định để tránh lỗi Rate Limit của bản Experimental
+    # [FIX] Switch to stable model to avoid Rate Limit errors from Experimental version
     model = genai.GenerativeModel("gemini-2.5-flash")
     
-    # Tạo danh sách sản phẩm trong prompt
+    # Create product list in prompt
     products_text = ""
     for i, prod in enumerate(products_batch, 1):
-        products_text += f"{i}. ID: {prod['id_sap']}, Tên: {prod['name']}\n"
+        products_text += f"{i}. ID: {prod['id_sap']}, Name: {prod['name']}\n"
     
     prompt = f"""
             Bạn là chuyên gia phân loại sản phẩm nội thất cao cấp.
@@ -119,10 +109,10 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
             ]
     """
     
-    # Gọi AI với retry logic
+    # Call AI with retry logic
     response_text = call_gemini_with_retry(model, prompt, max_retries=3)
     
-    # Fallback mặc định nếu AI lỗi hẳn
+    # Default fallback if AI completely fails
     default_results = [{
         'id_sap': p['id_sap'],
         'category': 'Chưa phân loại',
@@ -135,7 +125,7 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     
     try:
         clean = response_text.strip()
-        # Xử lý trường hợp Gemini trả về markdown code block
+        # Handle case when Gemini returns markdown code block
         if "```json" in clean:
             clean = clean.split("```json")[1].split("```")[0].strip()
         elif "```" in clean:
@@ -143,7 +133,7 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
         
         results = json.loads(clean)
         
-        # Đảm bảo số lượng kết quả khớp với input
+        # Ensure result count matches input
         if len(results) != len(products_batch):
             print(f"WARNING: Batch size mismatch: expected {len(products_batch)}, got {len(results)}")
             return default_results
@@ -162,7 +152,6 @@ async def search_by_image(
     file: UploadFile = File(...),
     session_id: str = Form(default=str(uuid.uuid4()))
 ):
-    """Tìm kiếm theo ảnh"""
     file_path = f"./media/temp_{uuid.uuid4()}.jpg"
     try:
         # Read file content
@@ -176,28 +165,12 @@ async def search_by_image(
         img = Image.open(file_path)
         model = genai.GenerativeModel("gemini-2.5-flash")
         
-        # prompt = """
-        # Đóng vai chuyên viên tư vấn vật tư AA corporation (Nội thất cao cấp).
-        # Phân tích ảnh nội thất này để trích xuất thông tin tìm kiếm Database.
-        
-        # OUTPUT JSON ONLY (no markdown, no backticks):
-        # {
-        #     "category": "Loại SP (Bàn, Ghế, Sofa, Tủ, Giường, Đèn, Kệ...)",
-        #     "visual_description": "Mô tả chi tiết cho khách hàng hiểu sản phẩm",
-        #     "search_keywords": "CHỈ 1-2 TỪ KHÓA ĐƠN GIẢN NHẤT (VD: bàn làm việc, ghế sofa, tủ gỗ, giường ngủ)",
-        #     "material_detected": "Vật liệu chính (Gỗ, Da, Vải, Đá, Kim loại...)",
-        #     "color_tone": "Màu chủ đạo"
-        # }
-        
-        # LƯU Ý: search_keywords PHẢI CỰC KỲ NGẮN GỌN, CHỈ TÊN LOẠI SẢN PHẨM. VD: "bàn làm việc" KHÔNG PHẢI "bàn làm việc gỗ hiện đại màu nâu"
-        # """
-        
         prompt = """
-            VAI TRÒ (ROLE)
-            Bạn là Chuyên viên Phân tích Vật tư Nội thất cao cấp tại AA Corporation. Bạn có kiến thức sâu rộng về vật liệu, kết cấu và phong cách thiết kế nội thất.
+            ROLE
+            You are a Senior Interior Materials Analyst at AA Corporation. You have deep knowledge of materials, construction, and interior design styles.
 
-            NHIỆM VỤ (TASK)
-            Phân tích hình ảnh được cung cấp và trích xuất thông tin kỹ thuật vào định dạng JSON Array (Mảng) chuẩn để nhập vào hệ thống cơ sở dữ liệu tìm kiếm.
+            TASK
+            Analyze the provided image and extract technical information into a standard JSON Array format for input into the database search system.
 
             CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
             Output phải là một mảng chứa chính xác 2 đối tượng (objects) nhằm phục vụ cơ chế tìm kiếm đa tầng:
@@ -265,23 +238,23 @@ async def search_by_image(
                 "category": "Nội thất"
             }
         
-        # Lấy search_keywords và rút gọn nếu quá dài
+        # Get search_keywords and shorten if too long
         search_keywords = ai_result[0].get("search_keywords", "").strip()
         category = ai_result[0].get("category", "")
         
-        # Nếu search_keywords quá dài (>50 ký tự) hoặc rỗng, dùng category
+        # If search_keywords too long (>50 chars) or empty, use category
         if not search_keywords or len(search_keywords) > 50:
-            search_text = category  # Chỉ dùng category đơn giản nhất
+            search_text = category  # Only use simplest category
             print(f"INFO: Using category as search term: {search_text}")
         else:
-            # Lấy tối đa 3 từ đầu tiên của search_keywords
+            # Get max first 3 words of search_keywords
             words = search_keywords.split()[:3]
             search_text = " ".join(words)
             print(f"INFO: Using simplified keywords: {search_text}")
         
         params = {
             "category": category,
-            "keywords_vector": search_text,  # Từ khóa CỰC KỲ đơn giản
+            "keywords_vector": search_text,  # EXTREMELY simple keywords
             "material_primary": ai_result[0].get("material_detected")
         }
         
@@ -289,21 +262,21 @@ async def search_by_image(
         products = search_result.get("products", [])
         
         # ========== IMAGE MATCHING VALIDATION ==========
-        # Kiểm tra sản phẩm có khớp với ai_interpretation không
+        # Check if product matches ai_interpretation
         ai_interpretation = ai_result[0].get("visual_description", "").lower()
         
         for product in products:
             product_name = (product.get('product_name') or '').lower()
             category = (product.get('category') or '').lower()
             
-            # Kiểm tra tên hoặc danh mục có trong ai_interpretation không
+            # Check if name or category is in ai_interpretation
             name_match = any(word in ai_interpretation for word in product_name.split() if len(word) > 2)
             category_match = category in ai_interpretation
             
-            # Nếu không khớp -> trừ base_score
+            # If no match → deduct base_score
             if not name_match and not category_match:
                 current_score = product.get('base_score', 0.5)
-                penalty = 0.25  # Trừ 0.25 điểm
+                penalty = 0.25  # Deduct 0.25 points
                 product['base_score'] = max(0, current_score - penalty)
                 product['image_mismatch'] = True
                 product['penalty_applied'] = penalty
@@ -311,7 +284,7 @@ async def search_by_image(
             else:
                 product['image_mismatch'] = False
         
-        # Phân loại sản phẩm theo base_score
+        # Classify products by base_score
         products_main = [p for p in products if p.get('base_score', 0) >= 0.7]
         products_low_confidence = [p for p in products if p.get('base_score', 0) < 0.6]
         
@@ -324,7 +297,7 @@ async def search_by_image(
             answer=f"Phân tích ảnh: {ai_result[0].get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products_main)} sản phẩm (High confidence)"
         )
 
-        # Nếu không có sản phẩm nào đạt base_score >= 0.7
+        # If no product meets base_score >= 0.7
         if not products_main:
             return {
                 "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm nội thất')}**.\n\n"
@@ -368,15 +341,11 @@ async def search_by_image(
 
 @router.post("/classify-products", tags=["Classifyapi"])
 def classify_pending_products():
-    """
-    🤖 Phân loại HÀNG LOẠT các sản phẩm chưa phân loại
-    Batch size: 8 sản phẩm/lần (tránh quá dài response)
-    """
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        # Lấy sản phẩm chưa phân loại
+        # Get unclassified products
         cur.execute("""
             SELECT headcode, id_sap, product_name 
             FROM products_qwen 
@@ -401,12 +370,12 @@ def classify_pending_products():
         classified = 0
         errors = []
         
-        BATCH_SIZE = 8  # Gemini xử lý tốt với 5-10 items
+        BATCH_SIZE = 8  # Gemini handles well with 5-10 items
         
         for i in range(0, len(pending_products), BATCH_SIZE):
             batch = pending_products[i:i+BATCH_SIZE]
             
-            # Chuẩn bị input cho batch classification
+            # Prepare input for batch classification
             batch_input = [{
                 'id_sap': p['id_sap'],
                 'name': p['product_name']
@@ -415,10 +384,10 @@ def classify_pending_products():
             print(f"INFO: Classifying batch {i//BATCH_SIZE + 1} ({len(batch)} products)...")
             
             try:
-                # GỌI BATCH CLASSIFICATION
+                # CALL BATCH CLASSIFICATION
                 results = batch_classify_products(batch_input)
                 
-                # Cập nhật vào DB
+                # Update to DB
                 for j, result in enumerate(results):
                     try:
                         cur.execute("""
@@ -438,19 +407,19 @@ def classify_pending_products():
                     except Exception as e:
                         errors.append(f"{batch[j]['headcode']}: {str(e)[:50]}")
                 conn.commit()
-                # Delay giữa các batch để tránh rate limit
+                # Delay between batches to avoid rate limit
                 if i + BATCH_SIZE < len(pending_products):
                     time.sleep(4)
                 
             except Exception as e:
                 print(f"ERROR: Batch {i//BATCH_SIZE + 1} failed: {e}")
                 errors.append(f"Batch {i//BATCH_SIZE + 1}: {str(e)[:100]}")
-                # Tiếp tục với batch tiếp theo
+                # Continue with next batch
                 continue
         
         conn.close()
         
-        # Kiểm tra còn bao nhiêu chưa phân loại
+        # Check how many remain unclassified
         conn = get_db()
         cur = conn.cursor()
         cur.execute("""
