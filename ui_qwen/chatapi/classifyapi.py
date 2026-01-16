@@ -238,6 +238,7 @@ async def search_by_image(
                 "category": "Nội thất"
             }
         
+        print(f"INFO: AI Image Analysis Result: {ai_result}")
         # Get search_keywords and shorten if too long
         search_keywords = ai_result[0].get("search_keywords", "").strip()
         category = ai_result[0].get("category", "")
@@ -258,8 +259,13 @@ async def search_by_image(
             "material_primary": ai_result[0].get("material_detected")
         }
         
-        search_result = search_products(params, session_id=session_id)
+        # Disable automatic fallback in search_products, we handle it manually here
+        search_result = search_products(params, session_id=session_id, disable_fallback=True)
         products = search_result.get("products", [])
+        
+        # Handle case when search_products returns None or empty
+        if products is None:
+            products = []
         
         # ========== IMAGE MATCHING VALIDATION ==========
         # Check if product matches ai_interpretation
@@ -267,11 +273,11 @@ async def search_by_image(
         
         for product in products:
             product_name = (product.get('product_name') or '').lower()
-            category = (product.get('category') or '').lower()
+            category_prod = (product.get('category') or '').lower()
             
             # Check if name or category is in ai_interpretation
             name_match = any(word in ai_interpretation for word in product_name.split() if len(word) > 2)
-            category_match = category in ai_interpretation
+            category_match = category_prod in ai_interpretation
             
             # If no match → deduct base_score
             if not name_match and not category_match:
@@ -285,10 +291,13 @@ async def search_by_image(
                 product['image_mismatch'] = False
         
         # Classify products by base_score
-        products_main = [p for p in products if p.get('base_score', 0) >= 0.7]
+        products_main = [p for p in products if p.get('base_score', 0) >= 0.6]
         products_low_confidence = [p for p in products if p.get('base_score', 0) < 0.6]
         
         print(f"INFO: Image search - Main products: {len(products_main)}, Low confidence: {len(products_low_confidence)}")
+        
+        # Store headcodes from first search to avoid duplicates
+        first_search_headcodes = set(p.get('headcode') for p in products if p.get('headcode'))
         
         histories.save_chat_to_histories(
             email="test@gmail.com",
@@ -297,21 +306,84 @@ async def search_by_image(
             answer=f"Phân tích ảnh: {ai_result[0].get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products_main)} sản phẩm (High confidence)"
         )
 
-        # If no product meets base_score >= 0.7
-        if not products_main:
+        # If no product meets base_score >= 0.6, try second search with array[1]
+        products_main_second = []
+        if not products_main and len(ai_result) > 1:
+            print(f"INFO: First search returned no high-confidence results, trying second search with array[1]")
+            
+            search_keywords_second = ai_result[1].get("search_keywords", "").strip()
+            category_second = ai_result[1].get("category", "")
+            
+            # If search_keywords too long or empty, use category
+            if not search_keywords_second or len(search_keywords_second) > 50:
+                search_text_second = category_second
+                print(f"INFO: Using category as search term (2nd): {search_text_second}")
+            else:
+                words_second = search_keywords_second.split()[:3]
+                search_text_second = " ".join(words_second)
+                print(f"INFO: Using simplified keywords (2nd): {search_text_second}")
+            
+            params_second = {
+                "category": category_second,
+                "keywords_vector": search_text_second,
+                "material_primary": ai_result[1].get("material_detected")
+            }
+            
+            # Disable automatic fallback for second search too
+            search_result_second = search_products(params_second, session_id=session_id, disable_fallback=True)
+            products_second = search_result_second.get("products", [])
+            
+            # Handle case when search_products returns None
+            if products_second is None:
+                products_second = []
+            
+            # ========== FILTER OUT DUPLICATES ==========
+            # Remove products that were already in first search
+            products_second_unique = [
+                p for p in products_second 
+                if p.get('headcode') not in first_search_headcodes
+            ]
+            
+            print(f"INFO: Second search - Total: {len(products_second)}, After removing duplicates: {len(products_second_unique)}")
+            
+            # Apply image matching validation for second search
+            ai_interpretation_second = ai_result[1].get("visual_description", "").lower()
+            
+            for product in products_second_unique:
+                product_name = (product.get('product_name') or '').lower()
+                category_prod = (product.get('category') or '').lower()
+                
+                name_match = any(word in ai_interpretation_second for word in product_name.split() if len(word) > 2)
+                category_match = category_prod in ai_interpretation_second
+                
+                if not name_match and not category_match:
+                    current_score = product.get('base_score', 0.5)
+                    penalty = 0.25
+                    product['base_score'] = max(0, current_score - penalty)
+                    product['image_mismatch'] = True
+                    product['penalty_applied'] = penalty
+                else:
+                    product['image_mismatch'] = False
+            
+            # Classify second search products
+            products_main_second = [p for p in products_second_unique if p.get('base_score', 0) >= 0.6]
+            
+            print(f"INFO: Second search - Found {len(products_main_second)} products with base_score >= 0.6")
+            
             return {
                 "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm nội thất')}**.\n\n"
-                        f"⚠️ Không tìm thấy sản phẩm phù hợp với yêu cầu.\n\n"
-                        f"💡 **Gợi ý**: Bạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm",
+                        f"⚠️ Tuy nhiên, rất tiếc tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn.\n\n"
+                        f"{'✅ Dựa trên hình ảnh bạn đã tải lên, tôi có **' + str(len(products_main_second)) + ' sản phẩm gợi ý** cho bạn.:' if products_main_second else '💡 **Gợi ý**: Bạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm'}",
                 "products": None,
+                "products_second": products_main_second if products_main_second else None,
                 "productLowConfidence": products_low_confidence[:5] if products_low_confidence else [],
                 "ai_interpretation": ai_result[0].get("visual_description", ""),
-                "search_method": "image_vector"
+                "search_method": "image_vector_fallback" if products_main_second else "image_vector",
             }
         
         return {
             "response": f"📸 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm')}**.\n\n"
-                       f"✅ Đã tìm thấy **{len(products_main)} sản phẩm** phù hợp:",
+                       f"✅ Tuy nhiên, dựa trên hình ảnh bạn đã tải lên, tôi có **{len(products_main)} sản phẩm** gợi ý cho bạn, :",
             "products": products_main,
             "productLowConfidence": products_low_confidence[:5] if products_low_confidence else [],
             "ai_interpretation": ai_result[0].get("visual_description", ""),
@@ -319,7 +391,8 @@ async def search_by_image(
             "confidence_summary": {
                 "high_confidence": len(products_main),
                 "low_confidence": len(products_low_confidence)
-            }
+            },
+            "suggested_prompts_mess":"Những sản phẩm gợi ý trên có phù hợp với nhu cầu của bạn không? Bạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm phù hợp hơn."
         }
     
     except Exception as e:

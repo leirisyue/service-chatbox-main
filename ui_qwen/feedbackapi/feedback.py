@@ -25,7 +25,7 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
     Args:
         query: Current question
         search_type: "product" or "material"
-        similarity_threshold: Similarity threshold (0.7 = 70%)
+        similarity_threshold: Similarity threshold (0.6 = 60%)
     
     Returns:
         Dict[item_id, feedback_score]

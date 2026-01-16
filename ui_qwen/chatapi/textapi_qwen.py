@@ -468,9 +468,44 @@ def get_intent_and_params(user_message: str, context: Dict) -> Dict:
             "success": False
         }
 
-def search_products(params: Dict, session_id: str = None):
-    """Multi-tier: HYBRID -> Vector -> Keyword"""
+def _generate_broader_search_params(original_params: Dict) -> Dict:
+    """Generate broader search parameters for fallback search"""
+    broader_params = original_params.copy()
     
+    # Strategy 1: If keywords_vector is too specific, use only category
+    if original_params.get("keywords_vector"):
+        keywords = original_params["keywords_vector"]
+        # Get only the first 1-2 words (most general terms)
+        words = keywords.split()[:2]
+        broader_params["keywords_vector"] = " ".join(words)
+        print(f"INFO: Broadened keywords from '{keywords}' to '{broader_params['keywords_vector']}'")
+    
+    # Strategy 2: If category and subcategory exist, remove subcategory
+    if original_params.get("sub_category"):
+        broader_params.pop("sub_category", None)
+        print(f"INFO: Removed sub_category filter for broader search")
+    
+    # Strategy 3: If material_primary is specified, remove it for broader results
+    if original_params.get("material_primary"):
+        broader_params.pop("material_primary", None)
+        print(f"INFO: Removed material_primary filter for broader search")
+    
+    # Strategy 4: If only category remains and keywords, use just category
+    if broader_params.get("category") and not broader_params.get("keywords_vector"):
+        broader_params["keywords_vector"] = broader_params["category"]
+        print(f"INFO: Using category as keywords: '{broader_params['keywords_vector']}'")
+    
+    return broader_params
+
+def search_products(params: Dict, session_id: str = None, disable_fallback: bool = False):
+    """Multi-tier: HYBRID -> Vector -> Keyword
+    
+    Args:
+        params: Search parameters
+        session_id: Session ID for personalization
+        disable_fallback: If True, won't perform automatic second search (for image search flow)
+    """
+    print(f"params: search_products +search_products_hybrid {params}")
     # TIER 1: Try Hybrid first
     try:
         result = search_products_hybrid(params)
@@ -618,9 +653,105 @@ def search_products(params: Dict, session_id: str = None):
             
             print(f"INFO: Final Ranking complete\n")
             
-            result["products"] = products
+            # Classify products by base_score
+            products_main = [p for p in products if p.get('base_score', 0) >= 0.6]
+            products_low_confidence = [p for p in products if p.get('base_score', 0) < 0.6]
+            
+            print(f"INFO: Main products: {len(products_main)}, Low confidence: {len(products_low_confidence)}")
+            
+            # Only do automatic fallback if not disabled (e.g., for image search)
+            products_main_second = []
+            if not products_main and not disable_fallback:
+                print(f"INFO: First search returned no high-confidence results, trying broader search")
+                
+                # Generate broader search params
+                broader_params = _generate_broader_search_params(params)
+                
+                if broader_params:
+                    print(f"INFO: Broader search params: {broader_params}")
+                    
+                    try:
+                        result_second = search_products_hybrid(broader_params)
+                        
+                        if result_second.get("products"):
+                            products_second = result_second["products"]
+                            
+                            # Update total_cost for second search products
+                            for product in products_second:
+                                product["total_cost"] = calculate_product_total_cost(product["headcode"])
+                            
+                            # Apply ranking to second search products
+                            for product in products_second:
+                                product['base_score'] = float(product.get('similarity', 0.5))
+                            
+                            # Apply query matching boost for second search
+                            query_keywords_second = broader_params.get("keywords_vector", "").lower().split()
+                            
+                            for product in products_second:
+                                boost = 0.0
+                                product_name = (product.get('product_name') or '').lower()
+                                category = (product.get('category') or '').lower()
+                                
+                                match_count = 0
+                                for keyword in query_keywords_second:
+                                    if keyword in product_name:
+                                        boost += 0.15
+                                        match_count += 1
+                                    if keyword in category:
+                                        boost += 0.08
+                                        match_count += 1
+                                
+                                if boost > 0:
+                                    product['base_score'] = min(1.0, product['base_score'] + boost)
+                                    product['query_match_count'] = match_count
+                                    product['query_boost'] = boost
+                            
+                            # Apply feedback scores to second search
+                            feedback_dict_second = get_feedback_boost_for_query(
+                                broader_params.get("keywords_vector", ""),
+                                search_type="product",
+                                similarity_threshold=0.85
+                            )
+                            
+                            max_feedback_second = max(feedback_dict_second.values()) if feedback_dict_second else 1.0
+                            
+                            for product in products_second:
+                                headcode = product.get('headcode')
+                                raw_feedback = feedback_dict_second.get(headcode, 0)
+                                product['feedback_score'] = float(raw_feedback / max_feedback_second) if max_feedback_second > 0 else 0.0
+                                product['feedback_count'] = float(raw_feedback)
+                            
+                            # Calculate final scores for second search
+                            W_BASE = 0.6
+                            W_FEEDBACK = 0.4
+                            
+                            for idx, product in enumerate(products_second):
+                                base = product.get('base_score', 0.5)
+                                feedback = product.get('feedback_score', 0.0)
+                                final_score = (W_BASE * base) + (W_FEEDBACK * feedback)
+                                product['final_score'] = float(final_score)
+                                product['original_rank'] = idx + 1
+                            
+                            # Sort by final_score
+                            products_second.sort(key=lambda x: x.get('final_score', 0), reverse=True)
+                            
+                            for idx, product in enumerate(products_second):
+                                product['final_rank'] = idx + 1
+                            
+                            # Filter second search by base_score >= 0.6
+                            products_main_second = [p for p in products_second if p.get('base_score', 0) >= 0.6]
+                            
+                            print(f"INFO: Second search found {len(products_main_second)} high-confidence products")
+                    
+                    except Exception as e:
+                        print(f"WARNING: Second search failed: {e}")
+            
+            result["products"] = products_main if products_main else None
+            result["products_second"] = products_main_second if products_main_second else None
+            result["productLowConfidence"] = products_low_confidence[:5] if products_low_confidence else []
             result["ranking_summary"] = get_ranking_summary(products)
             result["can_provide_feedback"] = True
+            result["search_method"] = "hybrid_fallback" if products_main_second and not products_main else result.get("search_method", "hybrid")
             
             return result
     except TimeoutError as e:

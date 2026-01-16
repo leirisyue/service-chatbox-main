@@ -414,6 +414,101 @@ function Message({ message, onSendMessage, typing }) {
               </ReactMarkdown>
             </>
           }
+
+          {!isUser && ( !!message.data?.products_second?.length) &&
+            <Box sx={{ width: '100%', typography: 'body1' }}>
+              <TabContext value={value}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                  <TabList onChange={handleChange} aria-label="lab API tabs example">
+                    <Tab label="View table" value="1" />
+                    <Tab label="View List" value="2" />
+                  </TabList>
+                </Box>
+                <TabPanel value="1">
+                  {!!message.data?.products_second?.length &&
+                    <TableContainer >
+                      <Table sx={{ minWidth: 650 }} aria-label="simple table">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell></TableCell>
+                            <TableCell>Tên sản phẩm</TableCell>
+                            <TableCell>Mã SAP</TableCell>
+                            <TableCell>Nhóm</TableCell>
+                            <TableCell>Vật liệu</TableCell>
+                            <TableCell>Đơn giá mới nhất (VNĐ)</TableCell>
+                            <TableCell>Dự án</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {message.data?.products_second?.map((row, index) => (
+                            <TableRow key={index}>
+                              <TableCell> {row.image_url ? <img src={convertGDriveUrl(row.image_url)} alt={row.product_name} width={50} /> : ''}</TableCell>
+                              <TableCell component="th" scope="row">{row.product_name}</TableCell>
+                              <TableCell>{row.headcode}</TableCell>
+                              <TableCell width={160}> {row.sub_category}</TableCell>
+                              <TableCell width={80}>{row.material_primary}</TableCell>
+                              <TableCell>{row?.total_cost?.toLocaleString("vi-VN") || ''}</TableCell>
+                              <TableCell>{row.project}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  }
+                </TabPanel>
+                <TabPanel value="2">
+                  {!isUser && typingDone && message.data?.products_second?.length > 0 && (
+                    <>
+                      <ProductListWithFeedback
+                        products={message.data.products_second}
+                        onMaterialClick={handleMaterialClick}
+                        onPriceClick={handlePriceClick}
+                        selectedProducts={selectedProducts}
+                        onToggleSelected={handleToggleSelected}
+                        feedbackSelected={feedbackSelected}
+                        onToggleFeedback={handleToggleFeedback}
+                      />
+                      <div className="batch-actions">
+                        <hr />
+                        {selectedProducts.length > 0 && (
+                          <>
+                            <div className="batch-actions-row">
+                              <button
+                                className="batch-btn primary"
+                                onClick={() => handleBatchOperation('detail')}
+                              >
+                                📋 Chi tiết SP
+                              </button>
+                              <button
+                                className="batch-btn primary"
+                                onClick={() => handleBatchOperation('materials')}
+                              >
+                                🧱 Định mức VL
+                              </button>
+                              <button
+                                className="batch-btn primary"
+                                onClick={() => handleBatchOperation('cost')}
+                              >
+                                💰 Chi phí
+                              </button>
+                            </div>
+                            <div className="batch-actions-row">
+                              <button
+                                className="batch-btn secondary"
+                                onClick={handleExportBOM}
+                              >
+                                📊 Xuất BOM
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </TabPanel>
+              </TabContext>
+            </Box>
+          }
         </div>
       </div>
     </div>

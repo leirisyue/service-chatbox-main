@@ -26,8 +26,6 @@ function ChatInput({ onSendMessage, onImageUpload, disabled, lastMessage }) {
 
     if (inputValue.trim() && !disabled) {
 
-
-
       if (!!lastMessage && lastMessage?.data?.suggested_prompts_mess && lastMessage?.data?.success) {
 
         const list = lastMessage.data.suggested_prompts_mess

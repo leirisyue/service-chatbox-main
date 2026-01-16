@@ -471,8 +471,7 @@ def search_products_hybrid(params: Dict):
     original_words = [w.strip().lower() for w in base.split() if len(w.strip()) > 1]
     
     # 5. XÁC ĐỊNH TỪ CHÍNH (loại sản phẩm) - PHẢI KHỚP CHÍNH XÁC
-    main_product_types = ["bàn", "ghế", "tủ", "giường", "sofa", "kệ", "đèn", "gương",
-                          "table", "chair", "cabinet", "bed", "shelf", "lamp", "mirror"]
+    main_product_types = ["bàn", "ghế", "tủ", "giường", "sofa", "kệ", "đèn", "gương", "table", "chair", "cabinet", "bed", "shelf", "lamp", "mirror"]
     
     main_word = None
     secondary_words = []
@@ -575,7 +574,7 @@ def search_products_hybrid(params: Dict):
         
         # STEP 2: Calculate vector similarity for SECONDARY words
         # Increase threshold to filter out irrelevant products
-        SIMILARITY_THRESHOLD = 0.35  
+        SIMILARITY_THRESHOLD = 0.60
         MIN_SECONDARY_MATCH_RATIO = 0.5  # Minimum 50% secondary words must match
         
         # Create vector for SECONDARY query (excluding main word)
