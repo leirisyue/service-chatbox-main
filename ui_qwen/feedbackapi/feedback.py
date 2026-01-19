@@ -119,16 +119,6 @@ def get_feedback_boost_for_query(query: str, search_type: str, similarity_thresh
         return {}
 
 def save_user_feedback(session_id: str, query: str, selected_items: list, rejected_items: list, search_type: str):
-    """
-    Lưu phản hồi của user về kết quả tìm kiếm
-    
-    Args:
-        session_id: ID session
-        query: Câu hỏi gốc
-        selected_items: List các item user chọn là ĐÚNG (headcode hoặc id_sap)
-        rejected_items: List các item user bỏ qua/từ chối
-        search_type: "product" hoặc "material"
-    """
     try:
         conn = get_db()
         cur = conn.cursor()

@@ -56,6 +56,7 @@ function App() {
 
     try {
       const response = await sendMessage(sessionId, message, context);
+      console.log("🚀 ~ handleSendMessage ~ response:", response);
 
       // Cập nhật context nếu có
       if (response.context) {

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { messagesAtom } from '../../atom/messageAtom';
 import { batchProducts, exportBOMReport, trackReject, trackView } from '../../services/api';
 import { formatTimestamp } from '../../utils/helpers';
-import ProductListWithFeedback from './ProductListWithFeedback';
+import ProductListWithFeedback from './ProductList';
 
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -23,16 +23,16 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import { Grid } from '@mui/system';
 import * as React from 'react';
-import MaterialCard from './MaterialCard';
 import { convertGDriveUrl } from '../../utils/gdrive';
+import ProductList from './ProductList';
+import MaterialList from './MaterialList';
 
 function Message({ message, onSendMessage, typing }) {
 
-  const isUser = message.role === 'user';
+  const isUser = message?.role === 'user';
 
-  const [displayedText, setDisplayedText] = useState(message.content || "");
+  const [displayedText, setDisplayedText] = useState(message?.content || "");
   const [typingDone, setTypingDone] = useState(true);
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [feedbackSelected, setFeedbackSelected] = useState([]);
@@ -47,8 +47,8 @@ function Message({ message, onSendMessage, typing }) {
   ========================= */
   useEffect(() => {
     if (!typing) return;
-    if (isUser || typeof message.content !== 'string') {
-      setDisplayedText(message.content);
+    if (isUser || typeof message?.content !== 'string') {
+      setDisplayedText(message?.content);
       setTypingDone(true);
       hasMountedRef.current = true;
       return;
@@ -56,7 +56,7 @@ function Message({ message, onSendMessage, typing }) {
 
     // render lần đầu (reload / history)
     if (!hasMountedRef.current) {
-      setDisplayedText(message.content);
+      setDisplayedText(message?.content);
       setTypingDone(true);
       hasMountedRef.current = true;
       return;
@@ -67,7 +67,7 @@ function Message({ message, onSendMessage, typing }) {
     setTypingDone(false);
 
     let index = 0;
-    const text = message.content;
+    const text = message?.content;
 
     const interval = setInterval(() => {
       setDisplayedText((prev) => prev + text.charAt(index));
@@ -181,7 +181,7 @@ function Message({ message, onSendMessage, typing }) {
   const handleReject = async () => {
     if (!sessionId) return;
 
-    const products = message.data?.products || [];
+    const products = message?.data?.products || [];
     try {
       await Promise.all(
         products.slice(0, 5).map((p) =>
@@ -192,7 +192,7 @@ function Message({ message, onSendMessage, typing }) {
       console.error('Error tracking reject:', error);
     }
 
-    const originalQuery = message.data?.query || '';
+    const originalQuery = message?.data?.query || '';
     onSendMessage?.(
       `Tìm thêm sản phẩm tương tự nhưng khác với kết quả vừa rồi: ${originalQuery}`
     );
@@ -221,7 +221,7 @@ function Message({ message, onSendMessage, typing }) {
   };
 
   const renderContent = () => (
-    <div className={message.type === 'welcome' ? 'welcome-md' : ''}>
+    <div className={message?.type === 'welcome' ? 'welcome-md' : ''}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkBreaks]}
         rehypePlugins={[
@@ -251,20 +251,20 @@ function Message({ message, onSendMessage, typing }) {
           <div>
             {formatTimestamp(message?.timestamp)}
           </div>
-          {message.imageUrl && (
+          {message?.imageUrl && (
             <div className="message-image">
-              <img src={message.imageUrl} alt="Uploaded" width={300} />
+              <img src={message?.imageUrl} alt="Uploaded" width={300} />
             </div>
           )}
-          {message.imageUrl && isUser && message.content && (
+          {message.imageUrl && isUser && message?.content && (
             <div className="message-text-with-image">
-              {message.content}
+              {message?.content}
             </div>
           )}
-          {!message.imageUrl && renderContent()}
-          {message.imageUrl && !isUser && renderContent()}
+          {!message?.imageUrl && renderContent()}
+          {message?.imageUrl && !isUser && renderContent()}
           <div ref={bottomRef} />
-          {!isUser && (!!message.data?.materials?.length || !!message.data?.products?.length) &&
+          {!isUser && (!!message?.data?.materials?.length || !!message.data?.products?.length) && typingDone &&
             <Box sx={{ width: '100%', typography: 'body1' }}>
               <TabContext value={value}>
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -279,6 +279,7 @@ function Message({ message, onSendMessage, typing }) {
                       <Table sx={{ minWidth: 650 }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
+                            <TableCell>STT</TableCell>
                             <TableCell></TableCell>
                             <TableCell>Tên vật liệu</TableCell>
                             <TableCell>Mã SAP</TableCell>
@@ -291,12 +292,13 @@ function Message({ message, onSendMessage, typing }) {
                         <TableBody>
                           {message.data?.materials?.map((row, index) => (
                             <TableRow key={index}>
-                              <TableCell> {row.image_url ? <img src={convertGDriveUrl(row.image_url)} alt={row.material_name} width={50} /> : ''}</TableCell>
-                              <TableCell component="th" scope="row">{row.material_name}</TableCell>
-                              <TableCell>{row.id_sap}</TableCell>
-                              <TableCell>{row.material_subgroup} </TableCell>
-                              <TableCell>{row.quantity}/{row.pm_unit}</TableCell>
-                              <TableCell>{row?.price?.toLocaleString("vi-VN") || ''}</TableCell>
+                              <TableCell>{index + 1}</TableCell>
+                              <TableCell> {row?.image_url ? <img src={convertGDriveUrl(row?.image_url)} alt={row?.material_name} width={50} /> : ''}</TableCell>
+                              <TableCell component="th" scope="row">{row?.material_name}</TableCell>
+                              <TableCell>{row?.id_sap}</TableCell>
+                              <TableCell>{row?.material_subgroup} </TableCell>
+                              <TableCell>{row?.quantity}/{row?.pm_unit || row?.unit}</TableCell>
+                              <TableCell>{row?.price?.toLocaleString("vi-VN") || row?.unit_price?.toLocaleString("vi-VN") || ''}</TableCell>
                               <TableCell>{row?.total_cost?.toLocaleString("vi-VN") || ''}</TableCell>
                             </TableRow>
                           ))}
@@ -309,6 +311,7 @@ function Message({ message, onSendMessage, typing }) {
                       <Table sx={{ minWidth: 650 }} aria-label="simple table">
                         <TableHead>
                           <TableRow>
+                            <TableCell>STT</TableCell>
                             <TableCell></TableCell>
                             <TableCell>Tên sản phẩm</TableCell>
                             <TableCell>Mã SAP</TableCell>
@@ -321,6 +324,7 @@ function Message({ message, onSendMessage, typing }) {
                         <TableBody>
                           {message.data?.products?.map((row, index) => (
                             <TableRow key={index}>
+                              <TableCell>{index + 1}</TableCell>
                               <TableCell> {row.image_url ? <img src={convertGDriveUrl(row.image_url)} alt={row.product_name} width={50} /> : ''}</TableCell>
                               <TableCell component="th" scope="row">{row.product_name}</TableCell>
                               <TableCell>{row.headcode}</TableCell>
@@ -338,7 +342,7 @@ function Message({ message, onSendMessage, typing }) {
                 <TabPanel value="2">
                   {!isUser && typingDone && message.data?.products?.length > 0 && (
                     <>
-                      <ProductListWithFeedback
+                      <ProductList
                         products={message.data.products}
                         onMaterialClick={handleMaterialClick}
                         onPriceClick={handlePriceClick}
@@ -385,29 +389,18 @@ function Message({ message, onSendMessage, typing }) {
                     </>
                   )}
                   {!isUser && typingDone && message.data?.materials?.length > 0 && (
-                    <div className="">
-                      <Grid container spacing={2}>
-                        {message.data.materials.map((material, index) => (
-                          <Grid key={index} size={{ xs: 12, md: 6 }}>
-                            <Box sx={{ height: '100%' }}>
-                              <MaterialCard
-                                material={material}
-                                onDetailClick={() =>
-                                  handleMaterialDetailClick(material.material_name)
-                                }
-                              />
-                            </Box>
-                          </Grid>
-                        ))}
-                      </Grid>
-                    </div>
+                    <>
+                      <MaterialList
+                        materials={message?.data?.materials}
+                        onMaterialClick={handleMaterialDetailClick}
+                      />
+                    </>
                   )}
                 </TabPanel>
               </TabContext>
             </Box>
           }
-
-          {!isUser && (!!message.data?.products_second?.length) &&
+          {!isUser && (!!message?.data?.products_second?.length) && typingDone &&
             <>
               <div>💜 Tôi có một số <b>sản phẩm tương tự</b> với yêu cầu trên của bạn! Bạn có thể tham khảo</div>
               <Box sx={{ width: '100%', typography: 'body1' }}>
@@ -419,11 +412,12 @@ function Message({ message, onSendMessage, typing }) {
                     </TabList>
                   </Box>
                   <TabPanel value="1">
-                    {!!message.data?.products_second?.length &&
+                    {!!message?.data?.products_second?.length &&
                       <TableContainer >
                         <Table sx={{ minWidth: 650 }} aria-label="simple table">
                           <TableHead>
                             <TableRow>
+                              <TableCell>STT</TableCell>
                               <TableCell></TableCell>
                               <TableCell>Tên sản phẩm</TableCell>
                               <TableCell>Mã SAP</TableCell>
@@ -436,13 +430,14 @@ function Message({ message, onSendMessage, typing }) {
                           <TableBody>
                             {message.data?.products_second?.map((row, index) => (
                               <TableRow key={index}>
-                                <TableCell> {row.image_url ? <img src={convertGDriveUrl(row.image_url)} alt={row.product_name} width={50} /> : ''}</TableCell>
-                                <TableCell component="th" scope="row">{row.product_name}</TableCell>
-                                <TableCell>{row.headcode}</TableCell>
-                                <TableCell width={160}> {row.sub_category}</TableCell>
-                                <TableCell width={80}>{row.material_primary}</TableCell>
+                                <TableCell>{index + 1}</TableCell>
+                                <TableCell> {row?.image_url ? <img src={convertGDriveUrl(row?.image_url)} alt={row?.product_name} width={50} /> : ''}</TableCell>
+                                <TableCell component="th" scope="row">{row?.product_name}</TableCell>
+                                <TableCell>{row?.headcode}</TableCell>
+                                <TableCell width={160}> {row?.sub_category}</TableCell>
+                                <TableCell width={80}>{row?.material_primary}</TableCell>
                                 <TableCell>{row?.total_cost?.toLocaleString("vi-VN") || ''}</TableCell>
-                                <TableCell>{row.project}</TableCell>
+                                <TableCell>{row?.project}</TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -451,10 +446,10 @@ function Message({ message, onSendMessage, typing }) {
                     }
                   </TabPanel>
                   <TabPanel value="2">
-                    {!isUser && typingDone && message.data?.products_second?.length > 0 && (
+                    {!isUser && typingDone && message?.data?.products_second?.length > 0 && (
                       <>
                         <ProductListWithFeedback
-                          products={message.data.products_second}
+                          products={message?.data?.products_second}
                           onMaterialClick={handleMaterialClick}
                           onPriceClick={handlePriceClick}
                           selectedProducts={selectedProducts}
@@ -504,7 +499,7 @@ function Message({ message, onSendMessage, typing }) {
               </Box>
             </>
           }
-          {!isUser && message.data?.success && message.data?.suggested_prompts_mess &&
+          {!isUser && message?.data?.success && message?.data?.suggested_prompts_mess && typingDone &&
             <>
               <div>💡 <b>Gợi ý cho bạn:</b></div>
               <ReactMarkdown
@@ -514,19 +509,10 @@ function Message({ message, onSendMessage, typing }) {
                   [rehypeSanitize, schemaMarkdown],
                 ]}
               >
-                {message.data?.suggested_prompts_mess}
+                {message?.data?.suggested_prompts_mess}
               </ReactMarkdown>
             </>
           }
-          {/* {!isUser && (!!message.data?.products_second?.length) &&
-            <>
-              <div>
-                Những sản phẩm trên có hợp với yêu cầu của bạn không? Nếu không hãy mô tả thêm để tôi có thể giúp bạn tốt hơn.
-                <br />
-                Hoặc bạn có thể chọn thêm sản phẩm khác từ <i>Gợi ý nhanh</i>.
-              </div>
-            </>
-          } */}
         </div>
       </div>
     </div>

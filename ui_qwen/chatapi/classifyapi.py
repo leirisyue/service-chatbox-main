@@ -798,7 +798,7 @@ async def search_by_image_with_text(
         
         # Build response message
         if products_main or products_second_main:
-            response_msg = f"📋 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
+            response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
             response_msg += f"🔍 **Mô tả sản phẩm:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
             if user_requirements:
                 response_msg += f"✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
@@ -810,12 +810,12 @@ async def search_by_image_with_text(
             
             response_msg += "!"
         else:
-            response_msg = f"📋 **Phân tích hình ảnh và yêu cầu:**\n\n"
+            response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu:**\n\n"
             response_msg += f"🔍 **Mô tả:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
             if user_requirements:
                 response_msg += f"✨ **Yêu cầu:** {user_requirements}\n\n"
             response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn.\n\n"
-            response_msg += f"💡 **Gợi ý:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
+            response_msg += f"💖 **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
         
         return {
             "response": response_msg,

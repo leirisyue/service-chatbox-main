@@ -274,6 +274,8 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     """
     try:
         response_text = call_gemini_with_retry(model, prompt)
+        print(f"Suggested prompts response: {response_text}")
+        
         if not response_text:
             return _get_fallback_prompts(context_type)
         
@@ -498,13 +500,6 @@ def _generate_broader_search_params(original_params: Dict) -> Dict:
     return broader_params
 
 def search_products(params: Dict, session_id: str = None, disable_fallback: bool = False):
-    """Multi-tier: HYBRID -> Vector -> Keyword
-    
-    Args:
-        params: Search parameters (can include main_keywords and secondary_keywords for parallel search)
-        session_id: Session ID for personalization
-        disable_fallback: If True, won't perform automatic second search (for image search flow)
-    """
     print(f"params: search_products + search_products_hybrid {params}")
     
     # Check if this is a parallel search request (has both main_keywords and secondary_keywords)
@@ -593,96 +588,6 @@ def search_products(params: Dict, session_id: str = None, disable_fallback: bool
                     product['query_boost'] = boost
                     print(f"  INFO: Boosted {product['headcode']}: +{boost:.3f} (matches: {match_count})")
             
-            # # ========== STEP 2: PERSONALIZATION ==========
-            # # ✅ Only apply if session_id exists AND user has history
-            # has_personalization = False
-            
-            # if session_id:
-            #     print(f"\nINFO: Personalization for {session_id[:8]}...")
-                
-            # if not has_personalization:
-            #     for product in products:
-            #         product['personal_score'] = 0.5
-            
-            # print(f"INFO: Personalization done\n")
-            
-            # # ========== STEP 3: FEEDBACK SCORES ==========
-            # print(f"MAIN: Feedback Scoring...")
-            
-            # feedback_dict = get_feedback_boost_for_query(
-            #     params.get("keywords_vector", ""),
-            #     search_type="product",
-            #     similarity_threshold=settings.SIMILARITY_THRESHOLD_LOW
-            # )
-            
-            # max_feedback = max(feedback_dict.values()) if feedback_dict else 1.0
-            
-            # for product in products:
-            #     headcode = product.get('headcode')
-            #     raw_feedback = feedback_dict.get(headcode, 0)
-                
-            #     product['feedback_score'] = float(raw_feedback / max_feedback) if max_feedback > 0 else 0.0
-            #     product['feedback_count'] = float(raw_feedback)
-            
-            # print(f"SUCCESS: Feedback Scoring done\n")
-            
-            # # ========== STEP 4: WEIGHTED SUM ==========
-            
-            # # ✅ ADAPTIVE WEIGHTS
-            # if has_personalization:
-            #     # User has history → prioritize personalization
-            #     W_BASE = 0.3
-            #     W_PERSONAL = 0.5
-            #     W_FEEDBACK = 0.2
-            # else:
-            #     # New user → prioritize base + social proof
-            #     W_BASE = 0.6
-            #     W_PERSONAL = 0.0  
-            #     W_FEEDBACK = 0.4
-            
-            # for idx, product in enumerate(products):
-            #     base = product.get('base_score', 0.5)
-            #     personal = product.get('personal_score', 0.5)
-            #     feedback = product.get('feedback_score', 0.0)
-                
-            #     # ✅ Only calculate personal if has_personalization
-            #     if has_personalization:
-            #         final_score = (W_BASE * base) + (W_PERSONAL * personal) + (W_FEEDBACK * feedback)
-            #     else:
-            #         final_score = (W_BASE * base) + (W_FEEDBACK * feedback)
-                
-            #     product['final_score'] = float(final_score)
-            #     product['original_rank'] = idx + 1
-            
-            # # ========== STEP 5: SORT FINAL ==========
-            # products.sort(key=lambda x: x.get('final_score', 0), reverse=True)
-            
-            # for idx, product in enumerate(products):
-            #     product['final_rank'] = idx + 1
-                
-            #     if product.get('feedback_count', 0) > 0:
-            #         product['has_feedback'] = True
-            
-            # print(f"INFO: Final Ranking complete\n")
-            
-            # # ========== RETURN EARLY IF DISABLE_FALLBACK OR DUAL KEYWORDS ==========
-            # # When disable_fallback=True (e.g., for image search with dual keywords),
-            # # return all products without automatic broader search
-            # if disable_fallback or has_dual_keywords:
-            #     if has_dual_keywords:
-            #         print(f"INFO: Dual keywords mode - Products: {len(products)}, Products second: {len(products_second)}")
-            #         result["products"] = products  # Return products from main_keywords
-            #         result["products_second"] = products_second  # Return products from secondary_keywords
-            #     else:
-            #         print(f"INFO: Fallback disabled - returning {len(products)} products as-is")
-            #         result["products"] = products  # Return ALL products, caller will filter
-                
-            #     result["ranking_summary"] = get_ranking_summary(products)
-            #     result["can_provide_feedback"] = True
-            #     result["search_method"] = result.get("search_method", "hybrid")
-            #     return result
-            
-            # Classify products by base_score (only for non-dual keyword searches)
             products_main = [p for p in products if p.get('final_score', 0) >= 0.75]
             products_low_confidence = [p for p in products if p.get('base_score', 0) < 0.6]
             
@@ -690,101 +595,6 @@ def search_products(params: Dict, session_id: str = None, disable_fallback: bool
             result["search_method"] = result.get("search_method", "hybrid")
             return result
             
-            # Only do automatic fallback if not disabled (e.g., for text search flow)
-            products_main_second = []
-            if True:
-                print(f"INFO: First search returned no high-confidence results, trying broader search")
-                
-                # Generate broader search params
-                broader_params = _generate_broader_search_params(params)
-                
-                if True:
-                    print(f"INFO: Broader search params: {broader_params}")
-                    
-                    try:
-                        result_second = search_products_hybrid(broader_params)
-                        
-                        if result_second.get("products"):
-                            products_second = result_second["products"]
-                            
-                            # Update total_cost for second search products
-                            for product in products_second:
-                                product["total_cost"] = calculate_product_total_cost(product["headcode"])
-                            
-                            # Apply ranking to second search products
-                            for product in products_second:
-                                product['base_score'] = float(product.get('similarity', 0.5))
-                            
-                            # Apply query matching boost for second search
-                            query_keywords_second = broader_params.get("keywords_vector", "").lower().split()
-                            
-                            for product in products_second:
-                                boost = 0.0
-                                product_name = (product.get('product_name') or '').lower()
-                                category = (product.get('category') or '').lower()
-                                
-                                match_count = 0
-                                for keyword in query_keywords_second:
-                                    if keyword in product_name:
-                                        boost += 0.15
-                                        match_count += 1
-                                    if keyword in category:
-                                        boost += 0.08
-                                        match_count += 1
-                                
-                                if boost > 0:
-                                    product['base_score'] = min(1.0, product['base_score'] + boost)
-                                    product['query_match_count'] = match_count
-                                    product['query_boost'] = boost
-                            
-                            # Apply feedback scores to second search
-                            feedback_dict_second = get_feedback_boost_for_query(
-                                broader_params.get("keywords_vector", ""),
-                                search_type="product",
-                                similarity_threshold=settings.SIMILARITY_THRESHOLD_VERY_HIGH
-                            )
-                            
-                            max_feedback_second = max(feedback_dict_second.values()) if feedback_dict_second else 1.0
-                            
-                            for product in products_second:
-                                headcode = product.get('headcode')
-                                raw_feedback = feedback_dict_second.get(headcode, 0)
-                                product['feedback_score'] = float(raw_feedback / max_feedback_second) if max_feedback_second > 0 else 0.0
-                                product['feedback_count'] = float(raw_feedback)
-                            
-                            # Calculate final scores for second search
-                            W_BASE = 0.6
-                            W_FEEDBACK = 0.4
-                            
-                            for idx, product in enumerate(products_second):
-                                base = product.get('base_score', 0.5)
-                                feedback = product.get('feedback_score', 0.0)
-                                final_score = (W_BASE * base) + (W_FEEDBACK * feedback)
-                                product['final_score'] = float(final_score)
-                                product['original_rank'] = idx + 1
-                            
-                            # Sort by final_score
-                            products_second.sort(key=lambda x: x.get('final_score', 0), reverse=True)
-                            
-                            for idx, product in enumerate(products_second):
-                                product['final_rank'] = idx + 1
-                            
-                            # Filter second search by base_score >= 0.6
-                            products_main_second = [p for p in products_second if p.get('base_score', 0) >= 0.6]
-                            
-                            print(f"INFO: Second search found {len(products_main_second)} high-confidence products")
-                    
-                    except Exception as e:
-                        print(f"WARNING: Second search failed: {e}")
-            
-            result["products"] = products_main if products_main else None
-            result["products_second"] = products_main_second if products_main_second else None
-            result["productLowConfidence"] = products_low_confidence[:5] if products_low_confidence else []
-            result["ranking_summary"] = get_ranking_summary(products)
-            result["can_provide_feedback"] = True
-            result["search_method"] = "hybrid_fallback" if products_main_second and not products_main else result.get("search_method", "hybrid")
-            
-            return result
     except TimeoutError as e:
         print(f"TIMER: TIER 1 timeout: {e}")
         # Return empty result instead of fallback to TIER 2
@@ -805,10 +615,7 @@ def search_products(params: Dict, session_id: str = None, disable_fallback: bool
                 "response": "No matching products found",
                 "success": False
             }
-    
-    # TIER 2 & 3: DO NOT RUN IF TIER 1 TIMEOUT - only run if TIER 1 failed for other reasons
-    # If we reach here, TIER 1 returned no results but not due to timeout
-    # So we should return empty instead of spending more time
+
     print("WARNING: TIER 1 returned no products, returning empty instead of fallback")
     return {
         "products": [],
@@ -818,15 +625,6 @@ def search_products(params: Dict, session_id: str = None, disable_fallback: bool
     }
 
 def search_products_by_material(material_query: str, params: Dict):
-    """
-    🔍 FIND PRODUCTS MADE FROM SPECIFIC MATERIALS
-    Example: "Find tables made from marble", "Teak wood cabinets"
-    
-    Logic: 
-    1. Find materials matching query (vector search)
-    2. JOIN product_materials to get products using those materials
-    3. Rank products by relevance
-    """
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
@@ -844,7 +642,7 @@ def search_products_by_material(material_query: str, params: Dict):
         }
     
     try:
-        # Find top matching materials
+        print("Find top matching materials")
         cur.execute(f"""
             SELECT 
                 id_sap, 
@@ -1099,7 +897,7 @@ def get_product_materials(headcode: str):
             'price_history': mat['material_subprice']
         })
     
-    response = f"📊 **ĐỊNH MỨC VẬT LIỆU: {prod['product_name']}**\n"
+    response = f" 🎉 **ĐỊNH MỨC VẬT LIỆU: {prod['product_name']}**\n"
     response += f"🏷️ Mã: `{headcode}`\n"
     response += f"📦 Total materials: **{len(materials_with_price)}**\n\n"
 
@@ -1131,7 +929,7 @@ def get_product_materials(headcode: str):
 
     
     response += f"\n---\n\n💰 **TOTAL MATERIAL COST: {total:,.2f} VND**"
-    response += f"\n\n⚠️ **Note:** Prices calculated from latest purchase history. Actual prices may vary."
+    # response += f"\n\n⚠️ **Note:** Prices calculated from latest purchase history. Actual prices may vary."
     
     # Add image link (if at least one material has image_url)
     first_image_url = next(
@@ -1740,7 +1538,7 @@ def list_products_by_category():
         prod_dict['total_cost'] = calculate_product_total_cost(prod['headcode'])
         categories[cat].append(prod_dict)
     
-    response = f"📦 **DANH SÁCH SẢN PHẨM THEO DANH MỤC ({len(categories)} danh mục):**\n\n"
+    response = f"️🎉 **DANH SÁCH SẢN PHẨM THEO DANH MỤC ({len(categories)} danh mục):**\n\n"
     
     all_products = []
     for idx, (cat_name, prods) in enumerate(sorted(categories.items()), 1):
@@ -1756,7 +1554,7 @@ def list_products_by_category():
     #     response += "\n"
         all_products.extend(prods)
     
-    response += "\n💡 **Gợi ý:** Chọn một sản phẩm để xem chi tiết hoặc tính chi phí.\n"
+    response += "\n💖 **Ghi chú:** Chọn một sản phẩm để xem chi tiết hoặc tính chi phí.\n"
     
     return {
         "response": response,
@@ -1777,7 +1575,6 @@ def chat(msg: ChatMessage):
         context = msg.context or {}
         
         intent_data = get_intent_and_params(user_message, context)
-        # print(f"\n🤖 Detected intent: {intent_data}")
         
         if intent_data.get("intent") == "error":
             error_msg = intent_data.get("error_message", "Xin lỗi, hệ thống đang bận. Vui lòng thử lại.")
@@ -1816,17 +1613,28 @@ def chat(msg: ChatMessage):
 
             ranking_summary = search_result.get("ranking_summary", {})
             result_count = len(products)
+            print(f"INFO: search_result",search_result)
             
-            # Check if search timed out or errored
-            if search_result.get("search_method") == "timeout" or (not products and search_result.get("success") == False):
+            if search_result.get("no_results") == "no_results":
                 print(f"⏱️ Search timeout or failed for query: {user_message}")
                 result_response = {
-                    "response": "",
+                    "response": " 💔 Thành thật xin lỗi, tôi không tìm thấy kết quả phù hợp trong cơ sở dữ liêu.\n\n Bạn có thể mô tả nhiều hơn về sản phẫm mong muốn không?\n\n Hoặc bạn có thể chọn xem Danh sách sản phẩm ở **Gợi ý nhanh** để tìm sản phẩm ưng ý.",
                     "products": [],
                     "materials": [],
-                    "success": True,
-                    "suggested_prompts": []
+                    "success": False,
                 }
+                return result_response
+            
+            # Check if search timed out or errored
+            if search_result.get("search_method") == "timeout":
+                print(f"⏱️ Search timeout or failed for query: {user_message}")
+                result_response = {
+                    "response": " 💔 Thành thật xin lỗi, hệ thống tìm kiếm hiện đang quá tải và không thể trả về kết quả ngay lúc này.\n\n",
+                    "products": [],
+                    "materials": [],
+                    "success": False,
+                }
+                return result_response
             elif not products:
                 try:
                     suggested_prompts_mess = generate_suggested_prompts(
@@ -1838,20 +1646,19 @@ def chat(msg: ChatMessage):
                     suggested_prompts_mess = "• Thử với từ khóa khác\n• Tìm theo danh mục sản phẩm\n• Liên hệ tư vấn viên"
                 
                 result_response = {
-                    "response": (
-                        f"🔍 **KHÔNG TÌM THẤY SẢN PHẨM PHÙ HỢP**\n\n"
-                        f"Rất tiếc, tôi không tìm thấy sản phẩm nào khớp với \"{user_message}\".\n\n"
-                        # f"**💡 Gợi ý cho bạn:**\n"
-                        # f"{suggested_prompts_mess}"
-                    ),
+                    "response": 
+                        f" 🔍 **KHÔNG TÌM THẤY SẢN PHẨM PHÙ HỢP**\n\n"+
+                        f" 💔 Thành thật xin lỗi, tôi không tìm thấy kết quả phù hợp trong cơ sở dữ liêu.\n\n Bạn có thể mô tả nhiều hơn về sản phẫm mong muốn không?\n\n Hoặc bạn có thể chọn xem Danh sách sản phẩm ở **Gợi ý nhanh** để tìm sản phẩm ưng ý.\n\n"
+                    ,
                     "suggested_prompts": [
                         "Xem danh mục sản phẩm phổ biến",
                         "Tìm theo vật liệu",
                         "Liên hệ chuyên viên tư vấn"
                     ],
-                    "success": True,
+                    "success": False,
                     "suggested_prompts_mess":suggested_prompts_mess
                 }
+                return result_response
             else:
                 response_text = ""
                 suggested_prompts = []
@@ -1866,8 +1673,6 @@ def chat(msg: ChatMessage):
                         f"🎯 **KẾT QUẢ TÌM KIẾM**\n"
                         f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n"
                         f"💡 **{follow_up}**\n"
-                        # f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:\n"
-                        # f"{suggested_prompts_mess}"
                     )
                 else:
                     response_text = (
@@ -1897,7 +1702,6 @@ def chat(msg: ChatMessage):
                             prod_item.get("sub_category", ""),
                             prod_item.get("material_primary", ""),
                         ])
-
                     suggested_prompts = [
                         f"💰 Phân tích chi phí {products[0]['headcode']}",
                         f"🧱 Xem cấu tạo vật liệu {products[0]['headcode']}",
@@ -1910,15 +1714,6 @@ def chat(msg: ChatMessage):
                         {"query": user_message, "products": products}
                     )
                     suggested_prompts_mess = format_suggested_prompts(tmp)
-                    # response_text += (
-                    #     f"**Các vật :**\n"
-                    #     # f"• Các sản phẩm được liệt kê dưới đây đều đáp ứng yêu cầu về sản phẩm\n"
-                    #     # f"• Nếu cần thay đổi tiêu chí (màu sắc, kích thước, chất liệu), hãy cho tôi biết\n"
-                    #     # f"• Tôi có thể tư vấn thêm về phong cách thiết kế phù hợp"
-                    #     f"{suggested_prompts_mess}"
-                    # )
-                    # response_text += "\n\n---\n\n"
-                    # response_text += suggested_prompts_mess
                 result_response = {
                     "response": response_text,
                     "products": products,
@@ -1933,12 +1728,6 @@ def chat(msg: ChatMessage):
             
             if not material_query:
                 result_response = {
-                    # "response": "🎯 **TÌM SẢN PHẨM THEO VẬT LIỆU**\n\n"
-                                # "Để tôi tư vấn sản phẩm phù hợp, vui lòng cho biết:\n"
-                                # "• Bạn quan tâm đến vật liệu nào? (gỗ, đá, kim loại...)\n"
-                                # "• Sản phẩm dùng cho không gian nào?\n"
-                                # "• Ngân sách dự kiến là bao nhiêu?",
-                                # f"{suggested_prompts_mess}",
                     "response": "⚠️ Hiện tại tôi chưa nhận được thông tin về vật liệu bạn muốn tìm kiếm sản phẩm. ",
                     "suggested_prompts": [
                         "Sản phẩm làm từ gỗ sồi tự nhiên",
@@ -2123,8 +1912,6 @@ def chat(msg: ChatMessage):
                     "response": (
                         f"🔍 **KHÔNG TÌM THẤY VẬT LIỆU PHÙ HỢP**\n\n"
                         f"Rất tiếc, tôi không tìm thấy vật liệu nào khớp với \"{user_message}\".\n\n"
-                        # f"**💡 Đề xuất:**\n"
-                        # f"{suggested_prompts_mess}"
                     ),
                     "suggested_prompts": [
                         "Vật liệu chịu nhiệt",
@@ -2173,12 +1960,6 @@ def chat(msg: ChatMessage):
                         feedback
                     ])
 
-                # response_text += (
-                #     "\n📦 **DANH SÁCH VẬT LIỆU ƯU TIÊN**\n" +
-                #     build_markdown_table(headers, rows) +
-                #     "\n"
-                # )
-                
                 # Thêm phần link hình ảnh riêng (ngoài bảng)
                 materials_with_images = [m for m in materials[:3] if m.get('image_url')]
                 if materials_with_images:
@@ -2191,10 +1972,6 @@ def chat(msg: ChatMessage):
                     {"query": user_message, "materials": materials}
                 )
                 suggested_prompts_mess = format_suggested_prompts(tmp)
-                # response_text += (
-                #         f"**Nếu các vật liệu trên chưa đúng ý, tôi có thể:**\n"
-                #         f"{suggested_prompts_mess}"
-                #     )
                 
                 result_response = {
                     "response": response_text,
@@ -2270,17 +2047,6 @@ def chat(msg: ChatMessage):
                 ]
             }
         
-        # # Lấy thông tin mở rộng từ kết quả tìm kiếm
-        # expanded = None
-        # keywords = []
-        
-        # if intent == "search_product" and result_response.get("data"):
-        #     expanded = result_response["data"].get("expanded_query")
-        #     # Lấy keywords từ params
-        #     if params.get("keywords_vector"):
-        #         keywords = extract_product_keywords(params["keywords_vector"])
-                
-        # print(f"SUCCESS => Final response: {result_response.get('materials', '')}, count: {result_count}")
         listProducts = listProducts or result_response.get("products", []) or result_response.get("materials", [])
         # Save chat history
         histories.save_chat_to_histories(
@@ -2326,7 +2092,7 @@ def chat(msg: ChatMessage):
                 "response": (
                     "⏱️ **KHÔNG TÌM THẤY KẾT QUẢ PHÙ HỢP**\n\n"
                     "Hệ thống không tìm thấy danh sách phù hợp với yêu cầu của bạn.\n\n"
-                    "**💡 Gợi ý:**\n"
+                    "**💖 Ghi chú:**\n"
                     "• Thử từ khóa tìm kiếm khác\n"
                     "• Xem các danh mục sản phẩm có sẵn\n"
                     "• Liên hệ chuyên viên để được tư vấn chi tiết"
@@ -2473,13 +2239,12 @@ def batch_product_operations(request: BatchProductRequest):
                 })
             
             # Tạo response
-            response = f"🧱 **ĐỊNH MỨC VẬT LIỆU - {len(products_dict)} SẢN PHẨM:**\n\n"
+            response = f" 🎉 **ĐỊNH MỨC VẬT LIỆU - {len(products_dict)} SẢN PHẨM:**\n\n"
             
             for prod_data in products_dict.values():
                 response += f"### 📦 {prod_data['product_name']} (`{prod_data['headcode']}`)\n\n"
                 
                 total_cost = sum(m['total'] for m in prod_data['materials'])
-
                 # Tạo bảng Markdown cho vật liệu
                 headers = [
                     "STT",

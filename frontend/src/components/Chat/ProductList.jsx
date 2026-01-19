@@ -2,7 +2,7 @@ import { Box, Grid } from '@mui/material';
 import React, { useState } from 'react';
 import ProductCard from './ProductCard';
 
-function ProductListWithFeedback({
+function ProductList({
   products = [],
   onMaterialClick,
   onPriceClick,
@@ -15,7 +15,7 @@ function ProductListWithFeedback({
   const [feedbackMode, setFeedbackMode] = useState(false);
 
   return (
-    <div className="">
+    <div>
       <div className="products-header-row">
         <h3>
           📦 Kết quả tìm kiếm sản phẩm ({products.length})
@@ -40,9 +40,9 @@ function ProductListWithFeedback({
         </div>
       </div>
 
-      <div className="">
+      <div>
         <Grid container spacing={2}>
-          {products.map((product, pidx) => {
+          {products?.map((product, pidx) => {
             const headcode = product.headcode || 'N/A';
             const productName = (product.product_name || 'N/A').slice(0, 50);
             const originalRank =
@@ -131,4 +131,4 @@ function ProductListWithFeedback({
   );
 }
 
-export default ProductListWithFeedback;
+export default ProductList;

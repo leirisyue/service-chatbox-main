@@ -1468,11 +1468,11 @@ def get_product_materials(headcode: str):
     if not materials:
         return {
             "response": f"⚠️ Sản phẩm **{prod['product_name']}** ({headcode}) chưa có định mức vật liệu.\n\n"
-                       f"Có thể:\n"
-                       f"• Sản phẩm mới chưa nhập định mức\n"
-                       f"• Chưa import file product_materials.csv\n"
-                       f"• Mã sản phẩm trong product_materials không khớp\n\n"
-                       f"Vui lòng kiểm tra lại hoặc liên hệ bộ phận kỹ thuật."
+                        f" Có thể:\n"
+                        f"• Sản phẩm mới chưa nhập định mức\n"
+                        f"• Chưa import file product_materials.csv\n"
+                        f"• Mã sản phẩm trong product_materials không khớp\n\n"
+                        f"Vui lòng kiểm tra lại hoặc liên hệ bộ phận kỹ thuật."
         }
     
     total = 0
@@ -1480,7 +1480,7 @@ def get_product_materials(headcode: str):
     
     for mat in materials:
         latest_price = get_latest_material_price(mat['material_subprice'])
-        quantity = float(mat['quantity']) if mat['quantity'] else 0.0  # ✅
+        quantity = float(mat['quantity']) if mat['quantity'] else 0.0 
         total_cost = quantity * latest_price
         total += total_cost
         
@@ -1500,7 +1500,7 @@ def get_product_materials(headcode: str):
             'price_history': mat['material_subprice']
         })
     
-    response = f"📊 **ĐỊNH MỨC VẬT LIỆU: {prod['product_name']}**\n"
+    response = f"🎉 **ĐỊNH MỨC VẬT LIỆU: {prod['product_name']}**\n"
     response += f"🏷️ Mã: `{headcode}`\n"
     response += f"📦 Tổng số loại vật liệu: **{len(materials_with_price)}**\n\n"
     response += "---\n\n"
@@ -2307,7 +2307,7 @@ def chat(msg: ChatMessage):
                     follow_up = intent_data.get("follow_up_question", "Bạn cần tìm loại vật liệu cụ thể nào?")
                     response_text = (
                         f"🔎 Tìm thấy **{len(materials)} nguyên vật liệu** phù hợp.\n\n"
-                        f"💡 **Gợi ý:** {follow_up}"
+                        f"💖 **Ghi chú:** {follow_up}"
                     )
                 else:
                     response_text = f"✅ Đã tìm thấy **{len(materials)} nguyên vật liệu** đúng yêu cầu."

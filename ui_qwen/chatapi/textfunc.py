@@ -610,15 +610,6 @@ def calculate_product_total_cost(headcode: str) -> float:
     return total_cost
 
 def search_products_hybrid(params: Dict):
-    """HYBRID: Vector + Keyword với từ CHÍNH bắt buộc khớp, từ PHỤ tìm gần giống
-    
-    Supports parallel search when both main_keywords and secondary_keywords are provided.
-    Returns: {
-        "products": [...],  # From main_keywords
-        "products_second": [...],  # From secondary_keywords (if provided)
-        "search_method": "..."
-    }
-    """
     import signal
     
     def timeout_handler(signum, frame):
@@ -1007,29 +998,54 @@ def search_products_hybrid(params: Dict):
 def expand_search_query(user_query: str, params: Dict) -> str:
     """AI mở rộng query ngắn thành mô tả chi tiết với từ khóa chính xác"""
     model = genai.GenerativeModel("gemini-2.5-flash")
-    
     prompt = f"""
             Người dùng tìm: "{user_query}"
 
-            Tạo mô tả tìm kiếm tối ưu (2-3 câu ngắn), GIỮ NGUYÊN TỪ KHÓA CHÍNH từ câu gốc:
-            1. LOẠI SẢN PHẨM CHÍNH XÁC (bàn/ghế/tủ...) - PHẢI khớp với từ khóa gốc
-            2. VẬT LIỆU CỤ THỂ (gỗ teak/đá marble/da bò...)
-            3. VỊ TRÍ/CÔNG DỤNG (nhà bếp/phòng khách/dining/coffee...)
+            ROLE
+            Bạn là chuyên gia phân tích từ khóa và mô tả sản phẩm nội thất cho hệ thống tìm kiếm.
 
-            QUAN TRỌNG: 
-            - NẾU người dùng tìm "bàn làm việc" thì PHẢI nhấn mạnh "bàn làm việc", "desk", "working table"
-            - KHÔNG mở rộng sang loại sản phẩm khác (ví dụ: tìm "bàn" thì không nhắc đến "ghế")
-            - Chỉ bổ sung từ đồng nghĩa và chi tiết về loại sản phẩm CỤ THỂ đang tìm
+            TASK
+            Dựa CHỈ trên câu truy vấn văn bản của người dùng, tạo mô tả tìm kiếm ngắn gọn (2–3 câu), tối ưu cho truy vấn sản phẩm nội thất.
 
-            VD: 
-            - "bàn làm việc" -> "Bàn làm việc desk working table văn phòng. Office desk bàn học bàn máy tính."
-            - "bàn gỗ teak" -> "Bàn làm từ gỗ teak tự nhiên. Dining table hoặc coffee table chất liệu teak wood cao cấp."
+            CHIẾN LƯỢC TỪ KHÓA
+            - Ưu tiên giữ NGUYÊN từ khóa chính trong câu gốc (Exact intent).
+            - Chỉ mở rộng bằng từ đồng nghĩa hoặc biến thể ngôn ngữ của CÙNG MỘT LOẠI SẢN PHẨM (Broad intent).
+            - KHÔNG suy đoán ngoài nội dung text người dùng nhập.
+            - KHÔNG chuyển sang loại sản phẩm khác.
 
-            Output (chỉ mô tả, tập trung vào từ khóa chính):
-        """
-    
+            YÊU CẦU BẮT BUỘC PHẢI CÓ TRONG MÔ TẢ
+            1. LOẠI SẢN PHẨM CHÍNH XÁC  
+            - Phải khớp 100% với từ khóa gốc (VD: bàn / ghế / tủ / sofa…)
+            - Được phép thêm từ đồng nghĩa cùng nghĩa (VD: desk / working table cho “bàn làm việc”).
+
+            2. VẬT LIỆU (chỉ khi có trong từ khóa hoặc là thuộc tính hiển nhiên đi kèm)  
+            - VD: gỗ teak, gỗ tự nhiên, đá marble, da bò, kim loại…
+
+            3. VỊ TRÍ / CÔNG DỤNG  
+            - VD: văn phòng, phòng khách, dining, coffee, nhà bếp…
+
+            RÀNG BUỘC QUAN TRỌNG
+            - Nếu người dùng tìm "bàn làm việc" → PHẢI nhấn mạnh:
+            "bàn làm việc", "desk", "working table", "office desk"
+            - TUYỆT ĐỐI KHÔNG mở rộng sang loại sản phẩm khác
+            (VD: tìm "bàn" thì không được nhắc "ghế", "sofa", "đèn"...)
+            - Không thêm phong cách, vật liệu hoặc công năng nếu không liên quan trực tiếp.
+
+            VÍ DỤ ĐỊNH HƯỚNG
+            - "bàn làm việc" →
+            "Bàn làm việc desk working table dành cho văn phòng và không gian làm việc tại nhà. Office desk, bàn học, bàn máy tính tập trung vào công năng làm việc."
+
+            - "bàn gỗ teak" →
+            "Bàn gỗ teak tự nhiên với kết cấu chắc chắn. Teak wood table phù hợp làm dining table hoặc coffee table trong không gian nội thất."
+
+            OUTPUT
+            - Chỉ trả về đoạn mô tả tìm kiếm
+            - Không giải thích, không markdown, không thêm tiêu đề
+            """
+
     try:
         response = call_gemini_with_retry(model, prompt, max_retries=2)
+        print(f"AI Expansion Response: {response}")
         if response:
             # Ensure original keyword is in expanded query
             expanded = response.strip()
@@ -1120,13 +1136,6 @@ def calculate_personalized_score(
     candidate_vector: list, 
     session_id: str
 ) -> float:
-    """
-    🎯 V5.7 - Trả về điểm Personalization RIÊNG (0.0 → 1.0)
-    KHÔNG trả về final_score, để search_products tổng hợp sau
-    
-    Returns:
-        float: Personal affinity score (0.0 = không khớp, 1.0 = rất khớp)
-    """
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -1211,15 +1220,6 @@ def calculate_personalized_score(
         return 0.5
 
 def generate_consolidated_report(product_headcodes: List[str]) -> BytesIO:
-    """
-    Tạo báo cáo Excel tổng hợp định mức vật tư cho nhiều sản phẩm
-    
-    Args:
-        product_headcodes: Danh sách mã sản phẩm
-    
-    Returns:
-        BytesIO: File Excel buffer
-    """
     conn = get_db()
     cur = conn.cursor(cursor_factory=RealDictCursor)
     
