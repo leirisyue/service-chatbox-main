@@ -88,7 +88,6 @@ def save_chat_to_history(session_id: str, user_message: str, bot_response: str,
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """
-            
             history_json = json.dumps([history_entry])
             cur.execute(insert_sql, (
                 email,

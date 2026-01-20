@@ -1462,9 +1462,9 @@
 #                 if intent_data.get("is_broad_query"):
 #                     follow_up = intent_data.get("follow_up_question", "Bạn muốn tìm loại cụ thể nào?")
 #                     response_text = (
-#                         f"🎯 **KẾT QUẢ TÌM KIẾM**\n"
+#                         f" 🔍 **KẾT QUẢ TÌM KIẾM**\n"
 #                         f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n"
-#                         f"💡 **{follow_up}**\n"
+#                         f" 💡 **{follow_up}**\n"
 #                         # f"Dưới đây là một số lựa chọn phổ biến dành cho bạn:\n"
 #                         # f"{suggested_prompts_mess}"
 #                     )
@@ -1563,10 +1563,10 @@
 #                 if not products:
 #                     matched_mats = search_result.get("matched_materials", [])
 #                     result_response = {
-#                         "response": f"🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
+#                         "response": f" 🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
 #                                     f"Tôi tìm thấy vật liệu **{', '.join(matched_mats)}** trong hệ thống.\n\n"
 #                                     f"**Tuy nhiên, hiện chưa có sản phẩm nào sử dụng vật liệu này.**\n\n",
-#                                     # f"💡 **Gợi ý cho bạn:**\n"
+#                                     # f" 💡 **Gợi ý cho bạn:**\n"
 #                                     # f"• Tìm sản phẩm với vật liệu tương tự\n"
 #                                     # f"• Liên hệ bộ phận thiết kế để đặt hàng riêng\n"
 #                                     # f"• Xem vật liệu thay thế có tính năng tương đồng",

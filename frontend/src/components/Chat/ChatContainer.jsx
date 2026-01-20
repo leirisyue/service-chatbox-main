@@ -24,13 +24,13 @@ function ChatContainer({ isLoading, onSendMessage }) {
       setShowThinkingText('');
       timer1 = setTimeout(() => {
         setShowThinkingText('đang phân tích...');
-      }, 5000);
+      }, 8000);
       timer2 = setTimeout(() => {
         setShowThinkingText('đang suy nghĩ...');
       }, 4000);
       timer3 = setTimeout(() => {
         setShowThinkingText('vui lòng chờ...');
-      }, 3000);
+      }, 5000);
     } else {
       setShowThinkingText('');
     }

@@ -1650,9 +1650,8 @@ def chat(msg: ChatMessage):
                 except Exception as e:
                     print(f"WARNING: Could not generate suggestions: {e}")
                     suggested_prompts_mess = "• Thử với từ khóa khác\n• Tìm theo danh mục sản phẩm\n• Liên hệ tư vấn viên"
-                response_msg = "🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
-                response_msg += f"💔  Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
-                
+                response_msg = " 🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
+                response_msg += f" 💔 Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
                 
                 result_response = {
                     "response": response_msg,
@@ -1676,18 +1675,18 @@ def chat(msg: ChatMessage):
                 if intent_data.get("is_broad_query"):
                     follow_up = intent_data.get("follow_up_question", "Bạn muốn tìm loại cụ thể nào?")
                     response_text = (
-                        f"🎯 **KẾT QUẢ TÌM KIẾM**\n"
-                        f"Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n"
-                        f"💡 **{follow_up}**\n"
+                        f" 🔍 **KẾT QUẢ TÌM KIẾM**\n"
+                        f" ✅ Tôi tìm thấy **{len(products)} sản phẩm** liên quan đến \"{user_message}\".\n"
+                        f" ⭐ **Ghi chú:** {follow_up}\n"
                     )
                 else:
                     response_text = (
-                        f"✅ **KẾT QUẢ TÌM KIẾM CHUYÊN SÂU**\n"
+                        f" ✅ **KẾT QUẢ TÌM KIẾM CHUYÊN SÂU**\n"
                         f"Tôi đã chọn lọc **{len(products)}** phù hợp nhất với yêu cầu của bạn.\n\n"
                     )
                     # ✅ NEW: Display ranking info if available
                     if ranking_summary['ranking_applied']:
-                        response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} sản phẩm** được ưu tiên dựa trên lịch sử tìm kiếm."
+                        response_text += f"\n\n ⭐ **{ranking_summary['boosted_items']} sản phẩm** được ưu tiên dựa trên lịch sử tìm kiếm."
                     
                     response_text += "\n**Bảng tóm tắt các sản phẩm:**\n"
                     headers = [
@@ -1761,9 +1760,9 @@ def chat(msg: ChatMessage):
                 
                 if not products:
                     matched_mats = search_result.get("matched_materials", [])
-                    response_msg = "🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
-                    response_msg += f"💔  Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
-                    response_msg += f"⭐ **Ghi chú**: Tôi tìm được những vật liệu sau trong hệ thống: **{', '.join(matched_mats)}**, bạn có thể tham khảo!"
+                    response_msg = " 🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
+                    response_msg += f" 💔  Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
+                    response_msg += f" ⭐ **Ghi chú**: Tôi tìm được những vật liệu sau trong hệ thống: **{', '.join(matched_mats)}**, bạn có thể tham khảo!"
 
                     result_response = {
                         "response": response_msg,
@@ -1945,31 +1944,31 @@ def chat(msg: ChatMessage):
                         f"💡 **Để tôi tư vấn chính xác hơn:** {follow_up}\n\n"
                         f"*Dưới đây là các vật liệu đang được sử dụng phổ biến:*"
                     )
-                else:
-                    response_text = (
-                        f"✅ **TƯ VẤN VẬT LIỆU CHUYÊN SÂU**\n"
-                        f"Dựa trên nhu cầu của bạn, **{len(materials)} vật liệu** dưới đây đang được sử dụng phổ biến và phù hợp nhất.\n\n"
-                    )
-                    # 🆕 Hiển thị ranking info
-                    if ranking_summary['ranking_applied']:
-                        response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên."
+                # else:
+                #     response_text = (
+                #         f"✅ **TƯ VẤN VẬT LIỆU CHUYÊN SÂU**\n"
+                #         f"Dựa trên nhu cầu của bạn, **{len(materials)} vật liệu** dưới đây đang được sử dụng phổ biến và phù hợp nhất.\n\n"
+                #     )
+                #     # 🆕 Hiển thị ranking info
+                #     if ranking_summary['ranking_applied']:
+                #         response_text += f"\n\n⭐ **{ranking_summary['boosted_items']} vật liệu** được ưu tiên."
 
-                for idx, mat in enumerate(materials, 1):
-                    price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
-                    material_name = mat["material_name"]
-                    feedback = (
-                        f"{mat['feedback_count']} lượt"
-                        if mat.get("has_feedback")
-                        else "-"
-                    )
-                    rows.append([
-                        idx,
-                        material_name,
-                        mat["id_sap"],
-                        mat["material_group"],
-                        price,
-                        feedback
-                    ])
+                # for idx, mat in enumerate(materials, 1):
+                #     price = f"{mat.get('price', 0):,.2f} / {mat.get('unit', '')}"
+                #     material_name = mat["material_name"]
+                #     feedback = (
+                #         f"{mat['feedback_count']} lượt"
+                #         if mat.get("has_feedback")
+                #         else "-"
+                #     )
+                #     rows.append([
+                #         idx,
+                #         material_name,
+                #         mat["id_sap"],
+                #         mat["material_group"],
+                #         price,
+                #         feedback
+                #     ])
 
                 # Thêm phần link hình ảnh riêng (ngoài bảng)
                 materials_with_images = [m for m in materials[:3] if m.get('image_url')]

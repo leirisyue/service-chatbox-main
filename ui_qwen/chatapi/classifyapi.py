@@ -713,7 +713,6 @@ async def search_by_image_with_text(
             clean = clean.split("```json")[1].split("```")[0].strip()
         elif "```" in clean:
             clean = clean.split("```")[1].split("```")[0].strip()
-        
         try:
             ai_result = json.loads(clean)
         except json.JSONDecodeError as e:
@@ -825,7 +824,7 @@ async def search_by_image_with_text(
             if user_requirements:
                 response_msg += f"✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
             response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n\n"
-            response_msg += f"✅ Tôi tìm thấy **{len(products_second_main)} sản phẩm tương tự** với yêu cầu của bạn! Bạn có thể tham khảo:"
+            # response_msg += f"✅ Tôi tìm thấy **{len(products_second_main)} sản phẩm tương tự** với yêu cầu của bạn! Bạn có thể tham khảo:"
         else:
             response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu:**\n\n"
             response_msg += f"🔍 **Mô tả:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
@@ -833,7 +832,7 @@ async def search_by_image_with_text(
                 response_msg += f"✨ **Yêu cầu:** {user_requirements}\n\n"
             response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn.\n\n"
             response_msg += f"⭐ **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
-        
+
         tmp = generate_suggested_prompts(
                         "search_product_not_found",
                         {"query": user_requirements}
