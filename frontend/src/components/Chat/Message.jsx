@@ -141,7 +141,7 @@ function Message({ message, onSendMessage, typing }) {
       role: 'bot',
       content: botData?.response || 'Thành thật xin lỗi, tôi không hiểu yêu cầu của bạn.',
       data: botData,
-      suggested_prompts_message: botData?.suggested_prompts_message || [],
+      suggested_prompts_mess: botData?.suggested_prompts_mess || [],
       timestamp: Date.now(),
     };
 
@@ -509,7 +509,7 @@ function Message({ message, onSendMessage, typing }) {
                   [rehypeSanitize, schemaMarkdown],
                 ]}
               >
-                {message?.data?.suggested_prompts_mess}
+                {message?.data?.suggested_prompts_mess + '\n\n**Trên đây là những gợi ý phù hợp với bạn, Bạn có thể tìm kiếm thêm sản phẩm hoặc Bạn có thể hỏi tôi bất cứ điều gì khác!**'}
               </ReactMarkdown>
             </>
           }

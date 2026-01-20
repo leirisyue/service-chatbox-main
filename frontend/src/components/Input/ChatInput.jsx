@@ -35,11 +35,11 @@ function ChatInput({ onSendMessage, onImageUpload, onImageWithTextUpload, disabl
       return;
     }
 
-    if (inputValue.trim() && !disabled) {
+    if (!!inputValue && inputValue.trim() && !disabled) {
 
       if (!!lastMessage && lastMessage?.data?.suggested_prompts_mess && lastMessage?.data?.success) {
 
-        const list = lastMessage.data.suggested_prompts_mess
+        const list = lastMessage?.data?.suggested_prompts_mess
           .split("•")
           .map(item => item.trim())
           .filter(item => item.length > 0);

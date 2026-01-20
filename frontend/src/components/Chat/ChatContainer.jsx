@@ -24,7 +24,7 @@ function ChatContainer({ isLoading, onSendMessage }) {
       setShowThinkingText('');
       timer1 = setTimeout(() => {
         setShowThinkingText('đang phân tích...');
-      }, 4000);
+      }, 5000);
       timer2 = setTimeout(() => {
         setShowThinkingText('đang suy nghĩ...');
       }, 4000);

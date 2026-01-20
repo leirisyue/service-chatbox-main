@@ -269,8 +269,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     [
         "Gợi ý 1 - tự nhiên, không emoji",
         "Gợi ý 2 - tự nhiên, không emoji",
-        "Gợi ý 3 - tự nhiên, không emoji",
-        "**Trên đây là các gợi ý phù hợp với bạn, Bạn có thể hỏi tôi bất cứ điều gì khác!**"
+        "Gợi ý 3 - tự nhiên, không emoji"
     ]
     """
     try:

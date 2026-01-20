@@ -88,8 +88,8 @@ function App() {
       setMessages(prev => [...prev, botMessage]);
 
       // Cập nhật suggested prompts
-      if (response.suggested_prompts) {
-        setSuggestedPrompts(response.suggested_prompts);
+      if (response?.suggested_prompts) {
+        setSuggestedPrompts(response?.suggested_prompts);
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -208,8 +208,8 @@ function App() {
       setMessages(prev => [...prev, botMessage]);
 
       // Cập nhật suggested prompts
-      if (response.suggested_prompts) {
-        setSuggestedPrompts(response.suggested_prompts);
+      if (response?.suggested_prompts) {
+        setSuggestedPrompts(response?.suggested_prompts);
       }
     } catch (error) {
       console.error('Error processing image with text:', error);
