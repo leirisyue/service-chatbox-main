@@ -2194,9 +2194,6 @@ def chat(msg: ChatMessage):
                         "can_provide_feedback": True          # Bật nút Feedback
                     }
 
-        
-
-
 
         elif intent == "query_product_materials":
             headcode = params.get("headcode")
@@ -2307,7 +2304,7 @@ def chat(msg: ChatMessage):
                     follow_up = intent_data.get("follow_up_question", "Bạn cần tìm loại vật liệu cụ thể nào?")
                     response_text = (
                         f"🔎 Tìm thấy **{len(materials)} nguyên vật liệu** phù hợp.\n\n"
-                        f"💖 **Ghi chú:** {follow_up}"
+                        f"⭐ **Ghi chú** {follow_up}"
                     )
                 else:
                     response_text = f"✅ Đã tìm thấy **{len(materials)} nguyên vật liệu** đúng yêu cầu."

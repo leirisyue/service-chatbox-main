@@ -7,7 +7,7 @@ import Message from './Message';
 function ChatContainer({ isLoading, onSendMessage }) {
 
   const messages = useAtomValue(messagesAtom);
-  const [showThinkingText, setShowThinkingText] = useState(false);
+  const [showThinkingText, setShowThinkingText] = useState('');
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -19,18 +19,26 @@ function ChatContainer({ isLoading, onSendMessage }) {
   }, [messages]);
 
   useEffect(() => {
-    let timer;
+    let timer1, timer2, timer3;
     if (isLoading) {
-      setShowThinkingText(false);
-      timer = setTimeout(() => {
-        setShowThinkingText(true);
-      }, 8000);
+      setShowThinkingText('');
+      timer1 = setTimeout(() => {
+        setShowThinkingText('đang phân tích...');
+      }, 4000);
+      timer2 = setTimeout(() => {
+        setShowThinkingText('đang suy nghĩ...');
+      }, 4000);
+      timer3 = setTimeout(() => {
+        setShowThinkingText('vui lòng chờ...');
+      }, 3000);
     } else {
-      setShowThinkingText(false);
+      setShowThinkingText('');
     }
     
     return () => {
-      if (timer) clearTimeout(timer);
+      if (timer1) clearTimeout(timer1);
+      if (timer2) clearTimeout(timer2);
+      if (timer3) clearTimeout(timer3);
     };
   }, [isLoading]);
 
@@ -48,7 +56,7 @@ function ChatContainer({ isLoading, onSendMessage }) {
               <div className="dot"></div>
             </div>
             {showThinkingText && (
-              <span className="thinking-text">đang suy nghĩ...</span>
+              <span className="thinking-text">{showThinkingText}</span>
             )}
           </div>
         )}

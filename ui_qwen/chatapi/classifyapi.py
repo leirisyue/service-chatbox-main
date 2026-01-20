@@ -12,8 +12,8 @@ from historiesapi import histories
 from PIL import Image
 from psycopg2.extras import RealDictCursor
 
-from .textfunc import call_gemini_with_retry
-from .textapi_qwen import search_products
+from .textfunc import call_gemini_with_retry,format_suggested_prompts
+from .textapi_qwen import generate_suggested_prompts, search_products
 from config import settings
 
 def get_db():
@@ -349,7 +349,7 @@ async def search_by_image(
             question="[IMAGE_UPLOAD]",
             answer=f"Phân tích ảnh: {ai_result[0].get('visual_description', 'N/A')[:100]}... | Tìm thấy {len(products_main)} sản phẩm theo yêu cầu của bạn, {len(products_second_main)} sản phẩm phụ"
         )
-        
+        response_msg = ""
         # Build response message based on results
         if products_main or products_second_main:
             response_msg = f"📋 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm')}**.\n\n"
@@ -357,13 +357,23 @@ async def search_by_image(
                 response_msg += f"✅ Dựa trên hình ảnh bạn đã tải lên, tôi có **{len(products_main)} sản phẩm theo yêu cầu của bạn** gợi ý cho bạn"
             # if products_second_main:
             #     response_msg += f"{', và ' if products_main else '✅ Tôi có '}**{len(products_second_main)} sản phẩm tương tự** với yêu cầu trên của bạn! Bạn có thể tham khảo"
-            response_msg += ":"
+            # response_msg += ":"
+        if not products_main and products_second_main:
+            response_msg = f"📋 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm nội thất')}**.\n\n"
+            response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n\n" 
+            # response_msg += f"✅ Tuy nhiên, tôi có **{len(products_second_main)} sản phẩm tương tự** với yêu cầu của bạn! Bạn có thể tham khảo:"
         else:
-            response_msg += f"⚠️ Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
+            response_msg = f"📋 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm nội thất')}**.\n\n"
+            response_msg += f"💔  Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
             response_msg = f"📋 **Phân tích ảnh:** Tôi nhận thấy đây là **{ai_result[0].get('visual_description', 'sản phẩm nội thất')}**.\n\n" \
-                            f"⚠️ Tuy nhiên, rất tiếc tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn.\n\n" \
-                            f"💡 **Gợi ý**: Bạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm"
+                            f"💔  Thật xin lỗi, rất tiếc tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn.\n\n" \
+                            f"⭐ **Ghi chú**: Bạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm"
 
+        tmp = generate_suggested_prompts(
+                        "search_product_not_found",
+                        {"query": "Tìm sản phẩm trong ảnh"}
+                    )
+        suggested_prompts_mess = format_suggested_prompts(tmp)
         return {
             "response": response_msg,
             "products": products_main if products_main else None,
@@ -377,7 +387,7 @@ async def search_by_image(
                 "low_confidence": len(products_low_confidence)
             },
             "success": True,
-            "suggested_prompts_mess": "Những sản phẩm gợi ý trên có phù hợp với nhu cầu của bạn không? \n\nBạn có thể mô tả chi tiết hơn. Hoặc bạn có thể tìm sản phẩm khác. Tôi sẽ gợi ý cho bạn danh sách sản phẩm phù hợp hơn."
+            "suggested_prompts_mess": suggested_prompts_mess
         }
     
     except Exception as e:
@@ -805,17 +815,30 @@ async def search_by_image_with_text(
             
             if products_main:
                 response_msg += f"✅ Tôi tìm thấy **{len(products_main)} sản phẩm phù hợp** với yêu cầu của bạn"
-            if products_second_main:
+            if products_main and products_second_main:
                 response_msg += f"Những sản phẩm trên có phù hợp với yêu cầu của bạn không?. Nếu không hãy để tôi tìm kiếm thêm cho bạn"
             
             response_msg += "!"
+        if not products_main and products_second_main:
+            response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
+            response_msg += f"🔍 **Mô tả sản phẩm:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
+            if user_requirements:
+                response_msg += f"✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
+            response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n\n"
+            response_msg += f"✅ Tôi tìm thấy **{len(products_second_main)} sản phẩm tương tự** với yêu cầu của bạn! Bạn có thể tham khảo:"
         else:
             response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu:**\n\n"
             response_msg += f"🔍 **Mô tả:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
             if user_requirements:
                 response_msg += f"✨ **Yêu cầu:** {user_requirements}\n\n"
             response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn.\n\n"
-            response_msg += f"💖 **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
+            response_msg += f"⭐ **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
+        
+        tmp = generate_suggested_prompts(
+                        "search_product_not_found",
+                        {"query": user_requirements}
+                    )
+        suggested_prompts_mess = format_suggested_prompts(tmp)
         
         return {
             "response": response_msg,
@@ -831,7 +854,7 @@ async def search_by_image_with_text(
                 "low_confidence_count": len(products_low_confidence)
             },
             "success": True,
-            "suggested_prompts_mess": "Sản phẩm có phù hợp không? Bạn có thể mô tả thêm về màu sắc, kích thước, chất liệu hoặc ngân sách để tôi tìm chính xác hơn!"
+            "suggested_prompts_mess": suggested_prompts_mess
         }
     
     except Exception as e:

@@ -70,7 +70,8 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     
     prompt = f"""
         Bạn là chuyên viên tư vấn nội thất cao cấp của AA Corporation.
-        Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh, dạng câu HỎI, Mỗi câu hỏi gợi ý đều có PHÂN TÍCH, ĐỊNH HƯỚNG câu trả lời cho user RÕ RÀNG.
+        Nhiệm vụ: Tạo {count} câu gợi ý TỰ NHIÊN, CHUYÊN NGHIỆP, PHÙ HỢP với ngữ cảnh, dạng câu HỎI, 
+        Mỗi câu hỏi đều có PHÂN TÍCH, VÍ DỤ GỢI Ý để ĐỊNH HƯỚNG câu trả lời cho user RÕ RÀNG.
         
         NGỮ CẢNH: {context_type}.
         cách xưng hô: tôi và bạn.
@@ -274,7 +275,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     """
     try:
         response_text = call_gemini_with_retry(model, prompt)
-        print(f"Suggested prompts response: {response_text}")
+        # print(f"Suggested prompts response: {response_text}")
         
         if not response_text:
             return _get_fallback_prompts(context_type)
@@ -747,6 +748,9 @@ def search_products_by_material(material_query: str, params: Dict):
         # Add base_score for consistency and apply query matching boost
         query_keywords = material_query.lower().split()
         
+        print("INFO: Applied query matching boost to products")
+        # print("INFO: products_list", products_list)
+        
         for product in products_list:
             # Set initial base_score based on relevance_score
             product['base_score'] = min(1.0, 0.5 + (product['relevance_score'] * 0.1))
@@ -780,14 +784,16 @@ def search_products_by_material(material_query: str, params: Dict):
                 product['base_score'] = min(1.0, product['base_score'] + boost)
                 product['query_match_count'] = match_count
                 product['query_boost'] = boost
+                
+
         
         # Split products based on base_score
-        products_high = [p for p in products_list if p.get('base_score', 0) >= 0.8][:10]
-        products_bonus = [p for p in products_list if 0.65 < p.get('base_score', 0) < 0.8]
+        products_high = [p for p in products_list if p.get('base_score', 0) >= 0.7][:10]
+        products_bonus = [p for p in products_list if 0.65 < p.get('base_score', 0) < 0.7]
         
         return {
             "products": products_high,
-            "productBonuslist": products_bonus,
+            "products_second": products_bonus,
             "search_method": "cross_table_material_to_product",
             "matched_materials": material_names,
             "explanation": f"Tìm thấy sản phẩm sử dụng: {', '.join(material_names[:3])}",
@@ -1554,7 +1560,7 @@ def list_products_by_category():
     #     response += "\n"
         all_products.extend(prods)
     
-    response += "\n💖 **Ghi chú:** Chọn một sản phẩm để xem chi tiết hoặc tính chi phí.\n"
+    response += "\n⭐ **Ghi chú:** Chọn một sản phẩm để xem chi tiết hoặc tính chi phí.\n"
     
     return {
         "response": response,
@@ -1637,25 +1643,26 @@ def chat(msg: ChatMessage):
                 return result_response
             elif not products:
                 try:
-                    suggested_prompts_mess = generate_suggested_prompts(
+                    tmp = generate_suggested_prompts(
                         "search_product_not_found",
                         {"query": user_message}
                     )
+                    suggested_prompts_mess = format_suggested_prompts(tmp)
                 except Exception as e:
                     print(f"WARNING: Could not generate suggestions: {e}")
                     suggested_prompts_mess = "• Thử với từ khóa khác\n• Tìm theo danh mục sản phẩm\n• Liên hệ tư vấn viên"
+                response_msg = "🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
+                response_msg += f"💔  Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
+                
                 
                 result_response = {
-                    "response": 
-                        f" 🔍 **KHÔNG TÌM THẤY SẢN PHẨM PHÙ HỢP**\n\n"+
-                        f" 💔 Thành thật xin lỗi, tôi không tìm thấy kết quả phù hợp trong cơ sở dữ liêu.\n\n Bạn có thể mô tả nhiều hơn về sản phẫm mong muốn không?\n\n Hoặc bạn có thể chọn xem Danh sách sản phẩm ở **Gợi ý nhanh** để tìm sản phẩm ưng ý.\n\n"
-                    ,
+                    "response": response_msg,
                     "suggested_prompts": [
                         "Xem danh mục sản phẩm phổ biến",
                         "Tìm theo vật liệu",
                         "Liên hệ chuyên viên tư vấn"
                     ],
-                    "success": False,
+                    "success": True,
                     "suggested_prompts_mess":suggested_prompts_mess
                 }
                 return result_response
@@ -1708,7 +1715,6 @@ def chat(msg: ChatMessage):
                         f"🎯 So sánh với sản phẩm tương tự",
                         f"📞 Kết nối với chuyên viên tư vấn"
                     ]
-                    
                     tmp = generate_suggested_prompts(
                         "search_product_found",
                         {"query": user_message, "products": products}
@@ -1746,18 +1752,22 @@ def chat(msg: ChatMessage):
                     products = rerank_with_feedback(products, feedback_scores, "headcode")
                 
                 result_count = len(products)
+
+                tmp = generate_suggested_prompts(
+                        "search_product_not_found",
+                        {"query": user_message}
+                    )
+
+                suggested_prompts_mess = format_suggested_prompts(tmp)    
                 
                 if not products:
                     matched_mats = search_result.get("matched_materials", [])
+                    response_msg = "🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
+                    response_msg += f"💔  Thật xin lỗi tôi không tìm thấy sản phẩm phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n"
+                    response_msg += f"⭐ **Ghi chú**: Tôi tìm được những vật liệu sau trong hệ thống: **{', '.join(matched_mats)}**, bạn có thể tham khảo!"
+
                     result_response = {
-                        "response": f"🔍 **KẾT QUẢ TÌM KIẾM**\n\n"
-                                    f"Tôi tìm thấy vật liệu **{', '.join(matched_mats)}** trong hệ thống.\n\n"
-                                    f"**Tuy nhiên, hiện chưa có sản phẩm nào sử dụng vật liệu này.**\n\n",
-                                    # f"💡 **Gợi ý cho bạn:**\n"
-                                    # f"• Tìm sản phẩm với vật liệu tương tự\n"
-                                    # f"• Liên hệ bộ phận thiết kế để đặt hàng riêng\n"
-                                    # f"• Xem vật liệu thay thế có tính năng tương đồng",
-                                    # f"{suggested_prompts_mess}",
+                        "response": response_msg,
                         "materials": matched_mats,
                         "suggested_prompts": [
                             "Tìm vật liệu thay thế phù hợp",
@@ -1765,8 +1775,10 @@ def chat(msg: ChatMessage):
                             "Xem danh mục vật liệu có sẵn"
                         ],
                         "materials": [],
+                        "success": True,
                         "suggested_prompts_mess":suggested_prompts_mess
                     }
+                    return result_response
                 else:
                     explanation = search_result.get("explanation", "")
                     response_text = f"✅ {explanation}\n\n"
@@ -2087,6 +2099,7 @@ def chat(msg: ChatMessage):
         
         # Check if it's a timeout-related error
         error_str = str(e).lower()
+        print(f"Error string: {error_str}")
         if "timeout" in error_str or "timed out" in error_str:
             return {
                 "response": (
@@ -2421,12 +2434,7 @@ def batch_product_operations(request: BatchProductRequest):
 
 @router.post("/report/consolidated", tags=["Chat qwen"])
 def create_consolidated_report(request: ConsolidatedBOMRequest):
-    """
-    📊 API Endpoint tạo báo cáo tổng hợp định mức vật tư
-    
-    Input: {"product_headcodes": ["B001", "B002", "G001"], "session_id": "..."}
-    Output: File Excel (.xlsx)
-    """
+
     try:
         if not request.product_headcodes or len(request.product_headcodes) == 0:
             return {
@@ -2475,9 +2483,7 @@ def create_consolidated_report(request: ConsolidatedBOMRequest):
 
 @router.post("/track/view", tags=["Chat qwen"])
 def track_product_view(request: TrackingRequest):
-    """
-    👁️ Track khi user XEM CHI TIẾT sản phẩm (Positive Signal)
-    """
+
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -2532,9 +2538,6 @@ def track_product_view(request: TrackingRequest):
 
 @router.post("/track/reject", tags=["Chat qwen"])
 def track_product_reject(request: TrackingRequest):
-    """
-    ERROR: Track khi user BỎ QUA/REJECT sản phẩm (Negative Signal)
-    """
     try:
         conn = get_db()
         cur = conn.cursor(cursor_factory=RealDictCursor)
