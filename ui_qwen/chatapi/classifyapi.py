@@ -631,72 +631,154 @@ async def search_by_image_with_text(
         img = Image.open(file_path)
         model = genai.GenerativeModel("gemini-2.5-flash")
         
-        # Enhanced prompt that combines image analysis with user's text description
-        prompt = f"""
-            ROLE
-            You are a Senior Interior Materials Analyst at AA Corporation with expertise in analyzing products based on both visual and textual information.
+        # ========== DETECT SEARCH MODE (PRODUCT vs MATERIAL) ==========
+        description_lower = description.lower()
+        is_material_search = any(keyword in description_lower for keyword in [
+            "vật liệu", "nguyên liệu", "chất liệu", "material", 
+            "gỗ", "da", "vải", "kim loại", "đá", "kính", "nhựa"
+        ])
+        is_product_search = any(keyword in description_lower for keyword in [
+            "sản phẩm", "product", "bàn", "ghế", "tủ", "giường", "sofa", "đèn", "kệ"
+        ])
+        
+        # If both or neither detected, default to product search
+        if is_material_search and not is_product_search:
+            search_mode = "material"
+            print(f"INFO: Detected MATERIAL search mode from description: {description}")
+        else:
+            search_mode = "product"
+            print(f"INFO: Detected PRODUCT search mode from description: {description}")
+        
+        # ========== PREPARE AI PROMPT BASED ON SEARCH MODE ==========
+        if search_mode == "material":
+            # MATERIAL SEARCH PROMPT
+            prompt = f"""
+                ROLE
+                You are a Senior Materials Analyst at AA Corporation specializing in interior materials identification.
 
-            TASK
-            Analyze the provided image AND the user's description to extract comprehensive technical information for database search.
+                TASK
+                Analyze the provided image to identify and extract MATERIALS used in the product shown.
 
-            USER'S DESCRIPTION & REQUIREMENTS:
-            {description}
+                USER'S DESCRIPTION & REQUIREMENTS:
+                {description}
 
-            CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
-            Output phải là một mảng chứa chính xác 2 đối tượng (objects):
+                CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
+                Focus on identifying MATERIALS in the image, NOT products.
+                Output must be an array with exactly 2 objects:
 
-            Object 1 (Ưu tiên): Kết hợp thông tin từ hình ảnh VÀ mô tả của user để tạo từ khóa tìm kiếm chính xác nhất.
-            - Ưu tiên các yêu cầu cụ thể từ user (màu sắc, kích thước, chất liệu, phong cách...)
-            - Kết hợp với đặc điểm nổi bật từ hình ảnh
+                Object 1 (Primary): Most specific material identification
+                Object 2 (Fallback): Broader material category
 
-            Object 2 (Dự phòng): Tìm kiếm mở rộng dựa trên danh mục chung.
+                HƯỚNG DẪN CÁC TRƯỜNG (FIELDS)
+                material_group: Main material group (Gỗ, Da, Vải, Kim loại, Đá, Kính, Nhựa, Sơn, Keo, Phụ kiện)
 
-            HƯỚNG DẪN CÁC TRƯỜNG (FIELDS)
-            category: Danh mục sản phẩm (Ghế, Bàn, Sofa, Tủ, Đèn, Giường, Kệ...)
+                material_description: Professional description of the material visible in the image
+                - Type and characteristics
+                - Surface finish
+                - Quality indicators
 
-            visual_description: Mô tả chuyên nghiệp kết hợp:
-            - Những gì nhìn thấy từ hình ảnh
-            - Yêu cầu cụ thể từ mô tả của user
-            - Phong cách, chất liệu, màu sắc, kích thước...
+                search_keywords:
+                - Object 1: Specific material keywords (e.g., "gỗ teak", "da bò thật", "vải linen cao cấp")
+                - Object 2: General material keywords (e.g., "gỗ tự nhiên", "da", "vải")
 
-            search_keywords:
-            - Object 1: Từ khóa chi tiết kết hợp yêu cầu user + đặc điểm hình ảnh
-            - Object 2: Từ khóa tổng quát hơn
+                color_tone: Material color
 
-            material_detected: Vật liệu nhìn thấy từ hình ảnh hoặc được user đề cập
+                material_properties: Special properties (waterproof, durable, premium, etc.)
 
-            color_tone: Màu sắc (từ hình ảnh hoặc yêu cầu của user)
+                ĐỊNH DẠNG OUTPUT
+                Return JSON array: [ {{...}}, {{...}} ]
+                No markdown, no explanation.
+                Language: Vietnamese.
 
-            user_requirements: Tóm tắt các yêu cầu đặc biệt của user (kích thước, giá, tính năng...)
+                VÍ DỤ:
+                Image: Wooden table with teak finish
+                User: "tìm vật liệu gỗ trong ảnh"
+                Output: [
+                    {{
+                        "material_group": "Gỗ",
+                        "material_description": "Gỗ teak tự nhiên, vân gỗ rõ nét, bề mặt đánh bóng láng mịn, màu nâu vàng ấm áp",
+                        "search_keywords": "gỗ teak tự nhiên",
+                        "color_tone": "Nâu vàng",
+                        "material_properties": "Cao cấp, bền, chống mối mọt"
+                    }},
+                    {{
+                        "material_group": "Gỗ",
+                        "material_description": "Gỗ tự nhiên, vân gỗ đẹp, bề mặt hoàn thiện tốt",
+                        "search_keywords": "gỗ tự nhiên",
+                        "color_tone": "Nâu",
+                        "material_properties": "Tự nhiên, bền"
+                    }}
+                ]
 
-            ĐỊNH DẠNG OUTPUT
-            Trả về JSON array: [ {{...}}, {{...}} ]
-            Không dùng markdown, không giải thích thêm.
-            Ngôn ngữ: Tiếng Việt.
+                BẮT ĐẦU PHÂN TÍCH VẬT LIỆU TRONG HÌNH ẢNH NÀY
+            """
+        else:
+            # PRODUCT SEARCH PROMPT (original)
+            prompt = f"""
+                ROLE
+                You are a Senior Interior Materials Analyst at AA Corporation with expertise in analyzing products based on both visual and textual information.
 
-            VÍ DỤ:
-            User description: "Tôi cần ghế văn phòng màu xám, có tựa lưng cao, giá dưới 3 triệu"
-            Output: [
-                {{
-                    "category": "Ghế",
-                    "visual_description": "Ghế văn phòng công thái học lưng cao, khung nhựa PP đen kết hợp lưới thoáng khí màu xám. Tay vịn nhựa chữ T điều chỉnh được. Đệm ngồi bọc vải màu xám xốp êm. Chân sao 5 cánh thép mạ có bánh xe, cần nâng hạ khí nén. Thiết kế theo yêu cầu: màu xám, lưng cao, phù hợp văn phòng.",
-                    "search_keywords": "ghế văn phòng lưng cao xám",
-                    "material_detected": "Lưới, Nhựa PP, Thép mạ, Vải",
-                    "color_tone": "Xám, Đen",
-                    "user_requirements": "Màu xám, tựa lưng cao, giá < 3 triệu"
-                }},
-                {{
-                    "category": "Ghế",
-                    "visual_description": "Ghế văn phòng công thái học lưng cao, khung nhựa PP đen kết hợp lưới thoáng khí màu xám. Tay vịn nhựa chữ T điều chỉnh được. Đệm ngồi bọc vải màu xám xốp êm. Chân sao 5 cánh thép mạ có bánh xe, cần nâng hạ khí nén.",
-                    "search_keywords": "ghế văn phòng",
-                    "material_detected": "Lưới, Nhựa PP, Thép mạ, Vải",
-                    "color_tone": "Xám, Đen",
-                    "user_requirements": "Màu xám, tựa lưng cao, giá < 3 triệu"
-                }}
-            ]
+                TASK
+                Analyze the provided image AND the user's description to extract comprehensive technical information for database search.
 
-            BẮT ĐẦU PHÂN TÍCH HÌNH ẢNH NÀY
-        """
+                USER'S DESCRIPTION & REQUIREMENTS:
+                {description}
+
+                CHIẾN LƯỢC DỮ LIỆU (DATA STRATEGY)
+                Output phải là một mảng chứa chính xác 2 đối tượng (objects):
+
+                Object 1 (Ưu tiên): Kết hợp thông tin từ hình ảnh VÀ mô tả của user để tạo từ khóa tìm kiếm chính xác nhất.
+                - Ưu tiên các yêu cầu cụ thể từ user (màu sắc, kích thước, chất liệu, phong cách...)
+                - Kết hợp với đặc điểm nổi bật từ hình ảnh
+
+                Object 2 (Dự phòng): Tìm kiếm mở rộng dựa trên danh mục chung.
+
+                HƯỚNG DẪN CÁC TRƯỜNG (FIELDS)
+                category: Danh mục sản phẩm (Ghế, Bàn, Sofa, Tủ, Đèn, Giường, Kệ...)
+
+                visual_description: Mô tả chuyên nghiệp kết hợp:
+                - Những gì nhìn thấy từ hình ảnh
+                - Yêu cầu cụ thể từ mô tả của user
+                - Phong cách, chất liệu, màu sắc, kích thước...
+
+                search_keywords:
+                - Object 1: Từ khóa chi tiết kết hợp yêu cầu user + đặc điểm hình ảnh
+                - Object 2: Từ khóa tổng quát hơn
+
+                material_detected: Vật liệu nhìn thấy từ hình ảnh hoặc được user đề cập
+
+                color_tone: Màu sắc (từ hình ảnh hoặc yêu cầu của user)
+
+                user_requirements: Tóm tắt các yêu cầu đặc biệt của user (kích thước, giá, tính năng...)
+
+                ĐỊNH DẠNG OUTPUT
+                Trả về JSON array: [ {{...}}, {{...}} ]
+                Không dùng markdown, không giải thích thêm.
+                Ngôn ngữ: Tiếng Việt.
+
+                VÍ DỤ:
+                User description: "Tôi cần ghế văn phòng màu xám, có tựa lưng cao, giá dưới 3 triệu"
+                Output: [
+                    {{
+                        "category": "Ghế",
+                        "visual_description": "Ghế văn phòng công thái học lưng cao, khung nhựa PP đen kết hợp lưới thoáng khí màu xám. Tay vịn nhựa chữ T điều chỉnh được. Đệm ngồi bọc vải màu xám xốp êm. Chân sao 5 cánh thép mạ có bánh xe, cần nâng hạ khí nén. Thiết kế theo yêu cầu: màu xám, lưng cao, phù hợp văn phòng.",
+                        "search_keywords": "ghế văn phòng lưng cao xám",
+                        "material_detected": "Lưới, Nhựa PP, Thép mạ, Vải",
+                        "color_tone": "Xám, Đen",
+                        "user_requirements": "Màu xám, tựa lưng cao, giá < 3 triệu"
+                    }},
+                    {{
+                        "category": "Ghế",
+                        "visual_description": "Ghế văn phòng công thái học lưng cao, khung nhựa PP đen kết hợp lưới thoáng khí màu xám. Tay vịn nhựa chữ T điều chỉnh được. Đệm ngồi bọc vải màu xám xốp êm. Chân sao 5 cánh thép mạ có bánh xe, cần nâng hạ khí nén.",
+                        "search_keywords": "ghế văn phòng",
+                        "material_detected": "Lưới, Nhựa PP, Thép mạ, Vải",
+                        "color_tone": "Xám, Đen",
+                        "user_requirements": "Màu xám, tựa lưng cao, giá < 3 triệu"
+                    }}
+                ]
+
+                BẮT ĐẦU PHÂN TÍCH HÌNH ẢNH NÀY
+            """
         
         # Generate content with both image and prompt
         response = model.generate_content([prompt, img])
@@ -704,7 +786,8 @@ async def search_by_image_with_text(
         if not response.text:
             return {
                 "response": "⚠️ Không phân tích được ảnh và mô tả. Vui lòng thử lại.",
-                "products": []
+                "products": [],
+                "materials": []
             }
         
         # Parse AI response
@@ -720,141 +803,270 @@ async def search_by_image_with_text(
             return {
                 "response": "⚠️ Lỗi phân tích dữ liệu. Vui lòng thử lại.",
                 "products": [],
+                "materials": [],
                 "success": False,
             }
         
-        print(f"INFO: AI Image+Text Analysis Result: {ai_result}")
+        print(f"INFO: AI Image+Text Analysis Result ({search_mode} mode): {ai_result}")
         
-        # Extract search parameters from AI result
-        search_keywords = ai_result[0].get("search_keywords", "").strip()
-        category = ai_result[0].get("category", "")
-        user_requirements = ai_result[0].get("user_requirements", "")
-        
-        # Prepare search text
-        if not search_keywords or len(search_keywords) > 50:
-            search_text = category
-            print(f"INFO: Using category as search term: {search_text}")
-        else:
-            words = search_keywords.split()[:4]  # Use up to 4 words for better matching
-            search_text = " ".join(words)
-            print(f"INFO: Using keywords: {search_text}")
-        
-        # Get secondary keywords if available
-        secondary_keywords = ""
-        secondary_category = ""
-        if len(ai_result) > 1:
-            secondary_keywords = ai_result[1].get("search_keywords", "").strip()
-            secondary_category = ai_result[1].get("category", "")
-        
-        # Prepare search parameters
-        params = {
-            "category": category,
-            "keywords_vector": search_text,
-            "material_primary": ai_result[0].get("material_detected"),
-            "main_keywords": search_keywords,
-            "secondary_keywords": secondary_keywords,
-            "secondary_category": secondary_category,
-            "user_description": description  # Include original user description
-        }
-        
-        print(f"INFO: Search params - Main: {search_keywords}, Secondary: {secondary_keywords}")
-        print(f"INFO: User requirements: {user_requirements}")
-        
-        # Execute search
-        search_result = search_products(params, session_id=session_id, disable_fallback=True)
-        
-        products = search_result.get("products", []) or []
-        products_second = search_result.get("products_second", []) or []
-        
-        print(f"INFO: Search results - Main: {len(products)}, Secondary: {len(products_second)}")
-        
-        # Validate products against image and text description
-        ai_interpretation = ai_result[0].get("visual_description", "").lower()
-        description_lower = description.lower()
-        
-        for product in products:
-            product_name = (product.get('product_name') or '').lower()
-            category_prod = (product.get('category') or '').lower()
+        # ========== BRANCH BASED ON SEARCH MODE ==========
+        if search_mode == "material":
+            # ===== MATERIAL SEARCH LOGIC =====
+            from .embeddingapi import generate_embedding_qwen
             
-            # Check match with AI interpretation and user description
-            name_match = any(word in ai_interpretation or word in description_lower 
-                            for word in product_name.split() if len(word) > 2)
-            category_match = category_prod in ai_interpretation or category_prod in description_lower
+            material_keywords = ai_result[0].get("search_keywords", "").strip()
+            material_group = ai_result[0].get("material_group", "")
+            material_description = ai_result[0].get("material_description", "")
             
-            if not name_match and not category_match:
-                current_score = product.get('base_score', 0.6)
-                penalty = 0.2
-                product['base_score'] = max(0, current_score - penalty)
-                product['mismatch'] = True
-                print(f"  ⚠️ Mismatch penalty for {product.get('headcode')}: {current_score:.3f} -> {product['base_score']:.3f}")
+            # Prepare search text
+            if not material_keywords or len(material_keywords) > 50:
+                search_text = material_group
             else:
-                product['mismatch'] = False
-        
-        # Classify products by confidence score
-        products_main = [p for p in products if p.get('final_score', 0) >= 0.75]
-        products_second_main = [p for p in products_second if p.get('similarity', 0) >= 0.6 and p.get('final_score', 0) < 0.75] if products_second else []
-        products_low_confidence = [p for p in products if p.get('similarity', 0) < 0.6]
-        
-        print(f"INFO: Final results - Main: {len(products_main)}, Secondary: {len(products_second_main)}, Low: {len(products_low_confidence)}")
-        
-        # Save to chat history
-        histories.save_chat_to_histories(
-            email="test@gmail.com",
-            session_id=session_id,
-            question=f"[IMAGE+TEXT] {description[:100]}...",
-            answer=f"Phân tích: {ai_result[0].get('visual_description', '')[:100]}... | Tìm thấy {len(products_main)} sản phẩm phù hợp với yêu cầu, {len(products_second_main)} sản phẩm phụ"
-        )
-        
-        # Build response message
-        if products_main or products_second_main:
-            response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
-            response_msg += f"🔍 **Mô tả sản phẩm:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
-            if user_requirements:
-                response_msg += f"✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
+                words = material_keywords.split()[:3]
+                search_text = " ".join(words)
             
-            if products_main:
-                response_msg += f"✅ Tôi tìm thấy **{len(products_main)} sản phẩm phù hợp** với yêu cầu của bạn"
-            if products_main and products_second_main:
-                response_msg += f"Những sản phẩm trên có phù hợp với yêu cầu của bạn không?. Nếu không hãy để tôi tìm kiếm thêm cho bạn"
+            print(f"INFO: Material search keywords: {search_text}")
             
-            response_msg += "!"
-        if not products_main and products_second_main:
-            response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
-            response_msg += f"🔍 **Mô tả sản phẩm:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
-            if user_requirements:
-                response_msg += f"✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
-            response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n\n"
-            # response_msg += f"✅ Tôi tìm thấy **{len(products_second_main)} sản phẩm tương tự** với yêu cầu của bạn! Bạn có thể tham khảo:"
+            # Generate embedding for material search
+            material_vector = generate_embedding_qwen(search_text)
+            
+            if not material_vector:
+                return {
+                    "response": "⚠️ Không thể tạo vector tìm kiếm. Vui lòng thử lại.",
+                    "materials": [],
+                    "success": False
+                }
+            
+            # Search materials in database
+            conn = get_db()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            
+            try:
+                # Primary material search with vector similarity
+                material_filter = ""
+                filter_params = [material_vector]
+                
+                if material_group:
+                    material_filter = "AND material_group ILIKE %s"
+                    filter_params.append(f"%{material_group}%")
+                
+                sql = f"""
+                    SELECT 
+                        id_sap,
+                        material_name,
+                        material_group,
+                        material_subgroup,
+                        material_subprice,
+                        unit,
+                        image_url,
+                        (name_embedding <=> %s::vector) as similarity
+                    FROM {settings.MATERIALS_TABLE}
+                    WHERE name_embedding IS NOT NULL
+                    {material_filter}
+                    ORDER BY similarity ASC
+                    LIMIT 20
+                """
+                
+                cur.execute(sql, filter_params)
+                materials = cur.fetchall()
+                conn.close()
+                
+                # Get latest prices for materials
+                from .textfunc import get_latest_material_price
+                materials_list = []
+                for mat in materials:
+                    mat_dict = dict(mat)
+                    mat_dict['price'] = get_latest_material_price(mat['material_subprice'])
+                    mat_dict['similarity_score'] = 1 - mat['similarity']  # Convert distance to similarity
+                    materials_list.append(mat_dict)
+                
+                # Classify materials by confidence
+                materials_main = [m for m in materials_list if m['similarity_score'] >= 0.75]
+                materials_low = [m for m in materials_list if m['similarity_score'] < 0.75]
+                
+                print(f"INFO: Material search - Found {len(materials_main)} high confidence materials")
+                
+                # Save to chat history
+                histories.save_chat_to_histories(
+                    email="test@gmail.com",
+                    session_id=session_id,
+                    question=f"[IMAGE+TEXT MATERIAL] {description[:100]}...",
+                    answer=f"Phân tích vật liệu: {material_description[:100]}... | Tìm thấy {len(materials_main)} vật liệu phù hợp"
+                )
+                
+                # Build response message
+                if materials_main:
+                    response_msg = f"🎉 **Phân tích vật liệu từ hình ảnh:**\n\n"
+                    response_msg += f"🔍 **Mô tả vật liệu:** {material_description}\n\n"
+                    response_msg += f"✅ Tôi tìm thấy **{len(materials_main)} vật liệu phù hợp** với yêu cầu của bạn!"
+                else:
+                    response_msg = f"🎉 **Phân tích vật liệu:**\n\n"
+                    response_msg += f"🔍 **Mô tả:** {material_description}\n\n"
+                    response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy vật liệu hoàn toàn phù hợp với yêu cầu của bạn.\n\n"
+                    response_msg += f"⭐ **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
+                
+                tmp = generate_suggested_prompts(
+                    "search_product_not_found",
+                    {"query": material_keywords}
+                )
+                suggested_prompts_mess = format_suggested_prompts(tmp)
+                
+                return {
+                    "response": response_msg,
+                    "materials": materials_main if materials_main else materials_list[:5],
+                    "materials_low_confidence": materials_low[:5] if materials_low else [],
+                    "ai_interpretation": material_description,
+                    "search_method": "image_text_material_search",
+                    "search_mode": "material",
+                    "confidence_summary": {
+                        "materials_main_count": len(materials_main),
+                        "low_confidence_count": len(materials_low)
+                    },
+                    "success": True,
+                    "suggested_prompts_mess": suggested_prompts_mess
+                }
+                
+            except Exception as e:
+                print(f"ERROR: Material search failed: {e}")
+                import traceback
+                traceback.print_exc()
+                conn.close()
+                return {
+                    "response": f"⚠️ Lỗi tìm kiếm vật liệu: {str(e)}",
+                    "materials": [],
+                    "success": False
+                }
+        
         else:
-            response_msg = f"🎉 **Phân tích hình ảnh và yêu cầu:**\n\n"
-            response_msg += f"🔍 **Mô tả:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
-            if user_requirements:
-                response_msg += f"✨ **Yêu cầu:** {user_requirements}\n\n"
-            response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn.\n\n"
-            response_msg += f"⭐ **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
+            # ===== PRODUCT SEARCH LOGIC (ORIGINAL) =====
+            search_keywords = ai_result[0].get("search_keywords", "").strip()
+            category = ai_result[0].get("category", "")
+            user_requirements = ai_result[0].get("user_requirements", "")
+            
+            # Prepare search text
+            if not search_keywords or len(search_keywords) > 50:
+                search_text = category
+                print(f"INFO: Using category as search term: {search_text}")
+            else:
+                words = search_keywords.split()[:4]  # Use up to 4 words for better matching
+                search_text = " ".join(words)
+                print(f"INFO: Using keywords: {search_text}")
+            
+            # Get secondary keywords if available
+            secondary_keywords = ""
+            secondary_category = ""
+            if len(ai_result) > 1:
+                secondary_keywords = ai_result[1].get("search_keywords", "").strip()
+                secondary_category = ai_result[1].get("category", "")
+            
+            # Prepare search parameters
+            params = {
+                "category": category,
+                "keywords_vector": search_text,
+                "material_primary": ai_result[0].get("material_detected"),
+                "main_keywords": search_keywords,
+                "secondary_keywords": secondary_keywords,
+                "secondary_category": secondary_category,
+                "user_description": description  # Include original user description
+            }
+            
+            print(f"INFO: Search params - Main: {search_keywords}, Secondary: {secondary_keywords}")
+            print(f"INFO: User requirements: {user_requirements}")
+            
+            # Execute search
+            search_result = search_products(params, session_id=session_id, disable_fallback=True)
+            
+            products = search_result.get("products", []) or []
+            products_second = search_result.get("products_second", []) or []
+            
+            print(f"INFO: Search results - Main: {len(products)}, Secondary: {len(products_second)}")
+            
+            # Validate products against image and text description
+            ai_interpretation = ai_result[0].get("visual_description", "").lower()
+            description_lower = description.lower()
+            
+            for product in products:
+                product_name = (product.get('product_name') or '').lower()
+                category_prod = (product.get('category') or '').lower()
+                
+                # Check match with AI interpretation and user description
+                name_match = any(word in ai_interpretation or word in description_lower 
+                                for word in product_name.split() if len(word) > 2)
+                category_match = category_prod in ai_interpretation or category_prod in description_lower
+                
+                if not name_match and not category_match:
+                    current_score = product.get('base_score', 0.6)
+                    penalty = 0.2
+                    product['base_score'] = max(0, current_score - penalty)
+                    product['mismatch'] = True
+                    print(f"  ⚠️ Mismatch penalty for {product.get('headcode')}: {current_score:.3f} -> {product['base_score']:.3f}")
+                else:
+                    product['mismatch'] = False
+            
+            # Classify products by confidence score
+            products_main = [p for p in products if p.get('final_score', 0) >= 0.75]
+            products_second_main = [p for p in products_second if p.get('similarity', 0) >= 0.6 and p.get('final_score', 0) < 0.75] if products_second else []
+            products_low_confidence = [p for p in products if p.get('similarity', 0) < 0.6]
+            
+            print(f"INFO: Final results - Main: {len(products_main)}, Secondary: {len(products_second_main)}, Low: {len(products_low_confidence)}")
+            
+            # Save to chat history
+            histories.save_chat_to_histories(
+                email="test@gmail.com",
+                session_id=session_id,
+                question=f"[IMAGE+TEXT PRODUCT] {description[:100]}...",
+                answer=f"Phân tích: {ai_result[0].get('visual_description', '')[:100]}... | Tìm thấy {len(products_main)} sản phẩm phù hợp với yêu cầu, {len(products_second_main)} sản phẩm phụ"
+            )
+            
+            # Build response message
+            if products_main or products_second_main:
+                response_msg = f" 🎉 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
+                response_msg += f" 🔍 **Mô tả sản phẩm:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
+                if user_requirements:
+                    response_msg += f" ✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
+                
+                if products_main:
+                    response_msg += f" ✅ Tôi tìm thấy **{len(products_main)} sản phẩm phù hợp** với yêu cầu của bạn"
+                if products_main and products_second_main:
+                    response_msg += f"Những sản phẩm trên có phù hợp với yêu cầu của bạn không?. Nếu không hãy để tôi tìm kiếm thêm cho bạn"
+                
+            elif not products_main and products_second_main:
+                response_msg = f" 🎉 **Phân tích hình ảnh và yêu cầu của bạn:**\n\n"
+                response_msg += f" 🔍 **Mô tả sản phẩm:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
+                if user_requirements:
+                    response_msg += f" ✨ **Yêu cầu của bạn:** {user_requirements}\n\n"
+                response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn trong cơ sở dữ liệu.\n\n"
+            else:
+                response_msg = f" 🎉 **Phân tích hình ảnh và yêu cầu:**\n\n"
+                response_msg += f" 🔍 **Mô tả:** {ai_result[0].get('visual_description', 'N/A')}\n\n"
+                if user_requirements:
+                    response_msg += f"✨ **Yêu cầu:** {user_requirements}\n\n"
+                response_msg += f"⚠️ Rất tiếc, tôi chưa tìm thấy sản phẩm hoàn toàn phù hợp với yêu cầu của bạn.\n\n"
+                response_msg += f" ⭐ **Ghi chú:** Bạn có thể thử mô tả chi tiết hơn hoặc điều chỉnh yêu cầu của bạn."
 
-        tmp = generate_suggested_prompts(
-                        "search_product_not_found",
-                        {"query": user_requirements}
-                    )
-        suggested_prompts_mess = format_suggested_prompts(tmp)
-        
-        return {
-            "response": response_msg,
-            "products": products_main if products_main else None,
-            "products_second": products_second_main if products_second_main else None,
-            "products_low_confidence": products_low_confidence[:5] if products_low_confidence else [],
-            "ai_interpretation": ai_result[0].get("visual_description", ""),
-            "user_requirements": user_requirements,
-            "search_method": "image_text_combined_search",
-            "confidence_summary": {
-                "products_main_count": len(products_main),
-                "products_second_count": len(products_second_main),
-                "low_confidence_count": len(products_low_confidence)
-            },
-            "success": True,
-            "suggested_prompts_mess": suggested_prompts_mess
-        }
+            tmp = generate_suggested_prompts(
+                            "search_product_not_found",
+                            {"query": user_requirements}
+                        )
+            suggested_prompts_mess = format_suggested_prompts(tmp)
+            
+            return {
+                "response": response_msg,
+                "products": products_main if products_main else None,
+                "products_second": products_second_main if products_second_main else None,
+                "products_low_confidence": products_low_confidence[:5] if products_low_confidence else [],
+                "ai_interpretation": ai_result[0].get("visual_description", ""),
+                "user_requirements": user_requirements,
+                "search_method": "image_text_combined_search",
+                "search_mode": "product",
+                "confidence_summary": {
+                    "products_main_count": len(products_main),
+                    "products_second_count": len(products_second_main),
+                    "low_confidence_count": len(products_low_confidence)
+                },
+                "success": True,
+                "suggested_prompts_mess": suggested_prompts_mess
+            }
     
     except Exception as e:
         print(f"ERROR: Image+Text search error: {e}")

@@ -1661,7 +1661,7 @@ def chat(msg: ChatMessage):
                         "Liên hệ chuyên viên tư vấn"
                     ],
                     "success": True,
-                    "suggested_prompts_mess":suggested_prompts_mess
+                    "suggested_prompts_mess": suggested_prompts_mess
                 }
                 return result_response
             else:

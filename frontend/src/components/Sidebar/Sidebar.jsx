@@ -197,8 +197,8 @@ function Sidebar({ sessionId, onResetChat, onLoadSession }) {
 
     // Lấy tin nhắn đầu tiên của user
     const firstUserMessage = history?.find(h => h.role === 'user');
-    if (firstUserMessage && firstUserMessage.content) {
-      return firstUserMessage.content.substring(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '');
+    if (firstUserMessage && firstUserMessage?.content) {
+      return firstUserMessage?.content.substring(0, 50) + (firstUserMessage?.content.length > 50 ? '...' : '');
     }
 
     return 'Session mới';
