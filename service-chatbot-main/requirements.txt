@@ -1,0 +1,13 @@
+fastapi
+pydantic
+psycopg2
+google.generativeai
+pandas
+Pillow
+python-multipart
+uvicorn
+streamlit
+cachetools
+pydantic_settings
+PrettyTable
+openpyxl

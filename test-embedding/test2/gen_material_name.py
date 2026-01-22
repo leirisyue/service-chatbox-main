@@ -4,14 +4,10 @@ import pandas as pd
 import os
 
 import google.generativeai as genai
-from psycopg2 import connect
-from psycopg2.extras import RealDictCursor
 
 # ===================== CONFIG =====================
 from connectDB import (
     get_main_db_connection,
-    get_vector_db_connection,
-    map_postgres_type,
 )
 
 
@@ -64,35 +60,61 @@ def rule_based_material_name(description: str) -> str | None:
 
 # --------------------------------------------------
 def generate_material_name(description: str) -> str:
-    """
-    Sinh tên vật liệu ngắn gọn từ description
-    """
 
     if not description or not description.strip():
         return "Không xác định"
 
     # ✅ 1️⃣ RULE-BASED TRƯỚC
-    rule_name = rule_based_material_name(description)
-    if rule_name:
-        return rule_name
-      
+    # rule_name = rule_based_material_name(description)
+    # if rule_name:
+    #     return rule_name
+    
+    # print("description:", description)
+
     prompt = f"""
-            You are a material naming assistant.
+                You are a senior expert in interior construction materials.
 
-            From the following description, generate a SHORT, CLEAN Vietnamese material name.
+                Return ONLY the final standardized Vietnamese material name.
+                NO explanation. NO JSON. NO extra text.
 
-            Rules:
-            - Remove specs, notes, approvals
-            - Keep material type + main usage
-            - If code exists, keep it
-            - Max 8–10 words
-            - Vietnamese
+                Task:
+                Generate a DETAILED and PROFESSIONAL Vietnamese material name. 
+                The name must capture the essence of the material, its texture/finish, and its unique identity.
 
-            Description:
-            \"\"\"{description}\"\"\"
+                ========================
+                NAMING RULES (STRICT)
+                ========================
 
-            Return ONLY the name.
-          """
+                1. Core Material (MANDATORY – FIRST WORD):
+                Always start with the core material: Vải, Gỗ, Đá, Inox, Sơn, Da, Veneer...
+
+                2. Detailed Attribute Sequence (IMPORTANT):
+                Construct the name in this order:
+                [Vật liệu cốt] + [Đặc điểm bề mặt/hiệu ứng] + [Tên riêng/Dòng sản phẩm] + [Mã màu/Mã số]
+
+                3. KEEP & EXPAND (Information to include):
+                - Surface Texture: xước, bóng, mờ, nhám, dệt thô, mịn, vân nổi (embossed).
+                - Visual Patterns: vân ngẫu nhiên, sọc dọc, hoa văn chìm.
+                - Key Identifiers: Tên bộ sưu tập (Settecento), tông màu đặc trưng (Reseda).
+                - Important Codes: 5609-V002, JNS09, v.v.
+
+                4. REMOVE (Noise):
+                - Tất cả các từ thừa: "Description", "Material type", "Classify", "Vị trí".
+                - Thông số vận hành: Khổ rộng, chiều dài, VAT, phí giao hàng, địa điểm Tây Ninh.
+                - Các đơn vị đo lường (mm, m2) trừ khi nó là một phần của tên mã.
+
+                5. Tone & Style:
+                - Professional "Material Schedule" style.
+                - Dùng thuật ngữ chuyên ngành (e.g., "Vải dệt" thay vì "Vải", "Đá cẩm thạch" thay vì "Đá").
+                - Tránh viết hoa toàn bộ (UPPERCASE), hãy dùng Capitalize từng chữ đầu nếu là tên riêng.
+
+                ========================
+                INPUT:
+                {description}
+
+                OUTPUT:
+                One detailed Vietnamese material name string.
+            """
 
     try:
         response = model.generate_content(
@@ -112,6 +134,7 @@ def generate_material_name(description: str) -> str:
 def generate_excel_from_table(
     table_name: str,
     description_column: str,
+    supplierSpecCDT: str,
     id_column: str = "ID",
     limit: int = 10000,
     output_file: str = "material_name_output.xlsx",
@@ -123,7 +146,7 @@ def generate_excel_from_table(
         with conn.cursor() as cur:
             cur.execute(
                 f'''
-                SELECT "{id_column}", "{description_column}"
+                SELECT "{id_column}", "{description_column}" ,"{supplierSpecCDT}"
                 FROM public."{table_name}"
                 LIMIT %s
                 ''',
@@ -137,7 +160,7 @@ def generate_excel_from_table(
 
         for idx, row in enumerate(rows, 1):
             id_val = row[0]
-            desc = row[1] or ""
+            desc = (row[1] or "") + " " + (row[2] or "")    
             
             name_material = generate_material_name(desc)
 
@@ -164,10 +187,13 @@ if __name__ == "__main__":
     generate_excel_from_table(
         table_name="ListMaterialsBOQ",
         description_column="description",
+        supplierSpecCDT="supplierSpecCDT",
         id_column="id",
-        # limit=10,
+        # limit=20,
         output_file="ListMaterialsBOQ_MaterialName.xlsx"
     )
+    
+    
 
 
 

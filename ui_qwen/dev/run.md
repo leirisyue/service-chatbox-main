@@ -1,1 +1,0 @@
-psql -U postgres -d db_vector -f create_chat_histories_table.sql

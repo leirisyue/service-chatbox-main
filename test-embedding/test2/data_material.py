@@ -17,26 +17,11 @@ My_GOOGLE_API_KEY = os.getenv("My_GOOGLE_API_KEY", "localhost")
 
 # ================= CONFIG GEMINI =================
 genai.configure(
-    api_key=os.getenv("GOOGLE_API_KEY")
+    api_key=os.getenv("My_GOOGLE_API_KEY")
 )
 
 # =================================================
 def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
-    """
-    Input:
-    [
-        {"ID_Material_SAP": "M001", "name": "Gỗ sồi tự nhiên"}
-    ]
-
-    Output (LUÔN ĐỦ FIELD):
-    [
-        {
-            "ID_Material_SAP": "M001",
-            "material_group": "Gỗ",
-            "material_subgroup": "Gỗ tự nhiên"
-        }
-    ]
-    """
 
     if not materials_batch:
         return []
