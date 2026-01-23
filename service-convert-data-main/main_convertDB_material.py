@@ -22,7 +22,7 @@ def get_table_columns(conn, table_name, schema="public"):
             udt_name
         FROM information_schema.columns
         WHERE table_schema = %s
-          AND table_name = %s
+            AND table_name = %s
         ORDER BY ordinal_position;
     """
     with conn.cursor() as cur:
@@ -86,11 +86,11 @@ def create_table_on_vector_db(
         CREATE TABLE {schema}.{table} (
             {columns}
         )
-    """).format(
-        schema=sql.Identifier(target_schema),
-        table=sql.Identifier(source_table_name),
-        columns=sql.SQL(", ").join(column_defs),
-    )
+        """).format(
+            schema=sql.Identifier(target_schema),
+            table=sql.Identifier(source_table_name),
+            columns=sql.SQL(", ").join(column_defs),
+        )
 
     vector_conn = get_vector_db_connection()
     try:
@@ -277,8 +277,8 @@ def sync_table_columns_generic(
     target_table,
     source_columns,
     target_columns,
-    key_target_col,   # cột dùng để match (C)
-    key_source_col,   # cột nguồn tương ứng (A),
+    key_target_col,  
+    key_source_col,   
 
     source_schema="public",
     target_schema="public",
@@ -379,7 +379,6 @@ def sync_table_columns_generic(
 
 # ----------------------------------------------------------------------------------------------------
 def main():
-    # MD_Material_SAP
     SOURCE_TABLE = "MD_Material_SAP"
     SELECTED_COLUMNS = [
         "ID_Material_SAP",

@@ -139,7 +139,7 @@ def build_merge_view_in_pthsp():
                 '''
             )
 
-            conn.commit()  # 🔥 DÒNG QUAN TRỌNG NHẤT
+            conn.commit()
 
             logging.info("VIEW VIEW_MATERIAL_MERGE đã được lưu trong DB PTHSP")
 

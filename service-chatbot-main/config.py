@@ -11,8 +11,15 @@ class Settings(BaseSettings):
     API_URL: str = "http://127.0.0.1:8000"
     API_URL_CHATBOT: str = "http://127.0.0.1:8080"
     
-    # Database settings
+    # Database vector settings
     DB_NAME: str = "db_vector"
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "postgres"
+    DB_HOST: str = "localhost"
+    DB_PORT: str = "5432"
+    
+    # Database description settings
+    DB_NAME: str = "PTHSP"
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
     DB_HOST: str = "localhost"
