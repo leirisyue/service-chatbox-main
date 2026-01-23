@@ -1,14 +1,15 @@
 import logging
 from psycopg2 import sql
 from connectDB import (
-    get_fetch_db_connection
+    get_main_db_connection,
+    get_vector_db_connection,
 )
 
 from logServer import setup_logging
 from data_material import batch_classify_materials
 
 def validate_main_tables_exist():
-    conn = get_fetch_db_connection()
+    conn = get_main_db_connection()
     cur = conn.cursor()
 
     cur.execute("""
@@ -54,7 +55,7 @@ def generate_cross_db_view_sql(
         )
 
     return f"""
-            CREATE VIEW "{view_schema}".{view_name} AS
+            CREATE OR REPLACE VIEW "{view_schema}".{view_name} AS
             SELECT
                 {", ".join(select_parts)}
             FROM "{fdw_schema}"."{table_1}" t1
@@ -64,13 +65,17 @@ def generate_cross_db_view_sql(
 
 
 def build_merge_rows_from_main_db():
-    conn = get_fetch_db_connection()
+    """
+    Merge dữ liệu từ 2 table KHÔNG JOIN.
+    Mỗi table được chuẩn hoá thành (name, description),
+    sau đó UNION ALL.
+    """
+
+    conn = get_main_db_connection()
     try:
         with conn.cursor() as cur:
-            # 1. Create or replace VIEW
             cur.execute(
                 '''
-                CREATE VIEW public."VIEW_MATERIAL_MERGE" AS
                 SELECT
                     CONCAT_WS(' - ',
                         t1."idMaterial",
@@ -91,58 +96,51 @@ def build_merge_rows_from_main_db():
                 '''
             )
 
-            # 2. Query view
-            cur.execute(
-                'SELECT name, description FROM public."VIEW_MATERIAL_MERGE";'
-            )
             rows = cur.fetchall()
-
-            logging.info(f"Đã merge {len(rows)} dòng từ VIEW")
+            logging.info(f"Đã merge {len(rows)} dòng từ 2 table (NO JOIN)")
             return rows
     finally:
         conn.close()
 
 
-def build_merge_view_in_pthsp():
-    conn = get_fetch_db_connection()
+def sync_merge_to_vector_db(rows):
+    """
+    Ghi dữ liệu merge vào VECTOR DB.
+    """
+
+    if not rows:
+        logging.warning("Không có dữ liệu merge để sync sang VECTOR DB")
+        return
+
+    conn = get_vector_db_connection()
     try:
         with conn.cursor() as cur:
-            # kiểm tra db
-            cur.execute("SELECT current_database();")
-            db = cur.fetchone()[0]
-            logging.info(f"Connected DB: {db}")
+            # Đảm bảo schema VIEW tồn tại trong VECTOR DB
+            cur.execute('CREATE SCHEMA IF NOT EXISTS "VIEW";')
 
             cur.execute(
                 '''
-                CREATE OR REPLACE VIEW public."VIEW_MATERIAL_MERGE" AS
-                SELECT
-                    t1."idMaterial" AS id_sap,
-                    t1."NameMaterial" AS description,
-                    t1."codeSuplier" AS material_group,
-                    t1."unit" AS unit,
-                    t1."imagesURL" as images_url,
-                    t1."createdAt" as created_at,
-                    t1."updatedAt" as updated_at
-                FROM public."ListMaterialsBOQ" t1
-
-                UNION ALL
-
-                SELECT
-                    t2."ID_Material_SAP" AS id_sap,
-                    t2."Des_Material_Sap" AS description,
-                    t2."materialGroupDescription" AS material_group,
-                    t2."Base_Unit" AS unit,
-                    t2."images_url" as images_url,
-                    t2."createdAt" as created_at,
-                    t2."updatedAt" as updated_at
-                FROM public."MD_Material_SAP" t2;
+                CREATE TABLE IF NOT EXISTS "VIEW".merge_material (
+                    name TEXT,
+                    description TEXT
+                );
                 '''
             )
 
-            conn.commit()  # 🔥 DÒNG QUAN TRỌNG NHẤT
+            cur.execute('TRUNCATE TABLE "VIEW".merge_material;')
 
-            logging.info("VIEW VIEW_MATERIAL_MERGE đã được lưu trong DB PTHSP")
+            insert_sql = '''
+                INSERT INTO "VIEW".merge_material
+                    (name, description)
+                VALUES (%s, %s);
+            '''
 
+            cur.executemany(insert_sql, rows)
+            conn.commit()
+
+        logging.info(
+            f"Đã sync {len(rows)} dòng vào VECTOR DB (VIEW.merge_material)"
+        )
     finally:
         conn.close()
 
@@ -153,7 +151,10 @@ def main():
         validate_main_tables_exist()
 
         logging.info("Merge dữ liệu từ 2 table (NO JOIN)")
-        build_merge_view_in_pthsp()
+        rows = build_merge_rows_from_main_db()
+
+        logging.info("Sync dữ liệu merge sang VECTOR DB")
+        sync_merge_to_vector_db(rows)
 
         logging.info("Hoàn tất merge dữ liệu")
 

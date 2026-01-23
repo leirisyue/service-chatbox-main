@@ -43,6 +43,7 @@ VECTOR_DB_PORT = os.getenv("VECTOR_DB_PORT", "5432")
 VECTOR_DB_USER = os.getenv("VECTOR_DB_USER", "postgres")
 VECTOR_DB_PASSWORD = os.getenv("VECTOR_DB_PASSWORD", "postgres")
 VECTOR_DB_DATABASE = os.getenv("VECTOR_DB_DATABASE", "postgres")
+FETCH_DB_DATABASE = os.getenv("FETCH_DB_DATABASE", "postgres")
 
 # Kiểu lưu embedding trong DB: "vector" (pgvector) hoặc "jsonb"
 EMBEDDING_STORAGE_TYPE = os.getenv("EMBEDDING_STORAGE_TYPE", "vector").lower()
@@ -61,6 +62,16 @@ def get_vector_db_connection():
         user=VECTOR_DB_USER,
         password=VECTOR_DB_PASSWORD,
         dbname=VECTOR_DB_DATABASE,
+    )
+    return conn
+
+def get_fetch_db_connection():
+    conn = psycopg2.connect(
+        host=VECTOR_DB_HOST,
+        port=VECTOR_DB_PORT,
+        user=VECTOR_DB_USER,
+        password=VECTOR_DB_PASSWORD,
+        dbname=FETCH_DB_DATABASE,
     )
     return conn
 
