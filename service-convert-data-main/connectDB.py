@@ -3,9 +3,6 @@ import logging
 import psycopg2
 from dotenv import load_dotenv
 
-
-from main_embedding import setup_logging
-
 try:
     from sshtunnel import SSHTunnelForwarder
 except ImportError:

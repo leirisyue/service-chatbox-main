@@ -18,47 +18,15 @@ try:
     import tiktoken
 except ImportError:
     tiktoken = None
+    
+from connectDB import (
+    get_vector_db_connection,
+)
+from logServer import setup_logging
 
-
-# =========================
-# 1. Load environment
-# =========================
-load_dotenv()
-
-QWEN_EMBED_MODEL = os.getenv("QWEN_EMBED_MODEL", "qwen3-embedding:latest")
-QWEN_API_BASE = os.getenv("QWEN_API_BASE", "http://localhost:11434")  # ví dụ Ollama
-
-VECTOR_DB_HOST = os.getenv("VECTOR_DB_HOST", "localhost")
-VECTOR_DB_PORT = os.getenv("VECTOR_DB_PORT", "5432")
-VECTOR_DB_USER = os.getenv("VECTOR_DB_USER", "postgres")
-VECTOR_DB_PASSWORD = os.getenv("VECTOR_DB_PASSWORD", "postgres")
-VECTOR_DB_DATABASE = os.getenv("VECTOR_DB_DATABASE", "postgres")
-FETCH_DB_DATABASE = os.getenv("FETCH_DB_DATABASE", "postgres")
-
-# Kiểu lưu embedding trong DB: "vector" (pgvector) hoặc "jsonb"
 EMBEDDING_STORAGE_TYPE = os.getenv("EMBEDDING_STORAGE_TYPE", "vector").lower()
-
-
-# =========================
-# 2. Logging setup
-# =========================
-
-def setup_logging(log_dir: str = "logs") -> str:
-    os.makedirs(log_dir, exist_ok=True)
-    timestamp = time.strftime("%Y%m%d_%H%M%S")
-    log_path = os.path.join(log_dir, f"embed_test_{timestamp}.log")
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        handlers=[
-            logging.FileHandler(log_path, encoding="utf-8"),
-            logging.StreamHandler()
-        ],
-    )
-    logging.info(f"Logging to {log_path}")
-    return log_path
-
+QWEN_API_BASE = os.getenv("QWEN_API_BASE", "http://localhost:11434")  # ví dụ Ollama
+QWEN_EMBED_MODEL = os.getenv("QWEN_EMBED_MODEL", "qwen3-embedding:latest")
 
 # =========================
 # 3. Helper: make JSON-safe
@@ -103,34 +71,7 @@ def estimate_tokens(texts: List[str], model_name: str = "gpt-4o-mini") -> int:
     return total
 
 
-# =========================
-# 5. Postgres helpers
-# =========================
 
-_MAIN_DB_TUNNEL = None
-
-
-def get_vector_db_connection():
-    conn = psycopg2.connect(
-        host=VECTOR_DB_HOST,
-        port=VECTOR_DB_PORT,
-        user=VECTOR_DB_USER,
-        password=VECTOR_DB_PASSWORD,
-        dbname=VECTOR_DB_DATABASE,
-    )
-    return conn
-
-def get_fetch_db_connection():
-    conn = psycopg2.connect(
-        host=VECTOR_DB_HOST,
-        port=VECTOR_DB_PORT,
-        user=VECTOR_DB_USER,
-        password=VECTOR_DB_PASSWORD,
-        dbname=FETCH_DB_DATABASE,
-    )
-    return conn
-
-_MAIN_DB_TUNNEL = None
 
 # =========================
 # tạo bảng embedding dùng chung (nếu muốn gom bảng)
@@ -235,38 +176,6 @@ def insert_embedding_rows(
     finally:
         conn.close()
 
-
-def fetch_rows_from_table(
-    table_name: str,
-    limit: int = 1000,
-) -> Tuple[List[str], List[Any]]:
-    conn = get_fetch_db_connection()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            query = f"SELECT * FROM public.\"{table_name}\" LIMIT %s;"
-            logging.info(f"Executing query: {query} with limit={limit}")
-            cur.execute(query, (limit,))
-            rows = cur.fetchall()
-
-            texts = []
-            for row in rows:
-                parts = []
-                for col, val in row.items():
-                    if val is None:
-                        v_str = ""
-                    else:
-                        v_str = str(val)
-                    parts.append(f"{col}={v_str}")
-                row_text = " | ".join(parts)
-                texts.append(row_text)
-
-        logging.info(f"Fetched {len(texts)} rows from table '{table_name}'.")
-        return texts, rows
-    finally:
-        conn.close()
-
-
-
 # =========================
 # 7. Qwen embedding + logging + DB save
 # =========================
@@ -325,96 +234,10 @@ def embed_with_qwen(
     return embeddings, elapsed, token_est, outfile
 
 
-# =========================
-# 8.1 batch fetch rows
-# =========================
-def fetch_rows_batch(
-    table_name: str,
-    limit: int,
-    offset: int,
-) -> Tuple[List[str], List[Any]]:
-    conn = get_fetch_db_connection()
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            query = f"""
-                SELECT *
-                FROM public."{table_name}"
-                ORDER BY id
-                LIMIT %s OFFSET %s
-            """
-            cur.execute(query, (limit, offset))
-            rows = cur.fetchall()
-
-            texts = []
-            for row in rows:
-                parts = []
-                for col, val in row.items():
-                    parts.append(f"{col}={'' if val is None else val}")
-                texts.append(" | ".join(parts))
-
-        return texts, rows
-    finally:
-        conn.close()
-
-
-# =========================
-# 8. Main test
-# =========================
-def run_test(table_name: str, limit: int = 1000, batch_size: int = 100):
-    logging.info(
-        f"Starting test for table='{table_name}', limit={limit}, batch={batch_size}"
-    )
-
-    # ensure_embedding_tables()
-
-    output_dir = "embeddings_output"
-    os.makedirs(output_dir, exist_ok=True)
-
-    offset = 0
-    total_processed = 0
-
-    while total_processed < limit:
-        current_limit = min(batch_size, limit - total_processed)
-
-        texts, raw_rows = fetch_rows_batch(
-            table_name,
-            limit=current_limit,
-            offset=offset,
-        )
-
-        if not texts:
-            break
-
-        logging.info(
-            f"Processing batch offset={offset}, size={len(texts)}"
-        )
-
-        # =====================
-        # Qwen
-        # =====================
-        embed_with_qwen(
-            table_name,
-            texts,
-            raw_rows,
-            output_dir,
-        )
-
-        offset += len(texts)
-        total_processed += len(texts)
-
-        logging.info(
-            f"Batch done. Total processed: {total_processed}/{limit}"
-        )
-
-    logging.info("=== ALL DONE ===")
-
-
-
-
 if __name__ == "__main__":
     import argparse
 
-    log_file = setup_logging()
+    log_file = setup_logging(log_dir="logs", name="main_embedding")
 
     parser = argparse.ArgumentParser(
         description="Test embedding từ Postgres table bằng  Qwen, có log, file JSONL và lưu DB"
@@ -422,5 +245,3 @@ if __name__ == "__main__":
     parser.add_argument("--table", required=True, help="Tên bảng trong Postgres")
     parser.add_argument("--limit", type=int, default=1000, help="Số dòng tối đa")
     args = parser.parse_args()
-
-    run_test(args.table, args.limit)

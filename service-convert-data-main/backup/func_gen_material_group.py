@@ -87,30 +87,15 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
         results = json.loads(clean)
 
         for r in results:
-            try:
-                id_sap_val = r.get("id_sap")
-                if not id_sap_val:
-                    logging.warning("Bỏ qua kết quả Gemini không có id_sap: %s", r)
-                    continue
-
-                group_val = r.get("material_group") or fallback[id_sap_val]["material_group"]
-                subgroup_val = r.get("material_subgroup") or fallback[id_sap_val]["material_subgroup"]
-                idx_val = r.get("idx", fallback[id_sap_val].get("idx", 0))
-
-                fallback[id_sap_val] = {
-                    "id_sap": id_sap_val,
-                    "material_group": group_val,
-                    "material_subgroup": subgroup_val,
-                    "idx": idx_val,
-                }
-            except Exception as item_e:
-                # Chỉ loại trừ phần tử lỗi, giữ các phần tử còn lại
-                logging.error(
-                    "Lỗi xử lý một phần tử kết quả Gemini, bỏ qua phần tử này. raw=%s, error=%s",
-                    r,
-                    item_e,
-                )
+            if "id_sap" not in r:
                 continue
+
+            fallback[r["id_sap"]] = {
+                "id_sap": r["id_sap"],
+                "material_group": r["material_group"] if r["material_group"] else r.get("material_group", "Not classified"),
+                "material_subgroup": r.get("material_subgroup", "Not classified"),
+                "idx": r.get("idx", 0),
+            }
 
         return list(fallback.values())
 

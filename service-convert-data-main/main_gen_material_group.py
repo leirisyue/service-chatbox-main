@@ -74,7 +74,7 @@ def classify_and_update_material_subgroup(
                 SELECT  "id_sap", "material_name", "material_group", "idx"
                 FROM "{source_view}"
                 WHERE "id_sap" IS NOT NULL AND "id_sap" <> ''
-                LIMIT 1000
+                OFFSET 20396 LIMIT 3000
                 '''
             )
             rows = cur.fetchall()
@@ -125,6 +125,7 @@ def classify_and_update_material_subgroup(
                             )
                             VALUES (%s, %s, %s, %s, %s)
                             ON CONFLICT (id_sap) DO NOTHING
+                            RETURNING id_sap
                             ''',
                             (
                                 r["id_sap"],
@@ -134,6 +135,14 @@ def classify_and_update_material_subgroup(
                                 r.get("idx", 0)
                             ),
                         )
+
+                        inserted_row = cur.fetchone()
+                        if inserted_row is None:
+                            logging.info(
+                                "CONFLICT: id_sap=%s đã tồn tại trong bảng %s, bỏ qua không chèn mới",
+                                r["id_sap"],
+                                target_table,
+                            )
 
                     # Sau khi xử lý xong cả batch_size thì mới commit một lần
                     vector_conn.commit()
