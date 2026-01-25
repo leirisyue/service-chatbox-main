@@ -19,14 +19,15 @@ class Settings(BaseSettings):
     DB_PORT: str = "5432"
     
     # Database description settings
-    DB_NAME: str = "PTHSP"
-    DB_USER: str = "postgres"
-    DB_PASSWORD: str = "postgres"
-    DB_HOST: str = "localhost"
-    DB_PORT: str = "5432"
+    DB_NAME_ORIGIN: str = "PTHSP"
+    DB_USER_ORIGIN: str = "postgres"
+    DB_PASSWORD_ORIGIN: str = "postgres"
+    DB_HOST_ORIGIN: str = "localhost"
+    DB_PORT_ORIGIN: str = "5432"
     
     # Table names
-    MATERIALS_TABLE: str = "materials_qwen"
+    # MATERIALS_TABLE: str = "materials_qwen"
+    MATERIALS_TABLE: str = "material_merge"
     
     # Qwen Embedding settings
     QWEN_HOST: str = "192.168.4.102"
@@ -54,6 +55,17 @@ class Settings(BaseSettings):
             "password": self.DB_PASSWORD,
             "host": self.DB_HOST,
             "port": self.DB_PORT
+        }
+
+    @property
+    def DB_CONFIG_ORIGIN(self) -> Dict[str, str]:
+        """Get origin database configuration as dict"""
+        return {
+            "dbname": self.DB_NAME_ORIGIN,
+            "user": self.DB_USER_ORIGIN,
+            "password": self.DB_PASSWORD_ORIGIN,
+            "host": self.DB_HOST_ORIGIN,
+            "port": self.DB_PORT_ORIGIN
         }
 
 settings = Settings()
