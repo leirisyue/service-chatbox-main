@@ -3,7 +3,7 @@
 ```bash
 python -m venv .venv  
 .venv\Scripts\activate
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --port 8080
 ```
 ### 2. Bật entrypoint trong git
 ```bash

@@ -11,3 +11,13 @@ cachetools
 pydantic_settings
 PrettyTable
 openpyxl
+dotenv
+python-dotenv 
+psycopg2-binary 
+requests 
+tiktoken
+transformers 
+torch
+paramiko==3.4.0 
+sshtunnel==0.4.0 
+cryptography==41.0.7

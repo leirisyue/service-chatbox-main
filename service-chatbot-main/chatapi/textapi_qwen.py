@@ -64,7 +64,6 @@ def _fetch_material_view_data(id_saps: List[str]) -> Dict[str, dict]:
     if not id_saps:
         return {}
 
-    # Deduplicate to avoid unnecessary DB load
     unique_ids = list({m_id for m_id in id_saps if m_id})
     if not unique_ids:
         return {}

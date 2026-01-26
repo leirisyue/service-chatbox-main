@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from datetime import datetime
-from typing import List, Any, Dict
+from typing import List, Any, Dict, Optional
 import json
 
 from .config import settings
@@ -261,3 +261,26 @@ def update_vector_rows(
         result.rowcount,
         table_name,
     )
+
+
+def get_id_sap_by_material_name(
+    table_name: str,
+    material_name: str,
+) -> Optional[Any]:
+    """Tìm id_sap trong bảng gốc dựa vào material_name.
+
+    Dùng cho API update theo key khi client chỉ gửi material_name.
+    """
+
+    query = text(
+        f'SELECT "id_sap" FROM public."{table_name}" '
+        f'WHERE "material_name" = :material_name LIMIT 1'
+    )
+
+    with origin_engine.connect() as conn:
+        row = conn.execute(query, {"material_name": material_name}).first()
+
+    if not row:
+        return None
+
+    return row[0]

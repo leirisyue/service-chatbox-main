@@ -9,7 +9,7 @@ def start_api():
     uvicorn.run(
         "app.api:app",
         host="0.0.0.0",
-        port=8000,
+        port=8080,
         reload=False,
     )
 
