@@ -28,6 +28,20 @@ class Settings:
 
     # ollama
     OLLAMA_HOST = os.getenv("OLLAMA_HOST")
+    
+    
+    VECTOR_DB_HOST: str = os.getenv("VECTOR_DB_HOST", "localhost")
+    VECTOR_DB_PORT: str = os.getenv("VECTOR_DB_PORT", "5432")
+    VECTOR_DB_USER: str = os.getenv("VECTOR_DB_USER", "root")
+    VECTOR_DB_PASSWORD: str = os.getenv("VECTOR_DB_PASSWORD", "123")
+    VECTOR_DB_DATABASE: str = os.getenv("VECTOR_DB_DATABASE", "postgres")
+
+    VECTOR_DB_SSH_TUNNEL_ENABLED: bool = os.getenv("VECTOR_DB_SSH_TUNNEL_ENABLED", "true").strip().lower() == "true"
+    VECTOR_DB_SSH_TUNNEL_HOST: str = os.getenv("VECTOR_DB_SSH_TUNNEL_HOST", "192.168.4.102")
+    VECTOR_DB_SSH_TUNNEL_PORT: int = int(os.getenv("VECTOR_DB_SSH_TUNNEL_PORT", "22"))
+    VECTOR_DB_SSH_TUNNEL_USER: str = os.getenv("VECTOR_DB_SSH_TUNNEL_USER", "sysadmin")
+    VECTOR_DB_SSH_TUNNEL_PASSWORD: str = os.getenv("VECTOR_DB_SSH_TUNNEL_PASSWORD", "123")
+    VECTOR_DB_SSH_TUNNEL_LOCAL_PORT: int = int(os.getenv("VECTOR_DB_SSH_TUNNEL_LOCAL_PORT", "15432"))
 
 
 settings = Settings()

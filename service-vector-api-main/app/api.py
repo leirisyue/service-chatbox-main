@@ -1,8 +1,10 @@
 from fastapi import FastAPI, BackgroundTasks, HTTPException
 from typing import Optional, List, Dict, Any
+from sqlalchemy import text
 
 from .service import process_table, run_all_tables, insert_records, update_records
 from .db import get_origin_tables, get_id_sap_by_material_name
+from .db import target_engine as engine  # <-- use target_engine
 
 from .schema import UpsertRequest, UpdateByKeysRequest
 
@@ -177,7 +179,7 @@ def update_data_by_keys(
                 status_code=400,
                 detail=(
                     f"Record at index {idx - 1} does not contain any "
-                    f"supported key from list_key: {list_key}"
+                    f"supported key from list_key: {prioritized_keys}"
                 ),
             )
 
@@ -191,3 +193,13 @@ def update_data_by_keys(
         "table": table_name,
         "count": len(normalized_records),
     }
+
+
+@app.get("/db/health")
+def db_health():
+    try:
+        with engine.connect() as conn:
+            v = conn.execute(text("SELECT 1")).scalar()
+        return {"db": "ok", "select_1": v}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DB connection failed: {type(e).__name__}: {e}")

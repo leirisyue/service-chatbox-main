@@ -10,15 +10,79 @@ from .logger import setup_logger
 logger = setup_logger(__name__)
 
 def make_pg_url(user, password, host, port, db):
-    return f"postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}"
+    from urllib.parse import quote_plus
+    # URL-encode the username and password to handle special characters
+    encoded_user = quote_plus(str(user))
+    encoded_password = quote_plus(str(password))
+    return f"postgresql+psycopg2://{encoded_user}:{encoded_password}@{host}:{port}/{db}"
+
+try:
+    from sshtunnel import SSHTunnelForwarder
+except ImportError:
+    SSHTunnelForwarder = None
+
+_VECTOR_DB_TUNNEL = None
+
+
+def _ensure_vector_db_tunnel():
+    global _VECTOR_DB_TUNNEL
+    if not settings.VECTOR_DB_SSH_TUNNEL_ENABLED:
+        return None
+    if SSHTunnelForwarder is None:
+        raise RuntimeError(
+            "sshtunnel package is required for SSH tunnel. Please install it with 'pip install sshtunnel'."
+        )
+    if _VECTOR_DB_TUNNEL is not None:
+        return _VECTOR_DB_TUNNEL
+
+    if not settings.VECTOR_DB_SSH_TUNNEL_HOST or not settings.VECTOR_DB_SSH_TUNNEL_USER:
+        raise RuntimeError(
+            "VECTOR_DB_SSH_TUNNEL_HOST và VECTOR_DB_SSH_TUNNEL_USER phải được cấu hình trong .env khi bật VECTOR_DB_SSH_TUNNEL_ENABLED."
+        )
+
+    tunnel = SSHTunnelForwarder(
+        (settings.VECTOR_DB_SSH_TUNNEL_HOST, settings.VECTOR_DB_SSH_TUNNEL_PORT),
+        ssh_username=settings.VECTOR_DB_SSH_TUNNEL_USER,
+        ssh_password=settings.VECTOR_DB_SSH_TUNNEL_PASSWORD or None,
+        remote_bind_address=(settings.VECTOR_DB_HOST, int(settings.VECTOR_DB_PORT)),
+        local_bind_address=("127.0.0.1", settings.VECTOR_DB_SSH_TUNNEL_LOCAL_PORT),
+    )
+    tunnel.start()
+    _VECTOR_DB_TUNNEL = tunnel
+
+    return _VECTOR_DB_TUNNEL
+
+
+def DB_Vector() -> Dict[str, str]:
+    """Get VECTOR DB configuration as dict (with optional SSH tunnel)."""
+    tunnel = _ensure_vector_db_tunnel()
+
+    if tunnel is not None:
+        host = "127.0.0.1"
+        port = tunnel.local_bind_port
+    else:
+        host = settings.VECTOR_DB_HOST
+        port = int(settings.VECTOR_DB_PORT)
+
+    return {
+        "host": host,
+        "port": port,
+        "user": settings.VECTOR_DB_USER,
+        "password": settings.VECTOR_DB_PASSWORD,
+        "dbname": settings.VECTOR_DB_DATABASE,
+        "sslmode": "disable",
+    }
+
+
+_vector_db_config = DB_Vector()
 
 origin_engine: Engine = create_engine(
     make_pg_url(
-        settings.ORIGIN_DB_USER,
-        settings.ORIGIN_DB_PASSWORD,
-        settings.ORIGIN_DB_HOST,
-        settings.ORIGIN_DB_PORT,
-        settings.ORIGIN_DB_NAME,
+        _vector_db_config["user"],
+        _vector_db_config["password"],
+        _vector_db_config["host"],
+        _vector_db_config["port"],
+        _vector_db_config["dbname"],
     )
 )
 
@@ -33,14 +97,17 @@ target_engine: Engine = create_engine(
 )
 
 logger.info(
-    "Origin DB connected to %s:%s/%s, Target DB connected to %s:%s/%s",
-    settings.ORIGIN_DB_HOST,
-    settings.ORIGIN_DB_PORT,
-    settings.ORIGIN_DB_NAME,
+    "Origin DB (vector) connected to %s:%s/%s, Target DB connected to %s:%s/%s",
+    _vector_db_config["host"],
+    _vector_db_config["port"],
+    _vector_db_config["dbname"],
     settings.APP_PG_HOST,
     settings.APP_PG_PORT,
     settings.APP_PG_DATABASE,
 )
+
+# Export engine as alias for target_engine (for health check)
+engine = target_engine
 
 def get_origin_tables() -> List[str]:
     sql = """
@@ -121,7 +188,6 @@ def insert_vector_rows(
     with target_engine.begin() as conn:
         conn.execute(text(insert_sql), serialized_rows)
     logger.info("Inserted %d rows into %s successfully", len(serialized_rows), table_name)
-
 
 def insert_origin_rows(
     table_name: str,
