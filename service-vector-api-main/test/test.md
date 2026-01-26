@@ -23,18 +23,12 @@
 ** Update Data By Keys
 /sync/{table_name}/update/keys
 {
-  "list_key": [
+  "list_key": [{"id_sap": "123"},{ "material_name":"Vật liệu A"}],
+  "data": [
     {
-      "id_sap": "123"
-      "material_name": "Vật liệu mới 123",
-    }
-  ],
-  {
-  "data": {
     "id_sap": "123",
-    "material_name": "Vật liệu mới 789",
+    "material_name": "Vật liệu mới 100001000358",
     "material_subgroup":"chờ",
     "material_group":"vật liệu mới "
-    }
-  }
+  }]
 }

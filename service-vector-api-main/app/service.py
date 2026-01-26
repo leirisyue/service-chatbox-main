@@ -102,47 +102,61 @@ def insert_records(
     except Exception:
         logger.exception("Failed to insert into origin table %s", table_name)
 
-    # 1b) Nếu là bảng materials_qwen, cập nhật name_embedding và description_embedding
-    if table_name == "materials_qwen":
-        origin_embed_rows: List[Dict[str, Any]] = []
-        for idx, record in enumerate(records_list, start=1):
-            if "id_sap" not in record:
-                logger.warning("Missing 'id_sap' in record %d for origin embedding, skip", idx)
-                continue
+    # 1b) Tạo name_embedding và description_embedding cho bảng gốc (nếu cần)
+    # Áp dụng cho các bảng có trường material_name hoặc tương tự
+    origin_embed_rows: List[Dict[str, Any]] = []
+    
+    for idx, record in enumerate(records_list, start=1):
+        # Yêu cầu có id_sap để update embedding
+        if "id_sap" not in record:
+            logger.warning("Missing 'id_sap' in record %d for origin embedding, skip", idx)
+            continue
 
-            name_text = str(record.get("material_name") or "")
-            # mô tả: dùng các field khác ngoài id_sap và material_name
-            desc_source = {k: v for k, v in record.items() if k not in ["id_sap", "material_name"]}
-            desc_text = record_to_text(desc_source) if desc_source else name_text
+        # Lấy tên vật liệu (name_text)
+        name_text = str(record.get("material_name") or "")
+        
+        # Tạo mô tả từ các field khác (loại bỏ id_sap và material_name)
+        desc_source = {
+            k: v for k, v in record.items() 
+            if k not in ["id_sap", "material_name"] and v is not None
+        }
+        desc_text = record_to_text(desc_source) if desc_source else name_text
 
-            try:
-                name_embedding = (
-                    embedding_service.embed(name_text)
-                    if name_text.strip()
-                    else None
-                )
-                description_embedding = (
-                    embedding_service.embed(desc_text)
-                    if desc_text.strip()
-                    else None
-                )
-            except Exception:
-                logger.exception("Embedding failed for origin record %d", idx)
-                continue
+        # Tạo embeddings
+        name_embedding = None
+        description_embedding = None
 
+        try:
+            if name_text.strip():
+                name_embedding = embedding_service.embed(name_text)
+        except Exception:
+            logger.exception("Failed to create name_embedding for record %d", idx)
+
+        try:
+            if desc_text.strip():
+                description_embedding = embedding_service.embed(desc_text)
+        except Exception:
+            logger.exception("Failed to create description_embedding for record %d", idx)
+
+        # Chỉ update nếu có ít nhất 1 embedding
+        if name_embedding is not None or description_embedding is not None:
             payload: Dict[str, Any] = {"id_sap": record["id_sap"]}
+            
             if name_embedding is not None:
                 payload["name_embedding"] = name_embedding
+            
             if description_embedding is not None:
                 payload["description_embedding"] = description_embedding
 
             origin_embed_rows.append(payload)
 
-        if origin_embed_rows:
-            try:
-                update_origin_rows(table_name, origin_embed_rows)
-            except Exception:
-                logger.exception("Failed to update origin embeddings for table %s", table_name)
+    # Update embeddings vào bảng gốc
+    if origin_embed_rows:
+        try:
+            update_origin_rows(table_name, origin_embed_rows)
+            logger.info("Updated %d origin embeddings for %s", len(origin_embed_rows), table_name)
+        except Exception:
+            logger.exception("Failed to update origin embeddings for table %s", table_name)
 
     # 2) Insert vào bảng vector (target DB)
     ensure_target_table(table_name)

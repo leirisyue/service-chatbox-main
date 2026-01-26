@@ -224,8 +224,6 @@ def insert_origin_rows(
         table_name,
     )
 
-
-
 def update_origin_rows(
     table_name: str,
     rows: List[Dict[str, Any]],
@@ -327,7 +325,6 @@ def update_vector_rows(
         result.rowcount,
         table_name,
     )
-
 
 def get_id_sap_by_material_name(
     table_name: str,

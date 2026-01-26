@@ -28,6 +28,8 @@ class Settings:
 
     # ollama
     OLLAMA_HOST = os.getenv("OLLAMA_HOST")
+    QWEN_MODEL: str = "qwen3-embedding:latest"
+    QWEN_EMBED_MODEL: str = "qwen3-embedding:latest"
     
     
     VECTOR_DB_HOST: str = os.getenv("VECTOR_DB_HOST", "localhost")

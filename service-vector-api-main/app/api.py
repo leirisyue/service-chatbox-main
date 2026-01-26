@@ -80,30 +80,19 @@ def update_data_by_keys(
     table_name: str,
     req: UpdateByKeysRequest,
 ):
-    """Update record(s) using required list_key.
-
-        - list_key là danh sách object theo thứ tự ưu tiên, ví dụ:
-            [
-                {"id_sap": 123},
-                {"material_name": "gỗ"}
-            ]
-    - Nếu record có `id_sap` thì dùng luôn.
-    - Nếu không có `id_sap` nhưng có `material_name` / `name_material`,
-      sẽ tra `id_sap` từ bảng gốc rồi update.
-    """
-
-    # Chuẩn hóa list_key: lấy ra danh sách tên key theo thứ tự ưu tiên
+    # Validate list_key
     raw_list_key = req.list_key
-    if not raw_list_key:
-        raise HTTPException(status_code=400, detail="list_key is required and cannot be empty")
+    if not raw_list_key or not isinstance(raw_list_key, list):
+        raise HTTPException(status_code=400, detail="list_key is required and must be a list")
 
-    prioritized_keys: List[str] = []
+    # Lưu cả key name và value
+    prioritized_keys: List[Dict[str, Any]] = []
 
     for idx, item in enumerate(raw_list_key):
         if not isinstance(item, dict):
             raise HTTPException(
                 status_code=400,
-                detail=f"list_key[{idx}] must be an object, e.g. {{\"id_sap\": 123}}",
+                detail=f"list_key[{idx}] must be an object, e.g. {{\"id_sap\": \"123\"}}",
             )
         if not item:
             raise HTTPException(
@@ -117,7 +106,8 @@ def update_data_by_keys(
             )
 
         key_name = next(iter(item.keys()))
-        prioritized_keys.append(str(key_name))
+        key_value = item[key_name]
+        prioritized_keys.append({"name": str(key_name), "value": key_value})
 
     records = req.data
 
@@ -132,60 +122,67 @@ def update_data_by_keys(
 
     normalized_records: List[Dict[str, Any]] = []
 
-    for idx, rec in enumerate(records_list, start=1):
+    for idx, rec in enumerate(records_list):
         if not isinstance(rec, dict):
             raise HTTPException(
                 status_code=400,
-                detail=f"Invalid record format at index {idx - 1}",
+                detail=f"Invalid record format at index {idx}",
             )
 
         current = rec.copy()
-
-        # Map name_material -> material_name nếu client dùng key này
-        if "material_name" not in current and "name_material" in current:
-            current["material_name"] = current["name_material"]
-
-        used_key = None
-
-        # Duyệt theo thứ tự ưu tiên trong list_key (đã chuẩn hóa)
-        for key in prioritized_keys:
-            # Ưu tiên id_sap nếu có sẵn trong record
-            if key == "id_sap" and current.get("id_sap") is not None:
-                used_key = "id_sap"
-                break
-
-            # Sử dụng material_name / name_material để truy vấn ra id_sap
-            if key in ("material_name", "name_material"):
-                material_name = current.get("material_name") or current.get("name_material")
-                if material_name is None:
+        resolved_id_sap = None
+        # Case 1: Record đã có sẵn id_sap → dùng luôn
+        if "id_sap" in current and current["id_sap"] is not None:
+            resolved_id_sap = current["id_sap"]
+        
+        # Case 2: Không có id_sap → dùng list_key để tìm
+        else:
+            # Duyệt theo thứ tự ưu tiên trong list_key
+            for key_info in prioritized_keys:
+                key_name = key_info["name"]
+                key_value = key_info["value"]
+                # Bỏ qua nếu value null/empty
+                if key_value is None or str(key_value).strip() == "":
                     continue
-
-                id_sap = get_id_sap_by_material_name(table_name, str(material_name))
-                if id_sap is None:
-                    raise HTTPException(
-                        status_code=404,
-                        detail=(
-                            f"No record found in table '{table_name}' "
-                            f"with material_name='{material_name}'"
-                        ),
+                # Xử lý key id_sap
+                if key_name == "id_sap":
+                    resolved_id_sap = key_value
+                    break
+                # Xử lý key material_name / name_material
+                elif key_name in ("material_name", "name_material"):
+                    material_name = str(key_value)
+                    
+                    # Tra id_sap từ bảng gốc bằng material_name
+                    resolved_id_sap = get_id_sap_by_material_name(
+                        table_name,
+                        material_name
                     )
-
-                current["id_sap"] = id_sap
-                used_key = key
-                break
-
-        if used_key is None:
+                    if resolved_id_sap is not None:
+                        # Tìm thấy → dừng lại
+                        break
+                    # Không tìm thấy → thử key tiếp theo
+                # Key khác (có thể mở rộng)
+                else:
+                    # TODO: Implement logic cho key khác nếu cần
+                    continue
+        # Kiểm tra đã resolve được id_sap chưa
+        if resolved_id_sap is None:
+            # Tạo thông báo chi tiết
+            tried_keys = [f"{k['name']}={k['value']}" for k in prioritized_keys]
             raise HTTPException(
-                status_code=400,
+                status_code=404,
                 detail=(
-                    f"Record at index {idx - 1} does not contain any "
-                    f"supported key from list_key: {prioritized_keys}"
+                    f"Record {idx}: Could not find matching record in table '{table_name}' "
+                    f"using list_key: {tried_keys}"
                 ),
             )
 
+        # Gán id_sap vào record để update
+        current["id_sap"] = resolved_id_sap
+
         normalized_records.append(current)
 
-    # Gọi lại logic update cũ
+    # Gọi logic update
     update_records(table_name, normalized_records)
 
     return {
