@@ -3,7 +3,6 @@ from fastapi import APIRouter
 from psycopg2.extras import RealDictCursor
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import google.generativeai as genai
 import time
 import psycopg2
 import requests
@@ -14,9 +13,6 @@ def get_db():
     return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
-# Configure once
-if settings.My_GOOGLE_API_KEY:
-    genai.configure(api_key=settings.My_GOOGLE_API_KEY)
 
 # Qwen configuration - now using settings
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434")
