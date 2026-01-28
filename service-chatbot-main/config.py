@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     MATERIALS_TABLE: str = "material_merge"
     MATERIALS_VIEW: str = "VIEW_MATERIAL_MERGE"
     
-    PRODUCT_TABLE: str = "products_qwen"
+    PRODUCTS_TABLE: str = "products_qwen"
     
     PRODUCT_MATERIALS_TABLE: str = "product_materials"
     

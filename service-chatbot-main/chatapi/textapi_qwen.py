@@ -1428,7 +1428,7 @@ def get_material_detail(id_sap: str = None, material_name: str = None):
                 COUNT(DISTINCT p.project) as project_count,
                 SUM(pm.quantity) as total_quantity
             FROM {settings.PRODUCT_MATERIALS_TABLE} pm
-            LEFT JOIN {settings.PRODUCT_TABLE} p ON pm.product_headcode = p.headcode
+            LEFT JOIN {settings.PRODUCTS_TABLE} p ON pm.product_headcode = p.headcode
             WHERE pm.material_id_sap = %s
         """, (material['id_sap'],))
         stats = cur.fetchone()
