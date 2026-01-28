@@ -1,9 +1,10 @@
 import json
 import time
+import requests
 from io import BytesIO
 from typing import Dict, List
+import signal
 
-import google.generativeai as genai
 import numpy as np
 import psycopg2
 from openpyxl import Workbook
@@ -15,6 +16,107 @@ from config import settings
 from .embeddingapi import generate_embedding_qwen
 from .connect_db import get_db_origin, get_db
 
+def fetch_google_content_api(api_endpoint: str, model_id: str, action: str, api_key: str, payload: Dict) -> Dict:
+    
+    url = f"{api_endpoint}/v1/publishers/google/models/{model_id}:{action}?key={api_key}"
+    
+    headers = {
+        "Content-Type": "application/json"
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        response.raise_for_status()
+        
+        # Trả về kết quả rút gọn nếu có thể
+        data = response.json()
+        try:
+            text = data['candidates'][0]['content']['parts'][0]['text']
+            return {"text": text}   
+        except (KeyError, IndexError, TypeError):
+            return data
+            
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling Google API: {e}")
+        try:
+            return response.json()
+        except:
+            return {"error": str(e), "details": response.text if 'response' in locals() else "No response"}
+
+def generate_text_rest(prompt: str) -> Dict:
+    payload = {
+        "contents": [{
+            "role": "user",
+            "parts": [{
+                "text": prompt
+            }]
+        }]
+    }
+    # print(f"prompt: {prompt}")
+    
+    return fetch_google_content_api(
+        api_endpoint=settings.API_ENDPOINT, 
+        model_id=settings.MODEL_ID, 
+        action=settings.GENERATE_CONTENT_API, 
+        api_key=settings.GOOGLE_API_KEY, 
+        payload=payload
+    )
+
+
+def call_gemini_with_retry(prompt, max_retries=3, timeout=20):
+    
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Gemini API timeout")
+    
+    for attempt in range(max_retries):
+        try:
+            # Set timeout for this attempt (only on Unix systems)
+            if hasattr(signal, 'SIGALRM'):
+                signal.signal(signal.SIGALRM, timeout_handler)
+                signal.alarm(timeout)
+            
+            # response = model.generate_content(prompt, request_options={"timeout": timeout})
+            response = generate_text_rest(prompt)
+            
+            # Cancel alarm
+            if hasattr(signal, 'SIGALRM'):
+                signal.alarm(0)
+
+            # Handle dict response (from generate_text_rest)
+            if isinstance(response, dict):
+                if "text" in response:
+                    return response["text"]
+                # Fallback for raw JSON if text extraction failed in fetch_google_content_api
+                try:
+                    return response['candidates'][0]['content']['parts'][0]['text']
+                except (KeyError, IndexError, TypeError):
+                    print(f"WARNING: Could not extract text from dict response: {response}")
+                    return None
+
+            # Handle GenerateContentResponse object (if using model.generate_content)
+            if hasattr(response, 'text'):
+                return response.text
+                
+            return str(response)
+
+        except TimeoutError:
+            print(f"WARNING: Gemini timeout after {timeout}s on attempt {attempt + 1}")
+            if attempt == max_retries - 1:
+                return None
+            continue
+        except Exception as e:
+            # Cancel alarm on error
+            if hasattr(signal, 'SIGALRM'):
+                signal.alarm(0)
+            
+            if "429" in str(e) or "quota" in str(e).lower():
+                wait_time = 5 * (2 ** attempt)
+                print(f"INFO: Quota exceeded. Đợi {wait_time}s...")
+                time.sleep(wait_time)
+                continue
+            print(f"ERROR Gemini: {e}")
+            return None
+    return None
 
 
 def format_suggested_prompts(prompts: list[str]) -> str:
@@ -65,7 +167,6 @@ def extract_product_keywords(query: str) -> list:
 
 def auto_classify_product(product_name: str, id_sap: str = "") -> Dict:
     """Automatically classify product using AI"""
-    model = genai.GenerativeModel("gemini-2.5-flash")
     
     prompt = f"""
                 Bạn là chuyên gia phân loại sản phẩm nội thất cao cấp.
@@ -103,7 +204,7 @@ def auto_classify_product(product_name: str, id_sap: str = "") -> Dict:
                 }}
         """
     
-    response_text = call_gemini_with_retry(model, prompt)
+    response_text = call_gemini_with_retry(prompt)
     
     if not response_text:
         return {
@@ -130,7 +231,6 @@ def auto_classify_product(product_name: str, id_sap: str = "") -> Dict:
 
 def auto_classify_material(material_name: str, id_sap: str = "") -> Dict:
     """Tự động phân loại vật liệu bằng AI"""
-    model = genai.GenerativeModel("gemini-2.5-flash")
     
     prompt = f"""
                 Phân loại nguyên vật liệu nội thất:
@@ -146,7 +246,7 @@ def auto_classify_material(material_name: str, id_sap: str = "") -> Dict:
                 }}
         """
     
-    response_text = call_gemini_with_retry(model, prompt)
+    response_text = call_gemini_with_retry(prompt)
     
     if not response_text:
         return {
@@ -529,47 +629,6 @@ def format_search_results(results):
             "similarity": round(1 - row["distance"], 3) if "distance" in row else None
         })
     return products
-
-def call_gemini_with_retry(model, prompt, max_retries=3, timeout=20):
-    """Gọi Gemini với retry logic và timeout"""
-    import signal
-    
-    def timeout_handler(signum, frame):
-        raise TimeoutError("Gemini API timeout")
-    
-    for attempt in range(max_retries):
-        try:
-            # Set timeout for this attempt (only on Unix systems)
-            if hasattr(signal, 'SIGALRM'):
-                signal.signal(signal.SIGALRM, timeout_handler)
-                signal.alarm(timeout)
-            
-            response = model.generate_content(prompt, request_options={"timeout": timeout})
-            
-            # Cancel alarm
-            if hasattr(signal, 'SIGALRM'):
-                signal.alarm(0)
-            
-            if response.text:
-                return response.text
-        except TimeoutError:
-            print(f"WARNING: Gemini timeout after {timeout}s on attempt {attempt + 1}")
-            if attempt == max_retries - 1:
-                return None
-            continue
-        except Exception as e:
-            # Cancel alarm on error
-            if hasattr(signal, 'SIGALRM'):
-                signal.alarm(0)
-            
-            if "429" in str(e) or "quota" in str(e).lower():
-                wait_time = 5 * (2 ** attempt)
-                print(f"INFO: Quota exceeded. Đợi {wait_time}s...")
-                time.sleep(wait_time)
-                continue
-            print(f"ERROR Gemini: {e}")
-            return None
-    return None
 
 def calculate_product_total_cost(headcode: str) -> float:
     """Tính tổng chi phí (total_cost) cho một sản phẩm"""
@@ -1025,7 +1084,6 @@ def search_products_hybrid(params: Dict):
 
 def expand_search_query(user_query: str, params: Dict) -> str:
     """AI mở rộng query ngắn thành mô tả chi tiết với từ khóa chính xác"""
-    model = genai.GenerativeModel("gemini-2.5-flash")
     prompt = f"""
             Người dùng tìm: "{user_query}"
 
@@ -1072,7 +1130,7 @@ def expand_search_query(user_query: str, params: Dict) -> str:
             """
 
     try:
-        response = call_gemini_with_retry(model, prompt, max_retries=2)
+        response = call_gemini_with_retry( prompt, max_retries=2)
         print(f"AI Expansion Response: {response}")
         if response:
             # Ensure original keyword is in expanded query

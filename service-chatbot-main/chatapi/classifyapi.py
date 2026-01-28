@@ -5,7 +5,6 @@ import time
 import uuid
 from typing import Dict, List
 
-import google.generativeai as genai
 import psycopg2
 from fastapi import (APIRouter, File, Form, UploadFile)
 from historiesapi import histories
@@ -27,8 +26,6 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
     if not materials_batch:
         return []
     
-    # [FIX] Switch to gemini-1.5-flash model for better stability and to avoid Rate Limit errors
-    model = genai.GenerativeModel("gemini-2.5-flash")
     
     materials_text = ""
     for i, mat in enumerate(materials_batch, 1):
@@ -48,7 +45,7 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
             """
     
     # Call Gemini with retry
-    response_text = call_gemini_with_retry(model, prompt, max_retries=3)
+    response_text = call_gemini_with_retry( prompt, max_retries=3)
     
     # Create default results (Fallback) to return if AI fails
     default_results = [{
@@ -84,9 +81,7 @@ def batch_classify_materials(materials_batch: List[Dict]) -> List[Dict]:
 def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     if not products_batch:
         return []
-    
-    # [FIX] Switch to stable model to avoid Rate Limit errors from Experimental version
-    model = genai.GenerativeModel("gemini-2.5-flash")
+
     
     # Create product list in prompt
     products_text = ""
@@ -109,7 +104,7 @@ def batch_classify_products(products_batch: List[Dict]) -> List[Dict]:
     """
     
     # Call AI with retry logic
-    response_text = call_gemini_with_retry(model, prompt, max_retries=3)
+    response_text = call_gemini_with_retry( prompt, max_retries=3)
     
     # Default fallback if AI completely fails
     default_results = [{
@@ -162,7 +157,6 @@ async def search_by_image(
         
         # Open image using PIL
         img = Image.open(file_path)
-        model = genai.GenerativeModel("gemini-2.5-flash")
         
         prompt = """
             ROLE
@@ -628,7 +622,6 @@ async def search_by_image_with_text(
         
         # Open image with PIL
         img = Image.open(file_path)
-        model = genai.GenerativeModel("gemini-2.5-flash")
         
         # ========== DETECT SEARCH MODE (PRODUCT vs MATERIAL) ==========
         description_lower = description.lower()

@@ -4,7 +4,6 @@ import re
 from datetime import datetime
 from typing import Dict, List
 
-import google.generativeai as genai
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
@@ -82,7 +81,6 @@ def _fetch_material_view_data(id_saps: List[str]) -> Dict[str, dict]:
 
     return {row["id_sap"]: row for row in rows if row.get("id_sap")}
 
-genai.configure(api_key=settings.My_GOOGLE_API_KEY)
 
 router = APIRouter()
 # ================================================================================================
@@ -91,7 +89,6 @@ router = APIRouter()
 
 def generate_suggested_prompts(context_type: str, context_data: Dict = None, count: int = 4) -> List[str]:
     
-    model = genai.GenerativeModel("gemini-2.5-flash")
         
     prompt = f"""
         Bạn là chuyên viên tư vấn nội thất cao cấp của AA Corporation.
@@ -298,7 +295,7 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
     ]
     """
     try:
-        response_text = call_gemini_with_retry(model, prompt)
+        response_text = call_gemini_with_retry(prompt)
         # print(f"Suggested prompts response: {response_text}")
         
         if not response_text:
@@ -318,7 +315,6 @@ def generate_suggested_prompts(context_type: str, context_data: Dict = None, cou
         return _get_fallback_prompts(context_type)
 
 def _get_fallback_prompts(context_type: str) -> List[str]:
-    """Fallback prompts if genai fails"""
     fallbacks = {
         "greeting": [
             "Tìm bàn làm việc hiện đại",
@@ -347,8 +343,6 @@ def _get_fallback_prompts(context_type: str) -> List[str]:
     ])
 
 def get_intent_and_params(user_message: str, context: Dict) -> Dict:
-    """AI Router with Reasoning & Soft Clarification capability"""
-    model = genai.GenerativeModel("gemini-2.5-flash")
     
     context_info = ""
     if context.get("current_products"):
@@ -454,7 +448,7 @@ def get_intent_and_params(user_message: str, context: Dict) -> Dict:
     }}
     """
     
-    response_text = call_gemini_with_retry(model, prompt, timeout=15)
+    response_text = call_gemini_with_retry(prompt, timeout=15)
     if not response_text:
         return {
             "intent": "error",

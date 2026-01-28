@@ -18,7 +18,7 @@ if os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
 class Settings(BaseSettings):
-    My_GOOGLE_API_KEY: str = os.getenv("My_GOOGLE_API_KEY", "localhost")
+    # My_GOOGLE_API_KEY: str = os.getenv("My_GOOGLE_API_KEY", "localhost")
     GOOGLE_PROJECT_ID: str = os.getenv("GOOGLE_PROJECT_ID", "aa-aibuild")
     GOOGLE_LOCATION: str = os.getenv("GOOGLE_LOCATION", "us-central1")
     GOOGLE_APPLICATION_CREDENTIALS: str = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "")
@@ -40,6 +40,11 @@ class Settings(BaseSettings):
     # DB_PASSWORD_ORIGIN: str = "postgres"
     # DB_HOST_ORIGIN: str = "localhost"
     # DB_PORT_ORIGIN: str = "5432"
+    
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+    API_ENDPOINT: str = os.getenv("API_ENDPOINT", "https://aiplatform.googleapis.com")
+    MODEL_ID: str = os.getenv("MODEL_ID", "gemini-2.5-flash")
+    GENERATE_CONTENT_API: str = os.getenv("GENERATE_CONTENT_API", "generateContent")
     
     # Table names
     # MATERIALS_TABLE: str = "materials_qwen"
