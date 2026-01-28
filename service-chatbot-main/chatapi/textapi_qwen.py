@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Dict, List
 
 import google.generativeai as genai
-import psycopg2
+
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 from psycopg2.extras import RealDictCursor
@@ -26,6 +26,8 @@ from .textfunc import (calculate_product_total_cost, call_gemini_with_retry,
                         search_products_hybrid, search_products_keyword_only)
 from .unit import (BatchProductRequest, ChatMessage, ConsolidatedBOMRequest,
                     TrackingRequest)
+
+from .connect_db import get_db_origin, get_db
 
 # Custom regex to filter illegal characters
 # Filters ASCII control chars that are invalid in Excel files (XML)
@@ -54,11 +56,6 @@ def build_markdown_table(headers: List[str], rows: List[List[str]]) -> str:
 
     return "\n".join([header_row, separator_row] + body_rows)
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
-
-def get_db_origin():
-    return psycopg2.connect(**settings.DB_CONFIG_ORIGIN)
 
 def _fetch_material_view_data(id_saps: List[str]) -> Dict[str, dict]:
     if not id_saps:

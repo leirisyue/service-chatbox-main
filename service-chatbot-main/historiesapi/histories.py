@@ -9,9 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 import json
-
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
+from chatapi.connect_db import get_db
 
 router = APIRouter()
 # ================================================================================================

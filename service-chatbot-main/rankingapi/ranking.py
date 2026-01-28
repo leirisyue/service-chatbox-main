@@ -6,8 +6,6 @@ from config import settings
 from fastapi import APIRouter
 from feedbackapi.feedback import get_feedback_boost_for_query
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
 # ================================================================================================

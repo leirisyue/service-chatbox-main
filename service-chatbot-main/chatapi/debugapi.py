@@ -8,8 +8,7 @@ from typing import Dict
 import psycopg2
 from config import settings
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
+from chatapi.connect_db import get_db
 
 router = APIRouter()
 # ================================================================================================

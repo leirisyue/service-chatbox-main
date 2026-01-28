@@ -9,8 +9,7 @@ from config import settings
 from historiesapi.histories import router as history_router
 from imageapi.media import router as media_router
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
+from chatapi.connect_db import get_db
 
 router = APIRouter()
 # ================================================================================================

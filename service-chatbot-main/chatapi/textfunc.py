@@ -13,10 +13,9 @@ from psycopg2.extras import RealDictCursor
 from config import settings
 
 from .embeddingapi import generate_embedding_qwen
+from .connect_db import get_db_origin, get_db
 
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
 
 def format_suggested_prompts(prompts: list[str]) -> str:
     if not prompts:

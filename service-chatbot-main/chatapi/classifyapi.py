@@ -16,8 +16,7 @@ from .textfunc import call_gemini_with_retry,format_suggested_prompts
 from .textapi_qwen import generate_suggested_prompts, search_products
 from config import settings
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
+from chatapi.connect_db import get_db
 
 router = APIRouter()
 # ================================================================================================

@@ -9,8 +9,7 @@ import requests
 from config import settings
 import os
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
+from chatapi.connect_db import get_db
 
 router = APIRouter()
 

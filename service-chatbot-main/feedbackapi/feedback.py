@@ -8,9 +8,8 @@ from fastapi import APIRouter
 from psycopg2.extras import RealDictCursor
 from chatapi.unit import FeedbackRequest
 from chatapi.embeddingapi import generate_embedding_qwen
+from chatapi.connect_db import get_db
 
-def get_db():
-    return psycopg2.connect(**settings.DB_CONFIG)
 
 router = APIRouter()
 # ================================================================================================
